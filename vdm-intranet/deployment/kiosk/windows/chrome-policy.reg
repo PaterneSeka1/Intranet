@@ -1,0 +1,24 @@
+Windows Registry Editor Version 5.00
+
+; VDM Intranet — Politique Chrome (Windows)
+; Double-cliquez pour appliquer, ou appelez-le depuis installer-demarrage.ps1
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+; Nouvel onglet → intranet
+"NewTabPageLocation"="http://localhost:3000"
+; Outils développeur désactivés (2 = totalement désactivé)
+"DeveloperToolsAvailability"=dword:00000002
+; Mode incognito désactivé (1 = désactivé)
+"IncognitoModeAvailability"=dword:00000001
+; Impression désactivée
+"PrintingEnabled"=dword:00000000
+; Téléchargements bloqués (3 = tous bloqués)
+"DownloadRestrictions"=dword:00000003
+; Barre de signets masquée
+"BookmarkBarEnabled"=dword:00000000
+; Historique désactivé
+"SavingBrowserHistoryDisabled"=dword:00000001
+; Gestionnaire de mots de passe désactivé
+"PasswordManagerEnabled"=dword:00000000
+; Paramètres Chrome inaccessibles
+"BrowserSettingsPageEnabled"=dword:00000000

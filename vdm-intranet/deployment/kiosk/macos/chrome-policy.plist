@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+  <!-- Nouvel onglet → intranet au lieu de google.com -->
+  <key>NewTabPageLocation</key>
+  <string>http://localhost:3000</string>
+
+  <!-- Outils développeur désactivés -->
+  <key>DeveloperToolsAvailability</key>
+  <integer>2</integer>
+
+  <!-- Mode incognito désactivé (empêche de contourner la session) -->
+  <key>IncognitoModeAvailability</key>
+  <integer>1</integer>
+
+  <!-- Impression désactivée -->
+  <key>PrintingEnabled</key>
+  <false/>
+
+  <!-- Téléchargements interdits -->
+  <key>DownloadRestrictions</key>
+  <integer>3</integer>
+
+  <!-- Barre de signets masquée -->
+  <key>BookmarkBarEnabled</key>
+  <false/>
+
+  <!-- Gestionnaire de mots de passe désactivé -->
+  <key>PasswordManagerEnabled</key>
+  <false/>
+
+  <!-- Empêcher la modification des paramètres Chrome -->
+  <key>BrowserSettingsPageEnabled</key>
+  <false/>
+
+  <!-- Historique désactivé -->
+  <key>SavingBrowserHistoryDisabled</key>
+  <true/>
+
+</dict>
+</plist>

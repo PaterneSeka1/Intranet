@@ -1,6 +1,6 @@
 #!/bin/bash
-# VDM Intranet — Installation du démarrage automatique (macOS)
-# Usage: bash installer-demarrage.sh [URL]
+# VDM Intranet — Installation complète du kiosque (macOS)
+# Usage : bash installer-demarrage.sh [URL]
 # Exemple: bash installer-demarrage.sh http://192.168.1.10:3000
 
 set -e
@@ -8,31 +8,57 @@ set -e
 VDM_URL="${1:-http://localhost:3000}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIOSK_SCRIPT="/usr/local/bin/kiosk-vdm.sh"
-PLIST_SRC="$SCRIPT_DIR/com.vdm.intranet.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.vdm.intranet.plist"
 
-echo "→ Installation du démarrage automatique VDM Intranet"
+echo "╔══════════════════════════════════════════╗"
+echo "║   VDM Intranet — Installation kiosque   ║"
+echo "╚══════════════════════════════════════════╝"
 echo "  URL : $VDM_URL"
 echo ""
 
-# Copier le script de lancement
-echo "→ Installation du script de lancement..."
+# ── 1. Script de lancement ─────────────────────────────────────────
+echo "→ [1/4] Installation du script de lancement..."
 sudo cp "$SCRIPT_DIR/kiosk-vdm.sh" "$KIOSK_SCRIPT"
 sudo chmod +x "$KIOSK_SCRIPT"
 
-# Injecter l'URL dans le plist
-echo "→ Configuration du LaunchAgent..."
-sed "s|http://localhost:3000|$VDM_URL|g" "$PLIST_SRC" > "$PLIST_DEST"
+# ── 2. Politique Chrome ────────────────────────────────────────────
+echo "→ [2/4] Application de la politique Chrome..."
+sudo mkdir -p "/Library/Managed Preferences"
+# Injecter l'URL dans la politique
+sed "s|http://localhost:3000|$VDM_URL|g" \
+    "$SCRIPT_DIR/chrome-policy.plist" \
+    | sudo tee "/Library/Managed Preferences/com.google.Chrome.plist" > /dev/null
+sudo chmod 644 "/Library/Managed Preferences/com.google.Chrome.plist"
 
-# Charger le LaunchAgent (actif dès maintenant et aux prochaines sessions)
+# ── 3. Bloquer Ctrl+N pour Chrome au niveau système ───────────────
+echo "→ [3/4] Désactivation de Cmd+N (nouvelle fenêtre) dans Chrome..."
+# Redirige le raccourci "New Window" vers une combinaison impossible
+defaults write com.google.Chrome NSUserKeyEquivalents \
+    -dict "New Window" "@~^\\U0000"
+# Idem pour "New Incognito Window"
+defaults write com.google.Chrome NSUserKeyEquivalents \
+    -dict-add "New Incognito Window" "@~^\\U0001"
+
+# ── 4. LaunchAgent (démarrage automatique à la session) ───────────
+echo "→ [4/4] Configuration du démarrage automatique..."
+sed "s|http://localhost:3000|$VDM_URL|g" \
+    "$SCRIPT_DIR/com.vdm.intranet.plist" > "$PLIST_DEST"
 launchctl unload "$PLIST_DEST" 2>/dev/null || true
 launchctl load "$PLIST_DEST"
 
 echo ""
 echo "✓ Installation terminée."
-echo "✓ L'application s'ouvrira automatiquement à la prochaine session."
 echo ""
-echo "Pour désinstaller :"
-echo "  launchctl unload ~/Library/LaunchAgents/com.vdm.intranet.plist"
-echo "  rm ~/Library/LaunchAgents/com.vdm.intranet.plist"
-echo "  sudo rm /usr/local/bin/kiosk-vdm.sh"
+echo "  Récapitulatif des restrictions appliquées :"
+echo "  • Barre d'adresse      → cachée (kiosk Chrome)"
+echo "  • Nouvel onglet Ctrl+T → bloqué (kiosk Chrome)"
+echo "  • Nouvelle fenêtre ⌘+N → redirigée vers l'intranet"
+echo "  • Outils développeur   → désactivés (politique)"
+echo "  • Mode incognito       → désactivé (politique)"
+echo "  • Téléchargements      → bloqués (politique)"
+echo "  • Historique           → désactivé (politique)"
+echo ""
+echo "  Redémarrez Chrome pour que toutes les restrictions soient actives."
+echo ""
+echo "  Pour désinstaller :"
+echo "    bash $SCRIPT_DIR/desinstaller.sh"
