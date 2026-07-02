@@ -63,14 +63,18 @@ export class ReportsService {
     this.assertAllowed(requester)
     const userWhere = this.buildUserWhere(requester)
 
-    const dateFilter: Record<string, Date> = {}
-    if (dateFrom) dateFilter.gte = new Date(dateFrom)
-    if (dateTo) dateFilter.lte = new Date(dateTo)
-    else dateFilter.lte = getToday()
+    const since90 = new Date()
+    since90.setUTCDate(since90.getUTCDate() - 90)
+    since90.setUTCHours(0, 0, 0, 0)
+
+    const dateFilter: Record<string, Date> = {
+      gte: dateFrom ? new Date(dateFrom) : since90,
+      lte: dateTo ? new Date(dateTo) : getToday(),
+    }
 
     const rows = await this.prisma.presence.findMany({
       where: {
-        ...(Object.keys(dateFilter).length ? { date: dateFilter } : {}),
+        date: dateFilter,
         user: userWhere,
       },
       include: {
@@ -83,6 +87,7 @@ export class ReportsService {
         },
       },
       orderBy: [{ date: 'desc' }, { user: { lastName: 'asc' } }],
+      take: 10000,
     })
 
     await this.logExport(requester.id, LogAction.PRESENCE_REPORT_EXPORTED)
@@ -156,13 +161,18 @@ export class ReportsService {
     this.assertAllowed(requester)
     const userWhere = this.buildUserWhere(requester)
 
-    const dateFilter: Record<string, Date> = {}
-    if (dateFrom) dateFilter.gte = new Date(dateFrom)
-    if (dateTo) dateFilter.lte = new Date(dateTo)
+    const since90conn = new Date()
+    since90conn.setUTCDate(since90conn.getUTCDate() - 90)
+    since90conn.setUTCHours(0, 0, 0, 0)
+
+    const dateFilter: Record<string, Date> = {
+      gte: dateFrom ? new Date(dateFrom) : since90conn,
+      lte: dateTo ? new Date(dateTo) : getToday(),
+    }
 
     const rows = await this.prisma.connectionLog.findMany({
       where: {
-        ...(Object.keys(dateFilter).length ? { date: dateFilter } : {}),
+        date: dateFilter,
         user: userWhere,
       },
       include: {

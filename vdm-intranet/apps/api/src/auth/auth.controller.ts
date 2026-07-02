@@ -27,7 +27,7 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Déconnexion — supprime le cookie' })
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(this.authService.cookieName(), { path: '/' })
+    res.clearCookie(this.authService.cookieName(), this.authService.cookieOptions(true))
     return { message: 'Déconnecté avec succès' }
   }
 

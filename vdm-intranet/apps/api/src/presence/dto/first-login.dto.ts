@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Min, Max, IsNotEmpty } from 'class-validator'
+import { IsNumber, IsOptional, IsString, MaxLength, Min, Max, IsNotEmpty } from 'class-validator'
 
 export class FirstLoginDto {
   @IsNumber()
@@ -16,14 +16,12 @@ export class FirstLoginDto {
   accuracy?: number
 
   @IsString()
+  @MaxLength(500)
   @IsOptional()
   address?: string
 
   @IsString()
-  @IsOptional()
-  mapsUrl?: string
-
-  @IsString()
+  @MaxLength(300)
   @IsOptional()
   userAgent?: string
 }

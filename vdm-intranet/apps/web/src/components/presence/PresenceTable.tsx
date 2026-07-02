@@ -45,9 +45,10 @@ interface Props {
   rows: PresenceRow[]
   canMandate: boolean
   currentUserId: string
+  date?: string
 }
 
-export function PresenceTable({ rows, canMandate, currentUserId }: Props) {
+export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) {
   const router = useRouter()
   const [mandateForm, setMandateForm] = useState<MandateForm | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -55,7 +56,7 @@ export function PresenceTable({ rows, canMandate, currentUserId }: Props) {
 
   function openMandate(row: PresenceRow) {
     const today = new Date()
-    const dateStr = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, '0')}-${String(today.getUTCDate()).padStart(2, '0')}`
+    const dateStr = date ?? `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, '0')}-${String(today.getUTCDate()).padStart(2, '0')}`
     setMandateForm({
       userId: row.user.id,
       userLabel: row.user.fullName ?? row.user.username,

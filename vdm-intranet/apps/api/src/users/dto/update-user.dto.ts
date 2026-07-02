@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsEmail, IsEnum, IsOptional, IsString, Matches, MinLength } from 'class-validator'
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Role } from '@prisma/client'
 
@@ -11,7 +11,7 @@ export class UpdateUserDto {
   @ApiPropertyOptional() @IsString() @IsOptional() poleId?: string
   @ApiPropertyOptional() @IsString() @IsOptional() managerId?: string
   @ApiPropertyOptional() @IsString() @IsOptional() scheduleGroupId?: string
-  @ApiPropertyOptional() @IsString() @IsOptional() individualExpectedArrivalTime?: string
+  @ApiPropertyOptional({ example: '08:00' }) @IsString() @Matches(/^\d{2}:\d{2}$/) @IsOptional() individualExpectedArrivalTime?: string
   @ApiPropertyOptional() @IsString() @MinLength(8) @IsOptional() password?: string
   @ApiPropertyOptional() @IsString() @IsOptional() currentPassword?: string
 }

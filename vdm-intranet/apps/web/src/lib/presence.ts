@@ -82,16 +82,23 @@ export interface FirstLoginPayload {
   longitude: number
   accuracy?: number
   address?: string
-  mapsUrl?: string
   userAgent?: string
 }
 
 async function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}/api/presence${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
-  })
+  const controller = new AbortController()
+  const tid = setTimeout(() => controller.abort(), 30_000)
+  let res: Response
+  try {
+    res = await fetch(`${BASE}/api/presence${path}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      signal: controller.signal,
+      ...init,
+    })
+  } finally {
+    clearTimeout(tid)
+  }
   if (!res.ok) {
     let msg = 'Erreur serveur'
     try {

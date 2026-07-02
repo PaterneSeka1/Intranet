@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts'
@@ -157,9 +157,13 @@ export function PilotageClient({ role }: Props) {
     } finally { setLogLoading(false) }
   }, [])
 
-  useEffect(() => { fetchLog(1, '', '') }, [fetchLog])
-
+  const logInitialized = useRef(false)
   useEffect(() => {
+    if (!logInitialized.current) {
+      logInitialized.current = true
+      fetchLog(1, '', '')
+      return
+    }
     const timer = setTimeout(() => { setLogPage(1); fetchLog(1, logSearch, logAction) }, 400)
     return () => clearTimeout(timer)
   }, [logSearch, logAction, fetchLog])

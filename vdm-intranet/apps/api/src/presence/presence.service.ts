@@ -11,10 +11,11 @@ import { LoginLogDto } from './dto/login-log.dto'
 import { CreateMandateDto } from './dto/create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
+import { Role } from '@prisma/client'
 
 type Requester = {
   id: string
-  role: string
+  role: Role
   businessUnitId?: string | null
   poleId?: string | null
 }
@@ -139,54 +140,76 @@ export class PresenceService {
     const today = getToday()
     const now = new Date()
 
-    // Si une présence existe déjà → retourner sans la modifier
-    const existing = await this.prisma.presence.findUnique({
-      where: { userId_date: { userId, date: today } },
-    })
-    if (existing) {
-      await this.createConnectionLog(userId, 'LOGIN', today, now, dto, ipAddress, false)
-      return existing
+    // Calculer le groupe horaire hors transaction (lecture seule, non critique)
+    const { time: expectedTime, isNightShift } = await this.schedule.getScheduleSource(userId, today)
+
+    // mapsUrl toujours construit côté serveur — jamais depuis le client
+    const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
+
+    const connectionLogData = {
+      userId,
+      type: 'LOGIN' as const,
+      date: today,
+      connectedAt: now,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      accuracy: dto.accuracy,
+      address: dto.address,
+      mapsUrl,
+      userAgent: dto.userAgent,
+      ipAddress,
     }
 
-    const { time: expectedTime, isNightShift } = await this.schedule.getScheduleSource(userId, today)
-    const { status, delayMinutes } = expectedTime
-      ? this.schedule.calculatePresenceStatus(expectedTime, now, isNightShift)
-      : { status: 'PRESENT' as const, delayMinutes: null }
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.presence.findUnique({
+        where: { userId_date: { userId, date: today } },
+      })
 
-    const mapsUrl = dto.mapsUrl ?? buildMapsUrl(dto.latitude, dto.longitude)
+      if (existing) {
+        await tx.connectionLog.create({
+          data: { ...connectionLogData, isFirstConnectionOfDay: false },
+        })
+        return existing
+      }
 
-    // Créer le ConnectionLog en premier pour avoir l'ID source
-    const logEntry = await this.createConnectionLog(userId, 'LOGIN', today, now, dto, ipAddress, true)
+      const { status, delayMinutes } = expectedTime
+        ? this.schedule.calculatePresenceStatus(expectedTime, now, isNightShift)
+        : { status: 'PRESENT' as const, delayMinutes: null }
 
-    const presence = await this.prisma.presence.create({
-      data: {
-        userId,
-        date: today,
-        status,
-        expectedArrivalTime: expectedTime ?? '--:--',
-        officialArrivalTime: now,
-        delayMinutes,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        accuracy: dto.accuracy,
-        address: dto.address,
-        mapsUrl,
-        sourceConnectionLogId: logEntry.id,
-      },
+      const logEntry = await tx.connectionLog.create({
+        data: { ...connectionLogData, isFirstConnectionOfDay: true },
+      })
+
+      const presence = await tx.presence.create({
+        data: {
+          userId,
+          date: today,
+          status,
+          expectedArrivalTime: expectedTime ?? '--:--',
+          officialArrivalTime: now,
+          delayMinutes,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          accuracy: dto.accuracy,
+          address: dto.address,
+          mapsUrl,
+          sourceConnectionLogId: logEntry.id,
+        },
+      })
+
+      await tx.activityLog.create({
+        data: {
+          userId,
+          action: 'GEOLOCATION',
+          entity: 'Presence',
+          entityId: presence.id,
+          ipAddress,
+          details: { source: 'first-login' },
+        },
+      })
+
+      return presence
     })
-
-    await this.prisma.activityLog.create({
-      data: {
-        userId,
-        action: 'GEOLOCATION',
-        entity: 'Presence',
-        entityId: presence.id,
-        ipAddress,
-        details: { status, expectedArrivalTime: expectedTime, delayMinutes, source: 'first-login' },
-      },
-    })
-
-    return presence
   }
 
   // ----------------------------------------------------------------
@@ -341,13 +364,17 @@ export class PresenceService {
 
   async getMandates(requester: Requester) {
     const scope = this.buildUserScope(requester)
+    const since = new Date()
+    since.setUTCDate(since.getUTCDate() - 30)
+    since.setUTCHours(0, 0, 0, 0)
     return this.prisma.dailyMandate.findMany({
-      where: { user: { isActive: true, ...scope } },
+      where: { user: { isActive: true, ...scope }, date: { gte: since } },
       include: {
         user: { select: { id: true, username: true, fullName: true, role: true, businessUnit: { select: { name: true } } } },
         createdBy: { select: { id: true, username: true, fullName: true } },
       },
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      take: 100,
     })
   }
 
@@ -397,10 +424,10 @@ export class PresenceService {
     if (!mandate) throw new NotFoundException('Mandat introuvable')
 
     const canDelete =
-      requester.role === 'CTO_ADMIN' ||
+      requester.role === Role.CTO_ADMIN ||
       mandate.createdById === requester.id ||
-      (requester.role === 'RESPONSABLE_BU' && mandate.user.businessUnitId === requester.businessUnitId) ||
-      (requester.role === 'RESPONSABLE_POLE' && mandate.user.poleId === requester.poleId)
+      (requester.role === Role.RESPONSABLE_BU && mandate.user.businessUnitId === requester.businessUnitId) ||
+      (requester.role === Role.RESPONSABLE_POLE && mandate.user.poleId === requester.poleId)
 
     if (!canDelete) throw new ForbiddenException('Vous ne pouvez pas supprimer ce mandat')
 
@@ -444,11 +471,11 @@ export class PresenceService {
   }
 
   private buildUserScope(requester: Requester): Record<string, unknown> {
-    if (['CTO_ADMIN', 'PDG', 'DAF'].includes(requester.role)) return {}
-    if (requester.role === 'RESPONSABLE_BU' && requester.businessUnitId) {
+    if (([Role.CTO_ADMIN, Role.PDG, Role.DAF] as Role[]).includes(requester.role)) return {}
+    if (requester.role === Role.RESPONSABLE_BU && requester.businessUnitId) {
       return { businessUnitId: requester.businessUnitId }
     }
-    if (requester.role === 'RESPONSABLE_POLE' && requester.poleId) {
+    if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {
       return { poleId: requester.poleId }
     }
     return { id: requester.id }
@@ -458,11 +485,11 @@ export class PresenceService {
     requester: Requester,
     target: { businessUnitId?: string | null; poleId?: string | null },
   ): boolean {
-    if (requester.role === 'CTO_ADMIN') return true
-    if (requester.role === 'RESPONSABLE_BU' && requester.businessUnitId) {
+    if (requester.role === Role.CTO_ADMIN) return true
+    if (requester.role === Role.RESPONSABLE_BU && requester.businessUnitId) {
       return target.businessUnitId === requester.businessUnitId
     }
-    if (requester.role === 'RESPONSABLE_POLE' && requester.poleId) {
+    if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {
       return target.poleId === requester.poleId
     }
     return false

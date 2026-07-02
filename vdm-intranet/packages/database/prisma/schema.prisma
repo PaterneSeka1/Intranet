@@ -177,6 +177,7 @@ model Presence {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
+  @@index([date, status])
   @@map("presences")
 }
 
@@ -199,6 +200,7 @@ model ConnectionLog {
 
   user User @relation(fields: [userId], references: [id])
 
+  @@index([userId, date, type])
   @@map("connection_logs")
 }
 
@@ -287,5 +289,6 @@ model ActivityLog {
 
   user User @relation(fields: [userId], references: [id])
 
+  @@index([userId, occurredAt])
   @@map("activity_logs")
 }

@@ -17,24 +17,24 @@ export class PresenceScheduleService {
   ) {}
 
   async getScheduleSource(userId: string, date: Date): Promise<ScheduleSource> {
-    // 1. Mandat exceptionnel journalier
-    const mandate = await this.prisma.dailyMandate.findUnique({
-      where: { userId_date: { userId, date } },
-    })
-    if (mandate) {
-      return { time: mandate.expectedArrivalTime, source: 'mandate', isNightShift: false }
-    }
-
-    // 2. Groupe horaire de l'utilisateur
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
         scheduleGroupId: true,
         individualExpectedArrivalTime: true,
         scheduleGroup: { select: { expectedArrivalTime: true, isNightShift: true } },
+        mandates: {
+          where: { date },
+          select: { expectedArrivalTime: true },
+          take: 1,
+        },
       },
     })
     if (!user) return { time: null, source: 'none', isNightShift: false }
+
+    if (user.mandates.length > 0) {
+      return { time: user.mandates[0].expectedArrivalTime, source: 'mandate', isNightShift: false }
+    }
 
     if (user.scheduleGroup) {
       return {
@@ -44,7 +44,6 @@ export class PresenceScheduleService {
       }
     }
 
-    // 3. Heure individuelle
     if (user.individualExpectedArrivalTime) {
       return { time: user.individualExpectedArrivalTime, source: 'individual', isNightShift: false }
     }

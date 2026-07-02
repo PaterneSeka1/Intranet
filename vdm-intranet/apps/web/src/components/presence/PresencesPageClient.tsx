@@ -105,7 +105,7 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
       {/* Tableau présences */}
       <div className="mb-8">
         <h2 className="text-sm font-bold text-gray-700 mb-3">Tableau de présences</h2>
-        <PresenceTable rows={rows} canMandate={canMandate} currentUserId={currentUserId} />
+        <PresenceTable rows={rows} canMandate={canMandate} currentUserId={currentUserId} date={date} />
       </div>
 
       {/* Mandats */}

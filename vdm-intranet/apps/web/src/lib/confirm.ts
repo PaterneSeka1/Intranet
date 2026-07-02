@@ -15,6 +15,7 @@ const CLOSE_EVENT = '__vdm_confirm_close'
 
 export function confirm(options: ConfirmOptions): Promise<boolean> {
   return new Promise(resolve => {
+    _resolve?.(false)
     _resolve = resolve
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: options }))

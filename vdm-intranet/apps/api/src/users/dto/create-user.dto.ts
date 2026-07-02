@@ -7,8 +7,8 @@ export class CreateUserDto {
   @IsString() @IsNotEmpty()
   username!: string
 
-  @ApiProperty({ example: '1234' })
-  @IsString() @MinLength(4)
+  @ApiProperty({ example: 'MotDePasse8+' })
+  @IsString() @MinLength(8)
   password!: string
 
   @ApiPropertyOptional({ example: 'Jean' })

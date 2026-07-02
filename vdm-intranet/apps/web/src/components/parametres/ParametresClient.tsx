@@ -48,12 +48,12 @@ type GroupForm = {
 // ---------------------------------------------------------------------------
 
 const BG_GRADIENTS = [
-  { label: 'Aurore orange', value: 'linear-gradient(135deg, #F28C38 0%, #e07d29 100%)', preview: 'from-orange-400 to-orange-500' },
-  { label: 'Océan bleu', value: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', preview: 'from-blue-900 to-blue-600' },
-  { label: 'Forêt verte', value: 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)', preview: 'from-green-900 to-green-500' },
-  { label: 'Nuit violette', value: 'linear-gradient(135deg, #2d1b69 0%, #7c3aed 100%)', preview: 'from-purple-900 to-purple-600' },
-  { label: 'Gris ardoise', value: 'linear-gradient(135deg, #1f2937 0%, #4b5563 100%)', preview: 'from-gray-800 to-gray-600' },
-  { label: 'Coucher de soleil', value: 'linear-gradient(135deg, #7c3aed 0%, #F28C38 100%)', preview: 'from-purple-600 to-orange-400' },
+  { label: 'Aurore orange',    value: 'linear-gradient(135deg, #F28C38 0%, #e07d29 100%)' },
+  { label: 'Océan bleu',       value: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)' },
+  { label: 'Forêt verte',      value: 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)' },
+  { label: 'Nuit violette',    value: 'linear-gradient(135deg, #2d1b69 0%, #7c3aed 100%)' },
+  { label: 'Gris ardoise',     value: 'linear-gradient(135deg, #1f2937 0%, #4b5563 100%)' },
+  { label: 'Coucher de soleil', value: 'linear-gradient(135deg, #7c3aed 0%, #F28C38 100%)' },
 ]
 
 const LS_KEY_APP = 'vdm_app_bg'
@@ -687,7 +687,8 @@ function BgSection({
             key={bg.value}
             onClick={() => onApply(bg.value)}
             title={bg.label}
-            className={`relative h-16 rounded-xl transition-all ${`bg-gradient-to-br ${bg.preview}`} ${
+            style={{ background: bg.value }}
+            className={`relative h-16 rounded-xl transition-all ${
               current === bg.value ? 'ring-2 ring-[#F28C38] ring-offset-2 scale-95' : 'hover:scale-95'
             }`}
           >

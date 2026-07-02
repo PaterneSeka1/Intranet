@@ -123,26 +123,25 @@ export class PilotageService {
     const from = getDaysAgo(n - 1)
     const today = getToday()
 
-    const logs = await this.prisma.connectionLog.findMany({
+    const grouped = await this.prisma.connectionLog.groupBy({
+      by: ['date'],
       where: {
         date: { gte: from, lte: today },
         type: 'LOGIN',
         user: userWhere,
       },
-      select: { date: true },
+      _count: { id: true },
+      orderBy: { date: 'asc' },
     })
 
     const countByDay = new Map<string, number>()
-
     for (let i = n - 1; i >= 0; i--) {
-      const d = getDaysAgo(i)
-      const key = d.toISOString().split('T')[0]
+      const key = getDaysAgo(i).toISOString().split('T')[0]
       countByDay.set(key, 0)
     }
-
-    for (const log of logs) {
-      const key = new Date(log.date).toISOString().split('T')[0]
-      countByDay.set(key, (countByDay.get(key) ?? 0) + 1)
+    for (const row of grouped) {
+      const key = new Date(row.date).toISOString().split('T')[0]
+      countByDay.set(key, row._count.id)
     }
 
     return Array.from(countByDay.entries()).map(([date, connexions]) => ({ date, connexions }))

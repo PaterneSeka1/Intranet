@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
 import { presenceApi } from '@/lib/presence'
+import { toast } from '@/lib/toast'
 import { GeoLocationScreen } from '@/components/presence/GeoLocationScreen'
 import { LoginAnimation } from '@/components/auth/LoginAnimation'
 
@@ -33,7 +34,9 @@ export default function LoginPage() {
       if (requiresFirstLoginGeolocation) {
         setStep('geo')
       } else {
-        presenceApi.loginLog({ userAgent: navigator.userAgent }).catch(() => {})
+        presenceApi.loginLog({ userAgent: navigator.userAgent }).catch(() => {
+          toast.warning('Présence non enregistrée — veuillez réessayer.')
+        })
         setStep('animating')
       }
     } catch (err) {

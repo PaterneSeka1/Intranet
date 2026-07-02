@@ -14,11 +14,19 @@ export class ApiError extends Error {
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
-  })
+  const controller = new AbortController()
+  const tid = setTimeout(() => controller.abort(), 30_000)
+  let res: Response
+  try {
+    res = await fetch(`${BASE}/api${path}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      signal: controller.signal,
+      ...init,
+    })
+  } finally {
+    clearTimeout(tid)
+  }
   if (res.status === 401 || res.status === 403) {
     if (typeof window !== 'undefined') {
       window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`

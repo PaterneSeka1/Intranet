@@ -39,6 +39,7 @@ export class UsersService {
       where,
       select: SAFE_SELECT,
       orderBy: [{ role: 'asc' }, { lastName: 'asc' }],
+      take: 500,
     })
   }
 
@@ -57,7 +58,7 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto) {
-    const passwordHash = await bcrypt.hash(dto.password, 10)
+    const passwordHash = await bcrypt.hash(dto.password, 12)
     const fullName = [dto.firstName, dto.lastName].filter(Boolean).join(' ')
     const { password, ...rest } = dto
     return this.prisma.user.create({

@@ -6,7 +6,14 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seed Module 4 — VDM Intranet')
 
-  const pwd = await bcrypt.hash('1234', 10)
+  const seedPassword = process.env.SEED_PASSWORD
+  if (!seedPassword) {
+    throw new Error(
+      'SEED_PASSWORD manquant. Définissez-le dans votre .env avant de lancer le seed.\n' +
+      'Exemple : SEED_PASSWORD="MotDePasse-Fort-2024!"',
+    )
+  }
+  const pwd = await bcrypt.hash(seedPassword, 12)
 
   // ---- Business Units ----
   const buDefs = [

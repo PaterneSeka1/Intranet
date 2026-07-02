@@ -40,7 +40,6 @@ export function GeoLocationScreen({ onSuccess }: Props) {
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
             userAgent: navigator.userAgent,
-            mapsUrl: `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`,
           }
           await presenceApi.firstLogin(payload)
           onSuccess()
