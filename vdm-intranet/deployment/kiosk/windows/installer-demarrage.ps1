@@ -1,4 +1,4 @@
-# VDM Intranet — Installation complète du kiosque (Windows)
+# VDM Intranet — Installation complète (Windows)
 # Exécuter en Administrateur : clic droit → "Exécuter avec PowerShell"
 # Usage : .\installer-demarrage.ps1 -VdmUrl "http://192.168.1.10:3000"
 
@@ -7,7 +7,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
+$AppName    = "VDM Intranet"
 
 Write-Host "╔══════════════════════════════════════════╗"
 Write-Host "║   VDM Intranet — Installation kiosque   ║"
@@ -15,50 +16,76 @@ Write-Host "╚═════════════════════�
 Write-Host "  URL : $VdmUrl"
 Write-Host ""
 
-# ── 1. Mettre à jour l'URL dans le batch ──────────────────────────
-Write-Host "→ [1/4] Configuration de l'URL..."
-$BatchFile = Join-Path $ScriptDir "vdm-kiosk.bat"
-(Get-Content $BatchFile) -replace "set VDM_URL=.*", "set VDM_URL=$VdmUrl" |
-    Set-Content $BatchFile
-
-# ── 2. Politique Chrome (registre) ───────────────────────────────
-Write-Host "→ [2/4] Application de la politique Chrome..."
+# ── 1. Politique Chrome (installation silencieuse de la PWA) ─────
+Write-Host "→ [1/3] Application de la politique Chrome..."
 $RegFile = Join-Path $ScriptDir "chrome-policy.reg"
-# Injecter l'URL dans le fichier registre
 (Get-Content $RegFile) -replace "http://localhost:3000", $VdmUrl |
     Set-Content "$env:TEMP\chrome-policy-vdm.reg"
 reg import "$env:TEMP\chrome-policy-vdm.reg" 2>&1 | Out-Null
 Remove-Item "$env:TEMP\chrome-policy-vdm.reg" -Force
 
-# ── 3. Bloquer Ctrl+N au niveau de Windows ───────────────────────
-Write-Host "→ [3/4] Restriction des raccourcis clavier pour Chrome..."
-# Supprime la ligne "New Window" du menu Chrome via registre
-$regPath = "HKCU:\Software\Google\Chrome"
-if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
-# AutoHotKey serait nécessaire pour intercepter au clavier — on s'en remet à la politique Chrome
+# ── 2. Trouver Chrome ─────────────────────────────────────────────
+Write-Host "→ [2/3] Localisation de Chrome..."
+$ChromePaths = @(
+    "C:\Program Files\Google\Chrome\Application\chrome.exe",
+    "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+)
+$Chrome = $ChromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-# ── 4. Raccourci de démarrage automatique ────────────────────────
-Write-Host "→ [4/4] Configuration du démarrage automatique..."
+if (-not $Chrome) {
+    Write-Error "Google Chrome introuvable. Installez Chrome et relancez."
+    exit 1
+}
+
+# ── 3. Démarrage automatique ──────────────────────────────────────
+Write-Host "→ [3/3] Configuration du démarrage automatique..."
+
+# Script PowerShell qui ouvre la PWA installée (ou Chrome en mode app en secours)
+$LaunchScript = @"
+`$AppName = "$AppName"
+`$VdmUrl  = "$VdmUrl"
+`$Chrome  = "$Chrome"
+
+# Chercher la PWA installée dans le profil Chrome
+`$ProfileBase = "`$env:LOCALAPPDATA\Google\Chrome\User Data"
+`$PwaApp = Get-ChildItem "`$ProfileBase\Default\Web Applications\*" -Recurse `
+    -Filter "*.ico" -ErrorAction SilentlyContinue |
+    Where-Object { `$_.DirectoryName -match "VDM" } |
+    Select-Object -First 1
+
+`$AppId = if (`$PwaApp) { Split-Path (Split-Path `$PwaApp.FullName -Parent) -Leaf } else { `$null }
+
+Start-Sleep -Seconds 8
+
+if (`$AppId) {
+    Start-Process `$Chrome "--app-id=`$AppId"
+} else {
+    # PWA pas encore installée → Chrome avec mode app (la politique l'installera)
+    Start-Process `$Chrome "--app=`$VdmUrl --start-fullscreen --no-first-run"
+}
+"@
+
+$LaunchFile = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\vdm-launch.ps1"
+$LaunchScript | Set-Content $LaunchFile
+
+# Raccourci dans Démarrage qui exécute le script PowerShell
 $StartupFolder = [Environment]::GetFolderPath("Startup")
 $ShortcutPath  = Join-Path $StartupFolder "VDM Intranet.lnk"
-
 $WScript  = New-Object -ComObject WScript.Shell
 $Shortcut = $WScript.CreateShortcut($ShortcutPath)
-$Shortcut.TargetPath       = $BatchFile
+$Shortcut.TargetPath       = "powershell.exe"
+$Shortcut.Arguments        = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$LaunchFile`""
 $Shortcut.WorkingDirectory = $ScriptDir
-$Shortcut.WindowStyle      = 1
+$Shortcut.WindowStyle      = 7
 $Shortcut.Description      = "VDM Intranet — Portail Veilleur des Médias"
 $Shortcut.Save()
 
 Write-Host ""
 Write-Host "✓ Installation terminée."
 Write-Host ""
-Write-Host "  Restrictions appliquées :"
-Write-Host "  • Barre d'adresse      → cachée (kiosk)"
-Write-Host "  • Nouvel onglet Ctrl+T → bloqué (kiosk)"
-Write-Host "  • Outils développeur   → désactivés (politique)"
-Write-Host "  • Mode incognito       → désactivé (politique)"
-Write-Host "  • Téléchargements      → bloqués (politique)"
-Write-Host "  • Historique           → désactivé (politique)"
+Write-Host "  Ce qui va se passer :"
+Write-Host "  1. Au prochain démarrage de Chrome → la PWA s'installe seule"
+Write-Host "  2. À chaque démarrage de l'ordinateur → la PWA s'ouvre automatiquement"
+Write-Host "  3. Aucune interaction utilisateur requise"
 Write-Host ""
-Write-Host "  Redémarrez Chrome et l'ordinateur pour activer toutes les restrictions."
+Write-Host "  → Redémarrez l'ordinateur pour tester."

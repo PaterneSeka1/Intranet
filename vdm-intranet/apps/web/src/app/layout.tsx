@@ -3,6 +3,8 @@ import './globals.css'
 import { Toaster } from '@/components/ui/Toaster'
 import { ConfirmPortal } from '@/components/ui/ConfirmModal'
 import { PwaRegister } from '@/components/PwaRegister'
+import { PwaInstallGate } from '@/components/PwaInstallGate'
+import { PwaAutoStart } from '@/components/PwaAutoStart'
 
 export const metadata: Metadata = {
   title: 'VDM Intranet',
@@ -38,6 +40,8 @@ export default function RootLayout({
         <Toaster />
         <ConfirmPortal />
         <PwaRegister />
+        <PwaInstallGate />
+        <PwaAutoStart />
       </body>
     </html>
   )

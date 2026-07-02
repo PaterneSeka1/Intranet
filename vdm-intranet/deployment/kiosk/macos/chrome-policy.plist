@@ -4,39 +4,59 @@
 <plist version="1.0">
 <dict>
 
-  <!-- Nouvel onglet → intranet au lieu de google.com -->
+  <!-- ── INSTALLATION SILENCIEUSE DE LA PWA ─────────────────────────────
+       Chrome installe automatiquement l'app au premier lancement,
+       sans aucune interaction utilisateur.                               -->
+  <key>WebAppInstallForceList</key>
+  <array>
+    <dict>
+      <key>url</key>
+      <string>http://localhost:3000</string>
+      <key>default_launch_container</key>
+      <string>window</string>
+      <key>create_desktop_shortcut</key>
+      <true/>
+      <key>fallback_app_name</key>
+      <string>VDM Intranet</string>
+    </dict>
+  </array>
+
+  <!-- Ouvre toujours la PWA dans sa propre fenêtre (sans barre navigateur) -->
+  <key>WebAppSettings</key>
+  <array>
+    <dict>
+      <key>manifest_id</key>
+      <string>http://localhost:3000/</string>
+      <key>display_mode</key>
+      <string>standalone</string>
+    </dict>
+  </array>
+
+  <!-- ── RESTRICTIONS ──────────────────────────────────────────────── -->
   <key>NewTabPageLocation</key>
   <string>http://localhost:3000</string>
 
-  <!-- Outils développeur désactivés -->
   <key>DeveloperToolsAvailability</key>
   <integer>2</integer>
 
-  <!-- Mode incognito désactivé (empêche de contourner la session) -->
   <key>IncognitoModeAvailability</key>
   <integer>1</integer>
 
-  <!-- Impression désactivée -->
   <key>PrintingEnabled</key>
   <false/>
 
-  <!-- Téléchargements interdits -->
   <key>DownloadRestrictions</key>
   <integer>3</integer>
 
-  <!-- Barre de signets masquée -->
   <key>BookmarkBarEnabled</key>
   <false/>
 
-  <!-- Gestionnaire de mots de passe désactivé -->
   <key>PasswordManagerEnabled</key>
   <false/>
 
-  <!-- Empêcher la modification des paramètres Chrome -->
   <key>BrowserSettingsPageEnabled</key>
   <false/>
 
-  <!-- Historique désactivé -->
   <key>SavingBrowserHistoryDisabled</key>
   <true/>
 
