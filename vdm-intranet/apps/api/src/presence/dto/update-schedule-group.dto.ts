@@ -1,12 +1,14 @@
-import { IsString, IsOptional, IsBoolean, Matches } from 'class-validator'
+import { IsString, IsOptional, IsBoolean, Matches, MaxLength } from 'class-validator'
 
 export class UpdateScheduleGroupDto {
   @IsString()
   @IsOptional()
+  @MaxLength(100)
   name?: string
 
   @IsString()
   @IsOptional()
+  @MaxLength(300)
   description?: string
 
   @IsString()

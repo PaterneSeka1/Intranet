@@ -28,7 +28,17 @@ export async function downloadCsvBlob(key: string, from?: string, to?: string): 
   if (from) params.set('from', from)
   if (to) params.set('to', to)
   const qs = params.toString()
-  const res = await fetch(`${API_BASE}/api/reports/${key}${qs ? `?${qs}` : ''}`, { credentials: 'include' })
+  const controller = new AbortController()
+  const tid = setTimeout(() => controller.abort(), 60_000)
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/api/reports/${key}${qs ? `?${qs}` : ''}`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(tid)
+  }
   if (!res.ok) {
     let msg = 'Erreur lors de la génération du rapport.'
     try { const body = await res.json(); msg = body.message ?? msg } catch { /* ignore */ }

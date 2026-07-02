@@ -51,19 +51,14 @@ export class PresenceScheduleService {
     return { time: null, source: 'none', isNightShift: false }
   }
 
-  async getExpectedArrivalTime(userId: string, date: Date): Promise<string | null> {
-    const { time } = await this.getScheduleSource(userId, date)
-    return time
-  }
-
-  async getDailyMandate(userId: string, date: Date) {
+  private async getDailyMandate(userId: string, date: Date) {
     return this.prisma.dailyMandate.findUnique({
       where: { userId_date: { userId, date } },
       include: { createdBy: { select: { id: true, username: true, fullName: true } } },
     })
   }
 
-  calculateDelayMinutes(expectedTime: string, actualDateTime: Date, isNightShift = false): number {
+  private calculateDelayMinutes(expectedTime: string, actualDateTime: Date, isNightShift = false): number {
     const [expHour, expMin] = expectedTime.split(':').map(Number)
     const actualHour = actualDateTime.getUTCHours()
     const actualMin = actualDateTime.getUTCMinutes()

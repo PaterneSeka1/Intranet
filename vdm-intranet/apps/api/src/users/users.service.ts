@@ -71,7 +71,7 @@ export class UsersService {
     const data: Record<string, unknown> = { ...dto }
 
     if (dto.password) {
-      data.passwordHash = await bcrypt.hash(dto.password, 10)
+      data.passwordHash = await bcrypt.hash(dto.password, 12)
       delete data.password
     }
 
@@ -86,8 +86,13 @@ export class UsersService {
       ].filter(Boolean).join(' ')
     }
 
-    const updated = await this.prisma.user.update({ where: { id }, data, select: SAFE_SELECT })
-    return updated
+    try {
+      const updated = await this.prisma.user.update({ where: { id }, data, select: SAFE_SELECT })
+      return updated
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Utilisateur introuvable.')
+      throw err
+    }
   }
 
   async updateMe(id: string, dto: UpdateUserDto) {
@@ -101,11 +106,12 @@ export class UsersService {
         throw new BadRequestException('Le mot de passe actuel est requis pour effectuer ce changement.')
       }
       const current = await this.prisma.user.findUnique({ where: { id }, select: { passwordHash: true } })
-      const valid = current && await bcrypt.compare(dto.currentPassword, current.passwordHash)
+      if (!current) throw new NotFoundException('Utilisateur introuvable.')
+      const valid = await bcrypt.compare(dto.currentPassword, current.passwordHash)
       if (!valid) {
         throw new BadRequestException('Mot de passe actuel incorrect.')
       }
-      data.passwordHash = await bcrypt.hash(data.password as string, 10)
+      data.passwordHash = await bcrypt.hash(data.password as string, 12)
       delete data.password
     }
     if (data.firstName !== undefined || data.lastName !== undefined) {
@@ -132,7 +138,12 @@ export class UsersService {
   }
 
   async setActive(id: string, isActive: boolean) {
-    return this.prisma.user.update({ where: { id }, data: { isActive }, select: SAFE_SELECT })
+    try {
+      return await this.prisma.user.update({ where: { id }, data: { isActive }, select: SAFE_SELECT })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Utilisateur introuvable.')
+      throw err
+    }
   }
 
   private scopeWhere(requester: Requester) {

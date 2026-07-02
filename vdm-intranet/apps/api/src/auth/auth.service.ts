@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
 import * as bcrypt from 'bcrypt'
@@ -60,7 +60,9 @@ export class AuthService {
   }
 
   async getMe(userId: string) {
-    return this.prisma.user.findUnique({ where: { id: userId }, select: USER_SELECT })
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: USER_SELECT })
+    if (!user) throw new NotFoundException('Utilisateur introuvable.')
+    return user
   }
 
   cookieName() {

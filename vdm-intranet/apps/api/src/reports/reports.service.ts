@@ -225,6 +225,7 @@ export class ReportsService {
           lastLoginAt: true,
         },
         orderBy: [{ role: 'asc' }, { lastName: 'asc' }],
+        take: 5000,
       }),
       this.prisma.presence.findMany({
         where: { date: today, user: userWhere },

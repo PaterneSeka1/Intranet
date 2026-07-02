@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Min, Max } from 'class-validator'
+import { IsNumber, IsOptional, IsString, IsUrl, MaxLength, Min, Max } from 'class-validator'
 
 export class LoginLogDto {
   @IsNumber()
@@ -15,17 +15,22 @@ export class LoginLogDto {
 
   @IsNumber()
   @IsOptional()
+  @Min(0)
+  @Max(50000)
   accuracy?: number
 
   @IsString()
+  @MaxLength(500)
   @IsOptional()
   address?: string
 
-  @IsString()
+  @IsUrl({ protocols: ['https'], require_tld: false })
+  @MaxLength(500)
   @IsOptional()
   mapsUrl?: string
 
   @IsString()
+  @MaxLength(300)
   @IsOptional()
   userAgent?: string
 }

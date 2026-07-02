@@ -14,8 +14,8 @@ export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Get()
-  findAll(@Query('active') active?: string) {
-    return this.announcementsService.findAll(active === 'true')
+  findAll(@Query('active') active?: string, @CurrentUser() user?: JwtUser) {
+    return this.announcementsService.findAll(user, active === 'true')
   }
 
   @Post()

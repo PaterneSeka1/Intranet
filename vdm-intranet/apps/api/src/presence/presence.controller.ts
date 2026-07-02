@@ -121,7 +121,8 @@ export class PresenceController {
     @CurrentUser() user: AuthUser,
     @Query('limit') limit?: string,
   ) {
-    return this.presenceService.getMyConnections(user.id, limit ? parseInt(limit, 10) : 50)
+    const safeLimit = limit ? Math.min(200, Math.max(1, parseInt(limit, 10) || 50)) : 50
+    return this.presenceService.getMyConnections(user.id, safeLimit)
   }
 
   // ----------------------------------------------------------------

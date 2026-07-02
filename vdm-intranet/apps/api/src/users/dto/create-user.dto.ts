@@ -1,22 +1,22 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Role } from '@prisma/client'
 
 export class CreateUserDto {
   @ApiProperty({ example: 'JEAN_DUPONT' })
-  @IsString() @IsNotEmpty()
+  @IsString() @IsNotEmpty() @MaxLength(50)
   username!: string
 
   @ApiProperty({ example: 'MotDePasse8+' })
-  @IsString() @MinLength(8)
+  @IsString() @MinLength(8) @MaxLength(200)
   password!: string
 
   @ApiPropertyOptional({ example: 'Jean' })
-  @IsString() @IsOptional()
+  @IsString() @IsOptional() @MaxLength(100)
   firstName?: string
 
   @ApiPropertyOptional({ example: 'DUPONT' })
-  @IsString() @IsOptional()
+  @IsString() @IsOptional() @MaxLength(100)
   lastName?: string
 
   @ApiPropertyOptional({ example: 'jean@vdm.ci' })
@@ -43,7 +43,7 @@ export class CreateUserDto {
   @IsString() @IsOptional()
   scheduleGroupId?: string
 
-  @ApiPropertyOptional()
-  @IsString() @IsOptional()
+  @ApiPropertyOptional({ example: '08:00' })
+  @IsString() @IsOptional() @Matches(/^\d{2}:\d{2}$/, { message: 'Format HH:mm requis' })
   individualExpectedArrivalTime?: string
 }

@@ -99,6 +99,12 @@ async function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
   } finally {
     clearTimeout(tid)
   }
+  if (res.status === 401 || res.status === 403) {
+    if (typeof window !== 'undefined') {
+      window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`
+    }
+    throw new Error('Session expirée.')
+  }
   if (!res.ok) {
     let msg = 'Erreur serveur'
     try {

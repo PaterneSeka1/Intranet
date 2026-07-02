@@ -1,6 +1,6 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common'
+import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
-import { Role } from '@prisma/client'
+import { LogAction, Role } from '@prisma/client'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { PilotageService } from './pilotage.service'
@@ -51,6 +51,9 @@ export class PilotageController {
     @Query('search') search?: string,
     @Query('action') action?: string,
   ) {
+    if (action && !Object.values(LogAction).includes(action as LogAction)) {
+      throw new BadRequestException('Valeur d\'action invalide.')
+    }
     return this.pilotageService.getActivityLog(
       user,
       Math.max(1, parseInt(page, 10) || 1),

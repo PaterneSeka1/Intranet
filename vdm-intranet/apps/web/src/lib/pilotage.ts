@@ -51,7 +51,20 @@ export type ActivityLogPage = {
 }
 
 async function req<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, { credentials: 'include' })
+  const controller = new AbortController()
+  const tid = setTimeout(() => controller.abort(), 30_000)
+  let res: Response
+  try {
+    res = await fetch(`${BASE}/api${path}`, { credentials: 'include', signal: controller.signal })
+  } finally {
+    clearTimeout(tid)
+  }
+  if (res.status === 401 || res.status === 403) {
+    if (typeof window !== 'undefined') {
+      window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`
+    }
+    throw new Error('Session expirée.')
+  }
   if (!res.ok) throw new Error(`Erreur ${res.status}`)
   return res.json() as Promise<T>
 }
@@ -71,16 +84,3 @@ export const pilotageApi = {
   },
 }
 
-export async function downloadReport(path: string, filename: string) {
-  const res = await fetch(`${BASE}/api/reports/${path}`, { credentials: 'include' })
-  if (!res.ok) throw new Error(`Erreur ${res.status}`)
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}

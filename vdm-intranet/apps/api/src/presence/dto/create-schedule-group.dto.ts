@@ -1,16 +1,19 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, Matches } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, Matches, MaxLength } from 'class-validator'
 
 export class CreateScheduleGroupDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name!: string
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(20)
   code!: string
 
   @IsString()
   @IsOptional()
+  @MaxLength(300)
   description?: string
 
   @IsString()

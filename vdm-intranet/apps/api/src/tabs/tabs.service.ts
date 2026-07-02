@@ -58,11 +58,16 @@ export class TabsService {
   async updateBusinessUnit(id: string, data: { name?: string; code?: string; description?: string; isActive?: boolean }) {
     const bu = await this.prisma.businessUnit.findUnique({ where: { id } })
     if (!bu) throw new NotFoundException('Business Unit introuvable.')
-    return this.prisma.businessUnit.update({
-      where: { id },
-      data: { ...data, code: data.code ? data.code.toUpperCase() : undefined },
-      select: { id: true, name: true, code: true, description: true, isActive: true, _count: { select: { users: true, poles: true } } },
-    })
+    try {
+      return await this.prisma.businessUnit.update({
+        where: { id },
+        data: { ...data, code: data.code ? data.code.toUpperCase() : undefined },
+        select: { id: true, name: true, code: true, description: true, isActive: true, _count: { select: { users: true, poles: true } } },
+      })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Business Unit introuvable.')
+      throw err
+    }
   }
 
   async deleteBusinessUnit(id: string) {
@@ -73,7 +78,12 @@ export class TabsService {
     if (!bu) throw new NotFoundException('Business Unit introuvable.')
     if (bu._count.users > 0) throw new BadRequestException(`Impossible de supprimer : ${bu._count.users} utilisateur(s) assigné(s) à cette BU.`)
     if (bu._count.poles > 0) throw new BadRequestException(`Impossible de supprimer : ${bu._count.poles} pôle(s) rattaché(s) à cette BU. Supprimez-les d'abord.`)
-    await this.prisma.businessUnit.delete({ where: { id } })
+    try {
+      await this.prisma.businessUnit.delete({ where: { id } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Business Unit introuvable.')
+      throw err
+    }
     return { deleted: true }
   }
 
@@ -96,18 +106,28 @@ export class TabsService {
   async updatePole(id: string, data: { name?: string; code?: string; businessUnitId?: string; isActive?: boolean }) {
     const pole = await this.prisma.pole.findUnique({ where: { id } })
     if (!pole) throw new NotFoundException('Pôle introuvable.')
-    return this.prisma.pole.update({
-      where: { id },
-      data: { ...data, code: data.code ? data.code.toUpperCase() : undefined },
-      select: { id: true, name: true, code: true, businessUnitId: true, isActive: true, businessUnit: { select: { id: true, name: true, code: true } }, _count: { select: { users: true } } },
-    })
+    try {
+      return await this.prisma.pole.update({
+        where: { id },
+        data: { ...data, code: data.code ? data.code.toUpperCase() : undefined },
+        select: { id: true, name: true, code: true, businessUnitId: true, isActive: true, businessUnit: { select: { id: true, name: true, code: true } }, _count: { select: { users: true } } },
+      })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Pôle introuvable.')
+      throw err
+    }
   }
 
   async deletePole(id: string) {
     const pole = await this.prisma.pole.findUnique({ where: { id }, select: { id: true, _count: { select: { users: true } } } })
     if (!pole) throw new NotFoundException('Pôle introuvable.')
     if (pole._count.users > 0) throw new BadRequestException('Impossible de supprimer un pôle ayant des utilisateurs.')
-    await this.prisma.pole.delete({ where: { id } })
+    try {
+      await this.prisma.pole.delete({ where: { id } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Pôle introuvable.')
+      throw err
+    }
     return { deleted: true }
   }
 
@@ -129,6 +149,7 @@ export class TabsService {
       where,
       select: TAB_SELECT,
       orderBy: [{ businessUnit: { name: 'asc' } }, { name: 'asc' }],
+      take: 200,
     })
   }
 
@@ -179,22 +200,30 @@ export class TabsService {
         ? LogAction.TAB_DISABLED
         : LogAction.TAB_UPDATED
 
-    const updated = await this.prisma.portalTab.update({
-      where: { id },
-      data: dto,
-      select: TAB_SELECT,
-    })
-
-    await this.log(requester.id, action, id, dto as object)
-
-    return updated
+    try {
+      const updated = await this.prisma.portalTab.update({
+        where: { id },
+        data: dto,
+        select: TAB_SELECT,
+      })
+      await this.log(requester.id, action, id, dto as object)
+      return updated
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Onglet introuvable.')
+      throw err
+    }
   }
 
   async remove(requester: Requester, id: string) {
     const tab = await this.findTabOrFail(id)
     this.assertCanManage(requester, tab.businessUnitId)
 
-    await this.prisma.portalTab.delete({ where: { id } })
+    try {
+      await this.prisma.portalTab.delete({ where: { id } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Onglet introuvable.')
+      throw err
+    }
     await this.log(requester.id, LogAction.TAB_DELETED, id, { name: tab.name })
 
     return { deleted: true }

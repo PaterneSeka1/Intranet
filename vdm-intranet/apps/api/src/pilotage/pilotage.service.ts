@@ -154,24 +154,19 @@ export class PilotageService {
     const userWhere = this.buildUserWhere(requester)
     const from = getDaysAgo(n - 1)
 
-    const logs = await this.prisma.activityLog.findMany({
+    const grouped = await this.prisma.activityLog.groupBy({
+      by: ['action'],
       where: {
         occurredAt: { gte: from },
         user: userWhere,
         action: { notIn: [LogAction.LOGIN, LogAction.LOGOUT] },
       },
-      select: { action: true },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 8,
     })
 
-    const countByAction = new Map<string, number>()
-    for (const log of logs) {
-      countByAction.set(log.action, (countByAction.get(log.action) ?? 0) + 1)
-    }
-
-    return Array.from(countByAction.entries())
-      .map(([action, count]) => ({ action, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8)
+    return grouped.map(row => ({ action: row.action, count: row._count.id }))
   }
 
   async getActivityLog(

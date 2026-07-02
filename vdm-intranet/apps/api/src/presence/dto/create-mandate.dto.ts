@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, Matches } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, Matches, MaxLength } from 'class-validator'
 
 export class CreateMandateDto {
   @IsString()
@@ -14,6 +14,7 @@ export class CreateMandateDto {
   expectedArrivalTime!: string
 
   @IsString()
+  @MaxLength(500)
   @IsOptional()
   reason?: string
 }

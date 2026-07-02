@@ -27,9 +27,10 @@ const ANNOUNCEMENT_SELECT = {
 export class AnnouncementsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(activeOnly = false) {
+  findAll(requester: Requester | undefined, activeOnly = false) {
+    const canSeeAll = requester && MANAGE_ROLES.includes(requester.role)
     const now = new Date()
-    const where = activeOnly
+    const where = activeOnly || !canSeeAll
       ? {
           isActive: true,
           publishedAt: { lte: now },
@@ -41,6 +42,7 @@ export class AnnouncementsService {
       where,
       select: ANNOUNCEMENT_SELECT,
       orderBy: [{ isPinned: 'desc' }, { publishedAt: 'desc' }],
+      take: 100,
     })
   }
 
@@ -84,14 +86,18 @@ export class AnnouncementsService {
     if (dto.publishedAt !== undefined) data.publishedAt = new Date(dto.publishedAt)
     if ('expiresAt' in dto) data.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null
 
-    const updated = await this.prisma.announcement.update({
-      where: { id },
-      data,
-      select: ANNOUNCEMENT_SELECT,
-    })
-
-    await this.log(requester.id, LogAction.ANNOUNCEMENT_UPDATED, id, dto as object)
-    return updated
+    try {
+      const updated = await this.prisma.announcement.update({
+        where: { id },
+        data,
+        select: ANNOUNCEMENT_SELECT,
+      })
+      await this.log(requester.id, LogAction.ANNOUNCEMENT_UPDATED, id, dto as object)
+      return updated
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Annonce introuvable.')
+      throw err
+    }
   }
 
   async remove(id: string, requester: Requester) {
@@ -102,7 +108,12 @@ export class AnnouncementsService {
     const existing = await this.prisma.announcement.findUnique({ where: { id } })
     if (!existing) throw new NotFoundException('Annonce introuvable.')
 
-    await this.prisma.announcement.delete({ where: { id } })
+    try {
+      await this.prisma.announcement.delete({ where: { id } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Annonce introuvable.')
+      throw err
+    }
     await this.log(requester.id, LogAction.ANNOUNCEMENT_DELETED, id, { title: existing.title })
     return { deleted: true }
   }

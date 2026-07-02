@@ -309,13 +309,16 @@ export class PresenceService {
     const group = await this.prisma.scheduleGroup.findUnique({ where: { id } })
     if (!group) throw new NotFoundException('Groupe horaire introuvable')
 
-    const updated = await this.prisma.scheduleGroup.update({ where: { id }, data: dto })
-
-    await this.prisma.activityLog.create({
-      data: { userId: updatedById, action: 'UPDATE', entity: 'ScheduleGroup', entityId: id, details: dto as object },
-    })
-
-    return updated
+    try {
+      const updated = await this.prisma.scheduleGroup.update({ where: { id }, data: dto })
+      await this.prisma.activityLog.create({
+        data: { userId: updatedById, action: 'UPDATE', entity: 'ScheduleGroup', entityId: id, details: dto as object },
+      })
+      return updated
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Groupe horaire introuvable')
+      throw err
+    }
   }
 
   async deleteScheduleGroup(id: string, deletedById: string) {
@@ -328,7 +331,12 @@ export class PresenceService {
       throw new BadRequestException(`Impossible de supprimer : ${group._count.users} utilisateur(s) assigné(s).`)
     }
 
-    await this.prisma.scheduleGroup.delete({ where: { id } })
+    try {
+      await this.prisma.scheduleGroup.delete({ where: { id } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Groupe horaire introuvable')
+      throw err
+    }
     await this.prisma.activityLog.create({
       data: { userId: deletedById, action: 'DELETE', entity: 'ScheduleGroup', entityId: id, details: { name: group.name } as object },
     })
@@ -431,7 +439,12 @@ export class PresenceService {
 
     if (!canDelete) throw new ForbiddenException('Vous ne pouvez pas supprimer ce mandat')
 
-    await this.prisma.dailyMandate.delete({ where: { id } })
+    try {
+      await this.prisma.dailyMandate.delete({ where: { id } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Mandat introuvable')
+      throw err
+    }
     await this.prisma.activityLog.create({
       data: { userId: requester.id, action: 'DELETE', entity: 'DailyMandate', entityId: id, details: {} },
     })
@@ -495,7 +508,7 @@ export class PresenceService {
     return false
   }
 
-  async hasPresenceToday(userId: string): Promise<boolean> {
+  private async hasPresenceToday(userId: string): Promise<boolean> {
     const today = getToday()
     const p = await this.prisma.presence.findUnique({
       where: { userId_date: { userId, date: today } },
