@@ -239,8 +239,9 @@ export function PresenceTable({ rows, canMandate, currentUserId }: Props) {
         >
           <form onSubmit={submitMandate} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Date</label>
+              <label htmlFor="mandate-date" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Date</label>
               <input
+                id="mandate-date"
                 type="date"
                 value={mandateForm.date}
                 onChange={e => setMandateForm({ ...mandateForm, date: e.target.value })}
@@ -249,10 +250,11 @@ export function PresenceTable({ rows, canMandate, currentUserId }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+              <label htmlFor="mandate-time" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                 Nouvelle heure attendue
               </label>
               <input
+                id="mandate-time"
                 type="time"
                 value={mandateForm.expectedArrivalTime}
                 onChange={e => setMandateForm({ ...mandateForm, expectedArrivalTime: e.target.value })}
@@ -261,10 +263,11 @@ export function PresenceTable({ rows, canMandate, currentUserId }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+              <label htmlFor="mandate-reason" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                 Motif <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
               </label>
               <input
+                id="mandate-reason"
                 type="text"
                 value={mandateForm.reason}
                 onChange={e => setMandateForm({ ...mandateForm, reason: e.target.value })}

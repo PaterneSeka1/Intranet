@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from '@/lib/toast'
 import { ROLE_LABELS, type User } from '@/types/user'
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import { API_BASE as API } from '@/lib/api-base'
 
 async function patchMe(data: Record<string, string>): Promise<User> {
   const res = await fetch(`${API}/api/users/me`, {
@@ -38,6 +38,7 @@ export function MonProfilClient({ user }: Props) {
   const [infoSaving, setInfoSaving] = useState(false)
 
   // Password form
+  const [currentPwd, setCurrentPwd] = useState('')
   const [newPwd, setNewPwd] = useState('')
   const [confirmPwd, setConfirmPwd] = useState('')
   const [pwdSaving, setPwdSaving] = useState(false)
@@ -61,8 +62,12 @@ export function MonProfilClient({ user }: Props) {
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (newPwd.length < 4) {
-      toast.error('Le mot de passe doit contenir au moins 4 caractères.')
+    if (!currentPwd) {
+      toast.error('Veuillez saisir votre mot de passe actuel.')
+      return
+    }
+    if (newPwd.length < 8) {
+      toast.error('Le nouveau mot de passe doit contenir au moins 8 caractères.')
       return
     }
     if (newPwd !== confirmPwd) {
@@ -71,7 +76,8 @@ export function MonProfilClient({ user }: Props) {
     }
     setPwdSaving(true)
     try {
-      await patchMe({ password: newPwd })
+      await patchMe({ currentPassword: currentPwd, password: newPwd })
+      setCurrentPwd('')
       setNewPwd('')
       setConfirmPwd('')
       toast.success('Mot de passe modifié avec succès.')
@@ -134,8 +140,9 @@ export function MonProfilClient({ user }: Props) {
           <form onSubmit={handleInfoSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Prénom</label>
+                <label htmlFor="profil-firstname" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Prénom</label>
                 <input
+                  id="profil-firstname"
                   type="text"
                   value={firstName}
                   onChange={e => setFirstName(e.target.value)}
@@ -144,8 +151,9 @@ export function MonProfilClient({ user }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nom</label>
+                <label htmlFor="profil-lastname" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nom</label>
                 <input
+                  id="profil-lastname"
                   type="text"
                   value={lastName}
                   onChange={e => setLastName(e.target.value)}
@@ -155,8 +163,9 @@ export function MonProfilClient({ user }: Props) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Adresse e-mail</label>
+              <label htmlFor="profil-email" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Adresse e-mail</label>
               <input
+                id="profil-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -181,29 +190,44 @@ export function MonProfilClient({ user }: Props) {
       {activeTab === 'password' && (
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h2 className="text-sm font-bold text-gray-900 mb-1">Changer mon mot de passe</h2>
-          <p className="text-xs text-gray-400 mb-4">Minimum 4 caractères. Votre session restera active après le changement.</p>
+          <p className="text-xs text-gray-400 mb-4">Minimum 8 caractères. Votre session restera active après le changement.</p>
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nouveau mot de passe</label>
+              <label htmlFor="current-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Mot de passe actuel</label>
               <input
+                id="current-pwd"
+                type="password"
+                value={currentPwd}
+                onChange={e => setCurrentPwd(e.target.value)}
+                required
+                autoComplete="current-password"
+                className={INPUT}
+                placeholder="••••••••"
+              />
+            </div>
+            <div>
+              <label htmlFor="new-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nouveau mot de passe</label>
+              <input
+                id="new-pwd"
                 type="password"
                 value={newPwd}
                 onChange={e => setNewPwd(e.target.value)}
                 required
-                minLength={4}
+                minLength={8}
                 autoComplete="new-password"
                 className={INPUT}
                 placeholder="••••••••"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Confirmer le mot de passe</label>
+              <label htmlFor="confirm-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Confirmer le mot de passe</label>
               <input
+                id="confirm-pwd"
                 type="password"
                 value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
                 required
-                minLength={4}
+                minLength={8}
                 autoComplete="new-password"
                 className={INPUT}
                 placeholder="••••••••"

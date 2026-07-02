@@ -18,17 +18,19 @@ async function bootstrap() {
     credentials: true,
   })
 
-  const swagger = new DocumentBuilder()
-    .setTitle('VDM Intranet API')
-    .setDescription('API du portail intranet — Veilleur des Médias')
-    .setVersion('1.0')
-    .addCookieAuth('access_token')
-    .build()
-  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger))
+  if (process.env.NODE_ENV !== 'production') {
+    const swagger = new DocumentBuilder()
+      .setTitle('VDM Intranet API')
+      .setDescription('API du portail intranet — Veilleur des Médias')
+      .setVersion('1.0')
+      .addCookieAuth('access_token')
+      .build()
+    SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger))
+    console.log(`[Swagger] http://localhost:${process.env.API_PORT ?? 3001}/api/docs`)
+  }
 
   const port = process.env.API_PORT ?? 3001
   await app.listen(port)
   console.log(`[API] http://localhost:${port}/api`)
-  console.log(`[Swagger] http://localhost:${port}/api/docs`)
 }
 bootstrap()

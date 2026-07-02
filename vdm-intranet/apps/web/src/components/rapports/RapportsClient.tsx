@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { toast } from '@/lib/toast'
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import { downloadCsvBlob, triggerDownload, getMonthStart, getToday, type DateRange } from '@/lib/csv-export'
 
 type ReportKey = 'presence' | 'activity' | 'connections' | 'general'
 
@@ -51,43 +51,6 @@ const REPORTS: ReportConfig[] = [
   },
 ]
 
-async function downloadCsv(key: ReportKey, from?: string, to?: string): Promise<Blob> {
-  const params = new URLSearchParams()
-  if (from) params.set('from', from)
-  if (to) params.set('to', to)
-  const qs = params.toString()
-  const url = `${API}/api/reports/${key}${qs ? `?${qs}` : ''}`
-  const res = await fetch(url, { credentials: 'include' })
-  if (!res.ok) {
-    let msg = 'Erreur lors de la génération du rapport.'
-    try { const body = await res.json(); msg = body.message ?? msg } catch {}
-    throw new Error(msg)
-  }
-  return res.blob()
-}
-
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
-
-function getMonthStart(): string {
-  const d = new Date()
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
-}
-
-function getToday(): string {
-  const d = new Date()
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
-}
-
-type DateRange = { from: string; to: string }
 
 export function RapportsClient() {
   const [loading, setLoading] = useState<ReportKey | null>(null)
@@ -110,7 +73,7 @@ export function RapportsClient() {
     }
     setLoading(report.key)
     try {
-      const blob = await downloadCsv(
+      const blob = await downloadCsvBlob(
         report.key,
         report.hasDateRange && from ? from : undefined,
         report.hasDateRange && to ? to : undefined,
@@ -141,10 +104,11 @@ export function RapportsClient() {
           {report.hasDateRange && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                <label htmlFor={`${report.key}-from`} className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
                   Du
                 </label>
                 <input
+                  id={`${report.key}-from`}
                   type="date"
                   value={ranges[report.key].from}
                   max={ranges[report.key].to || getToday()}
@@ -153,10 +117,11 @@ export function RapportsClient() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                <label htmlFor={`${report.key}-to`} className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
                   Au
                 </label>
                 <input
+                  id={`${report.key}-to`}
                   type="date"
                   value={ranges[report.key].to}
                   min={ranges[report.key].from || undefined}

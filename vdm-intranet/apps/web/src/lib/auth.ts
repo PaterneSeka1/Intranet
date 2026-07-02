@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers'
 import type { User } from '@/types/user'
+import { API_BASE as API } from './api-base'
 
 const COOKIE = process.env.COOKIE_NAME ?? 'vdm_token'
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 export async function getCurrentUser(): Promise<User | null> {
   const store = await cookies()

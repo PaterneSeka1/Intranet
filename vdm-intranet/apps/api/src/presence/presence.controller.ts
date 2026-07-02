@@ -17,13 +17,14 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { PresenceService } from './presence.service'
 import { FirstLoginDto } from './dto/first-login.dto'
 import { LoginLogDto } from './dto/login-log.dto'
+import { Role } from '@prisma/client'
 import { CreateMandateDto } from './dto/create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
 
 type AuthUser = {
   id: string
-  role: string
+  role: Role
   businessUnitId?: string | null
   poleId?: string | null
 }
@@ -88,7 +89,7 @@ export class PresenceController {
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateScheduleGroupDto,
   ) {
-    if (user.role !== 'CTO_ADMIN') throw new ForbiddenException()
+    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.presenceService.createScheduleGroup(dto, user.id)
   }
 
@@ -98,7 +99,7 @@ export class PresenceController {
     @Param('id') id: string,
     @Body() dto: UpdateScheduleGroupDto,
   ) {
-    if (user.role !== 'CTO_ADMIN') throw new ForbiddenException()
+    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.presenceService.updateScheduleGroup(id, dto, user.id)
   }
 
@@ -107,7 +108,7 @@ export class PresenceController {
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
   ) {
-    if (user.role !== 'CTO_ADMIN') throw new ForbiddenException()
+    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.presenceService.deleteScheduleGroup(id, user.id)
   }
 
@@ -137,7 +138,7 @@ export class PresenceController {
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateMandateDto,
   ) {
-    const CAN_MANDATE = ['CTO_ADMIN', 'RESPONSABLE_BU', 'RESPONSABLE_POLE']
+    const CAN_MANDATE = [Role.CTO_ADMIN, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE]
     if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.createMandate(dto, user)
   }
@@ -147,7 +148,7 @@ export class PresenceController {
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
   ) {
-    const CAN_MANDATE = ['CTO_ADMIN', 'RESPONSABLE_BU', 'RESPONSABLE_POLE']
+    const CAN_MANDATE = [Role.CTO_ADMIN, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE]
     if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.deleteMandate(id, user)
   }
@@ -155,6 +156,10 @@ export class PresenceController {
   // ----------------------------------------------------------------
 
   private getIp(req: Request): string {
-    return (req.headers['x-forwarded-for'] as string) ?? req.ip ?? ''
+    const forwarded = req.headers['x-forwarded-for']
+    if (forwarded) {
+      return (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0]).trim()
+    }
+    return req.ip ?? ''
   }
 }

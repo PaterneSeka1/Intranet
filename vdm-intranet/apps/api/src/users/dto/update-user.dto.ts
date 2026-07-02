@@ -12,5 +12,6 @@ export class UpdateUserDto {
   @ApiPropertyOptional() @IsString() @IsOptional() managerId?: string
   @ApiPropertyOptional() @IsString() @IsOptional() scheduleGroupId?: string
   @ApiPropertyOptional() @IsString() @IsOptional() individualExpectedArrivalTime?: string
-  @ApiPropertyOptional() @IsString() @MinLength(4) @IsOptional() password?: string
+  @ApiPropertyOptional() @IsString() @MinLength(8) @IsOptional() password?: string
+  @ApiPropertyOptional() @IsString() @IsOptional() currentPassword?: string
 }

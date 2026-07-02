@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
 import { MonHistoriqueClient, type ConnectionLog } from '@/components/historique/MonHistoriqueClient'
+import { API_BASE } from '@/lib/api-base'
 
 async function getMyConnections(): Promise<ConnectionLog[]> {
   try {
@@ -11,7 +12,7 @@ async function getMyConnections(): Promise<ConnectionLog[]> {
     const token = cookieStore.get(cookieName)?.value
     if (!token) return []
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/presence/my-connections?limit=200`,
+      `${API_BASE}/api/presence/my-connections?limit=200`,
       { headers: { Cookie: `${cookieName}=${token}` }, cache: 'no-store' },
     )
     if (!res.ok) return []

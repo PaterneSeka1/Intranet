@@ -115,7 +115,12 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
             <h2 className="text-sm font-bold text-gray-700">Mandats exceptionnels</h2>
             <span className="text-xs text-gray-400">{mandates.length} mandat{mandates.length > 1 ? 's' : ''} au total</span>
           </div>
-          <MandatesManager initialMandates={mandates} canMandate={canMandate} currentUserId={currentUserId} />
+          <MandatesManager
+            initialMandates={mandates}
+            canMandate={canMandate}
+            currentUserId={currentUserId}
+            users={rows.map(r => r.user)}
+          />
         </div>
       )}
     </div>

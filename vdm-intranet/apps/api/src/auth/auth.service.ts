@@ -69,10 +69,16 @@ export class AuthService {
 
   cookieOptions(isLogout = false) {
     const expiresIn = this.config.get<string>('JWT_EXPIRES_IN') ?? '8h'
+    const secureFlagEnv = this.config.get<string>('COOKIE_SECURE')
+    const secure = secureFlagEnv !== undefined
+      ? secureFlagEnv === 'true'
+      : this.config.get('NODE_ENV') === 'production'
+    const domain = this.config.get<string>('COOKIE_DOMAIN') || undefined
     return {
       httpOnly: true,
-      sameSite: 'lax' as const,
-      secure: this.config.get('NODE_ENV') === 'production',
+      sameSite: 'strict' as const,
+      secure,
+      domain,
       maxAge: isLogout ? 0 : parseMs(expiresIn),
       path: '/',
     }

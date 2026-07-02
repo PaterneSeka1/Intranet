@@ -225,8 +225,9 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             <form onSubmit={handleSubmit} className="space-y-4">
               {canManageAll && modal?.mode === 'create' && (
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Business Unit</label>
+                  <label htmlFor="tab-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Business Unit</label>
                   <select
+                    id="tab-bu"
                     value={form.businessUnitId}
                     onChange={e => setForm(f => ({ ...f, businessUnitId: e.target.value }))}
                     className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
@@ -241,8 +242,9 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom</label>
+                <label htmlFor="tab-name" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom</label>
                 <input
+                  id="tab-name"
                   type="text"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -253,8 +255,9 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">URL</label>
+                <label htmlFor="tab-url" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">URL</label>
                 <input
+                  id="tab-url"
                   type="url"
                   value={form.url}
                   onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
@@ -265,10 +268,11 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                <label htmlFor="tab-desc" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                   Description <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
                 </label>
                 <input
+                  id="tab-desc"
                   type="text"
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -279,7 +283,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Icône</label>
+                  <label htmlFor="tab-icon" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Icône</label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {ICON_PRESETS.map(ico => (
                       <button
@@ -293,6 +297,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                     ))}
                   </div>
                   <input
+                    id="tab-icon"
                     type="text"
                     value={form.icon}
                     onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
@@ -302,8 +307,9 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Couleur</label>
+                  <label htmlFor="tab-color" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Couleur</label>
                   <input
+                    id="tab-color"
                     type="color"
                     value={form.color}
                     onChange={e => setForm(f => ({ ...f, color: e.target.value }))}

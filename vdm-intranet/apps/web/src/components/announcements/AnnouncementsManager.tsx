@@ -258,8 +258,9 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
       >
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Titre *</label>
+                <label htmlFor="ann-title" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Titre *</label>
                 <input
+                  id="ann-title"
                   type="text"
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
@@ -269,8 +270,9 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Corps *</label>
+                <label htmlFor="ann-body" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Corps *</label>
                 <textarea
+                  id="ann-body"
                   value={form.body}
                   onChange={e => setForm({ ...form, body: e.target.value })}
                   required
@@ -281,8 +283,9 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Publication</label>
+                  <label htmlFor="ann-published" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Publication</label>
                   <input
+                    id="ann-published"
                     type="date"
                     value={form.publishedAt}
                     onChange={e => setForm({ ...form, publishedAt: e.target.value })}
@@ -290,10 +293,11 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  <label htmlFor="ann-expires" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                     Expiration <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
                   </label>
                   <input
+                    id="ann-expires"
                     type="date"
                     value={form.expiresAt}
                     onChange={e => setForm({ ...form, expiresAt: e.target.value })}
@@ -303,10 +307,11 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                <label htmlFor="ann-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                   BU ciblée <span className="text-gray-400 normal-case font-normal">(toutes si vide)</span>
                 </label>
                 <select
+                  id="ann-bu"
                   value={form.businessUnitId}
                   onChange={e => setForm({ ...form, businessUnitId: e.target.value })}
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white"

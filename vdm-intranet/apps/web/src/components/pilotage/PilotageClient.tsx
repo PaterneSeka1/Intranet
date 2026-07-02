@@ -15,44 +15,9 @@ import {
 import { ServerPagination } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
 
-// ─── Export helpers ───────────────────────────────────────────────────────────
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import { downloadCsvBlob, triggerDownload, getMonthStart, getToday, type DateRange } from '@/lib/csv-export'
 
 type ReportKey = 'presence' | 'activity' | 'connections' | 'general'
-type DateRange = { from: string; to: string }
-
-function getMonthStart(): string {
-  const d = new Date()
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
-}
-function getToday(): string {
-  const d = new Date()
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
-}
-
-async function downloadCsv(key: ReportKey, from?: string, to?: string): Promise<Blob> {
-  const params = new URLSearchParams()
-  if (from) params.set('from', from)
-  if (to) params.set('to', to)
-  const qs = params.toString()
-  const url = `${API}/api/reports/${key}${qs ? `?${qs}` : ''}`
-  const res = await fetch(url, { credentials: 'include' })
-  if (!res.ok) {
-    let msg = 'Erreur lors de la génération du rapport.'
-    try { const body = await res.json(); msg = body.message ?? msg } catch { /* noop */ }
-    throw new Error(msg)
-  }
-  return res.blob()
-}
-
-function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = filename
-  document.body.appendChild(a); a.click()
-  document.body.removeChild(a); URL.revokeObjectURL(url)
-}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -168,23 +133,18 @@ export function PilotageClient({ role }: Props) {
   })
 
   useEffect(() => {
+    Promise.all([pilotageApi.summary(), pilotageApi.presenceByBu()])
+      .then(([s, p]) => { setSummary(s); setPresenceByBu(p) })
+      .catch(err => { toast.error(err instanceof Error ? err.message : 'Impossible de charger le résumé.') })
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
     setChartLoading(true)
-    Promise.all([
-      pilotageApi.summary(),
-      pilotageApi.presenceByBu(),
-      pilotageApi.connectionsChart(chartDays),
-      pilotageApi.activityChart(chartDays),
-    ])
-      .then(([s, p, c, a]) => {
-        setSummary(s)
-        setPresenceByBu(p)
-        setConnectionsChart(c)
-        setActivityChart(a)
-      })
-      .catch(err => {
-        toast.error(err instanceof Error ? err.message : 'Impossible de charger les données.')
-      })
-      .finally(() => { setLoading(false); setChartLoading(false) })
+    Promise.all([pilotageApi.connectionsChart(chartDays), pilotageApi.activityChart(chartDays)])
+      .then(([c, a]) => { setConnectionsChart(c); setActivityChart(a) })
+      .catch(err => { toast.error(err instanceof Error ? err.message : 'Impossible de charger les graphiques.') })
+      .finally(() => setChartLoading(false))
   }, [chartDays])
 
   const fetchLog = useCallback(async (page: number, search: string, action: string) => {
@@ -192,6 +152,8 @@ export function PilotageClient({ role }: Props) {
     try {
       const result = await pilotageApi.activityLog({ page, limit: 25, search: search || undefined, action: action || undefined })
       setActivityLog(result)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Impossible de charger le journal d\'activité.')
     } finally { setLogLoading(false) }
   }, [])
 
@@ -219,7 +181,7 @@ export function PilotageClient({ role }: Props) {
     }
     setExportLoading(report.key)
     try {
-      const blob = await downloadCsv(
+      const blob = await downloadCsvBlob(
         report.key,
         report.hasDateRange && from ? from : undefined,
         report.hasDateRange && to ? to : undefined,
@@ -323,8 +285,9 @@ export function PilotageClient({ role }: Props) {
                 {report.hasDateRange && (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Du</label>
+                      <label htmlFor={`pilot-${report.key}-from`} className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Du</label>
                       <input
+                        id={`pilot-${report.key}-from`}
                         type="date"
                         value={ranges[report.key].from}
                         max={ranges[report.key].to || getToday()}
@@ -333,8 +296,9 @@ export function PilotageClient({ role }: Props) {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Au</label>
+                      <label htmlFor={`pilot-${report.key}-to`} className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Au</label>
                       <input
+                        id={`pilot-${report.key}-to`}
                         type="date"
                         value={ranges[report.key].to}
                         min={ranges[report.key].from || undefined}

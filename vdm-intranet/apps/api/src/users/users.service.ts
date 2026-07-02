@@ -96,6 +96,14 @@ export class UsersService {
       if (dto[key] !== undefined) data[key] = dto[key]
     }
     if (data.password) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Le mot de passe actuel est requis pour effectuer ce changement.')
+      }
+      const current = await this.prisma.user.findUnique({ where: { id }, select: { passwordHash: true } })
+      const valid = current && await bcrypt.compare(dto.currentPassword, current.passwordHash)
+      if (!valid) {
+        throw new BadRequestException('Mot de passe actuel incorrect.')
+      }
       data.passwordHash = await bcrypt.hash(data.password as string, 10)
       delete data.password
     }

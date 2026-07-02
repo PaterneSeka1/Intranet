@@ -5,7 +5,7 @@ import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { Modal } from '@/components/ui/Modal'
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import { API_BASE as API } from '@/lib/api-base'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -190,6 +190,16 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
     }
   }
 
+  async function toggleBuActive(bu: Bu) {
+    try {
+      const updated = await apiReq<Bu>(`/tabs/business-units/${bu.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !bu.isActive }) })
+      setBus(prev => prev.map(b => b.id === bu.id ? updated : b))
+      toast.success(`BU « ${bu.name} » ${updated.isActive ? 'activée' : 'désactivée'}.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.')
+    }
+  }
+
   // Pole form
   const [showPoleForm, setShowPoleForm] = useState(false)
   const [editingPole, setEditingPole] = useState<Pole | null>(null)
@@ -233,6 +243,16 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
     }
   }
 
+  async function togglePoleActive(pole: Pole) {
+    try {
+      const updated = await apiReq<Pole>(`/tabs/poles/${pole.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: !pole.isActive }) })
+      setPoles(prev => prev.map(p => p.id === pole.id ? updated : p))
+      toast.success(`Pôle « ${pole.name} » ${updated.isActive ? 'activé' : 'désactivé'}.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.')
+    }
+  }
+
   // --- Groupes horaires ---
   const [groups, setGroups] = useState<ScheduleGroup[]>(initialGroups)
   const [showGroupForm, setShowGroupForm] = useState(false)
@@ -245,7 +265,9 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
     try {
       const g = await apiReq<ScheduleGroup[]>('/presence/schedule-groups')
       setGroups(g)
-    } catch {}
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Impossible de recharger les groupes.')
+    }
   }
 
   function openCreateGroup() {
@@ -406,6 +428,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
                       {bu.description && <p className="text-xs text-gray-500 mt-0.5">{bu.description}</p>}
                     </div>
                     <div className="flex gap-2">
+                      <button onClick={() => toggleBuActive(bu)} className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${bu.isActive ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}>{bu.isActive ? 'Désactiver' : 'Activer'}</button>
                       <button onClick={() => { setEditingBu(bu); setBuForm({ name: bu.name, code: bu.code, description: bu.description ?? '' }); setBuError(''); setShowBuForm(true) }} className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">Modifier</button>
                       <button onClick={() => deleteBu(bu)} disabled={bu._count.users > 0} className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed">Supprimer</button>
                     </div>
@@ -417,10 +440,10 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
               <Modal open={showBuForm} onClose={() => setShowBuForm(false)} title={editingBu ? 'Modifier la BU' : 'Nouvelle Business Unit'} subtitle={editingBu ? `Éditer « ${editingBu.name} »` : 'Créer une nouvelle unité organisationnelle'} size="md">
                 <form onSubmit={handleBuSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom *</label><input type="text" value={buForm.name} onChange={e => setBuForm({ ...buForm, name: e.target.value })} required className={INPUT} /></div>
-                    <div><label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Code *</label><input type="text" value={buForm.code} onChange={e => setBuForm({ ...buForm, code: e.target.value.toUpperCase() })} required className={INPUT} placeholder="ex: BU_DIGITAL" /></div>
+                    <div><label htmlFor="bu-name" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom *</label><input id="bu-name" type="text" value={buForm.name} onChange={e => setBuForm({ ...buForm, name: e.target.value })} required className={INPUT} /></div>
+                    <div><label htmlFor="bu-code" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Code *</label><input id="bu-code" type="text" value={buForm.code} onChange={e => setBuForm({ ...buForm, code: e.target.value.toUpperCase() })} required className={INPUT} placeholder="ex: BU_DIGITAL" /></div>
                   </div>
-                  <div><label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Description</label><input type="text" value={buForm.description} onChange={e => setBuForm({ ...buForm, description: e.target.value })} className={INPUT} /></div>
+                  <div><label htmlFor="bu-desc" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Description</label><input id="bu-desc" type="text" value={buForm.description} onChange={e => setBuForm({ ...buForm, description: e.target.value })} className={INPUT} /></div>
                   {buError && <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">{buError}</div>}
                   <div className="flex gap-3 pt-1">
                     <button type="button" onClick={() => setShowBuForm(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
@@ -452,6 +475,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
                       <div className="text-xs text-gray-400 mt-0.5">{pole.businessUnit?.name ?? '—'} · {pole._count.users} utilisateur{pole._count.users > 1 ? 's' : ''}</div>
                     </div>
                     <div className="flex gap-2">
+                      <button onClick={() => togglePoleActive(pole)} className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${pole.isActive ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}>{pole.isActive ? 'Désactiver' : 'Activer'}</button>
                       <button onClick={() => { setEditingPole(pole); setPoleForm({ name: pole.name, code: pole.code, businessUnitId: pole.businessUnitId }); setPoleError(''); setShowPoleForm(true) }} className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">Modifier</button>
                       <button onClick={() => deletePole(pole)} disabled={pole._count.users > 0} className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed">Supprimer</button>
                     </div>
@@ -463,12 +487,12 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
               <Modal open={showPoleForm} onClose={() => setShowPoleForm(false)} title={editingPole ? 'Modifier le pôle' : 'Nouveau pôle'} subtitle={editingPole ? `Éditer « ${editingPole.name} »` : 'Créer un nouveau pôle'} size="md">
                 <form onSubmit={handlePoleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom *</label><input type="text" value={poleForm.name} onChange={e => setPoleForm({ ...poleForm, name: e.target.value })} required className={INPUT} /></div>
-                    <div><label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Code *</label><input type="text" value={poleForm.code} onChange={e => setPoleForm({ ...poleForm, code: e.target.value.toUpperCase() })} required className={INPUT} placeholder="ex: POLE_DATA" /></div>
+                    <div><label htmlFor="pole-name" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom *</label><input id="pole-name" type="text" value={poleForm.name} onChange={e => setPoleForm({ ...poleForm, name: e.target.value })} required className={INPUT} /></div>
+                    <div><label htmlFor="pole-code" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Code *</label><input id="pole-code" type="text" value={poleForm.code} onChange={e => setPoleForm({ ...poleForm, code: e.target.value.toUpperCase() })} required className={INPUT} placeholder="ex: POLE_DATA" /></div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Business Unit *</label>
-                    <select value={poleForm.businessUnitId} onChange={e => setPoleForm({ ...poleForm, businessUnitId: e.target.value })} required className={SELECT}>
+                    <label htmlFor="pole-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Business Unit *</label>
+                    <select id="pole-bu" value={poleForm.businessUnitId} onChange={e => setPoleForm({ ...poleForm, businessUnitId: e.target.value })} required className={SELECT}>
                       <option value="">Sélectionner une BU…</option>
                       {bus.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
@@ -554,28 +578,29 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
                 <form onSubmit={handleGroupSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom *</label>
-                      <input type="text" value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })} required className={INPUT} />
+                      <label htmlFor="grp-name" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom *</label>
+                      <input id="grp-name" type="text" value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })} required className={INPUT} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Code *</label>
-                      <input type="text" value={groupForm.code} onChange={e => setGroupForm({ ...groupForm, code: e.target.value.toUpperCase() })} required className={INPUT} placeholder="ex: GRP_MATIN" />
+                      <label htmlFor="grp-code" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Code *</label>
+                      <input id="grp-code" type="text" value={groupForm.code} onChange={e => setGroupForm({ ...groupForm, code: e.target.value.toUpperCase() })} required className={INPUT} placeholder="ex: GRP_MATIN" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Heure d'arrivée attendue *</label>
-                    <input type="time" value={groupForm.expectedArrivalTime} onChange={e => setGroupForm({ ...groupForm, expectedArrivalTime: e.target.value })} required className={INPUT} />
+                    <label htmlFor="grp-arrival" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Heure d'arrivée attendue *</label>
+                    <input id="grp-arrival" type="time" value={groupForm.expectedArrivalTime} onChange={e => setGroupForm({ ...groupForm, expectedArrivalTime: e.target.value })} required className={INPUT} />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Description</label>
-                    <input type="text" value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })} className={INPUT} />
+                    <label htmlFor="grp-desc" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Description</label>
+                    <input id="grp-desc" type="text" value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })} className={INPUT} />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Business Unit</label>
+                    <label htmlFor="grp-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Business Unit</label>
                     <select
+                      id="grp-bu"
                       value={groupForm.businessUnitId}
                       onChange={e => setGroupForm({ ...groupForm, businessUnitId: e.target.value, poleId: '' })}
                       className={SELECT}
@@ -587,10 +612,11 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
 
                   {groupForm.businessUnitId && (
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                      <label htmlFor="grp-pole" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
                         Pôle <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
                       </label>
                       <select
+                        id="grp-pole"
                         value={groupForm.poleId}
                         onChange={e => setGroupForm({ ...groupForm, poleId: e.target.value })}
                         className={SELECT}

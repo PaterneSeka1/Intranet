@@ -1,8 +1,7 @@
 'use client'
 
 import type { User } from '@/types/user'
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import { API_BASE as BASE } from './api-base'
 
 export class ApiError extends Error {
   constructor(

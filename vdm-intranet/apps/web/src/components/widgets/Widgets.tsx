@@ -32,11 +32,59 @@ const WIDGET_LABELS: Record<WidgetKey, string> = {
   weather: 'Météo',
 }
 
-// Shared frosted-glass card style
 const CARD = 'backdrop-blur-md bg-white/80 border border-gray-100/60 shadow-2xl rounded-2xl'
 
+const WEATHER_CACHE_KEY = 'vdm_weather_cache'
+const WEATHER_TTL = 10 * 60 * 1000
+
+function getCachedWeather(): WeatherData | null {
+  try {
+    const raw = localStorage.getItem(WEATHER_CACHE_KEY)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw) as { data: WeatherData; ts: number }
+    if (Date.now() - ts > WEATHER_TTL) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
+function setCachedWeather(data: WeatherData) {
+  try {
+    localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
+  } catch { /* noop */ }
+}
+
+// Isolated clock — only this component re-renders every second
+function ClockWidget() {
+  const [time, setTime] = useState(new Date())
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div className={`${CARD} w-44 p-4 flex flex-col items-center gap-0.5`}>
+      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+        {DAYS[time.getDay()]}
+      </div>
+      <div className="text-3xl font-bold text-gray-900 font-mono tabular-nums leading-none">
+        {time.getHours().toString().padStart(2, '0')}
+        <span className="text-gray-400">:</span>
+        {time.getMinutes().toString().padStart(2, '0')}
+        <span className="text-xl text-gray-400">
+          :{time.getSeconds().toString().padStart(2, '0')}
+        </span>
+      </div>
+      <div className="text-xs text-gray-600 mt-1">
+        {time.getDate()} {MONTHS[time.getMonth()]} {time.getFullYear()}
+      </div>
+      <div className="text-[10px] text-gray-400 mt-0.5">Abidjan · UTC+0</div>
+    </div>
+  )
+}
+
 export function Widgets() {
-  const [time, setTime] = useState<Date>(new Date())
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherError, setWeatherError] = useState(false)
   const [visible, setVisible] = useState<Record<WidgetKey, boolean>>({
@@ -48,6 +96,9 @@ export function Widgets() {
       const stored = localStorage.getItem('vdm_widgets')
       if (stored) setVisible(JSON.parse(stored))
     } catch { /* noop */ }
+
+    const cached = getCachedWeather()
+    if (cached) setWeather(cached)
   }, [])
 
   function toggleWidget(key: WidgetKey) {
@@ -59,25 +110,28 @@ export function Widgets() {
   }
 
   useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
+    const cached = getCachedWeather()
+    if (cached) { setWeather(cached); return }
 
-  useEffect(() => {
     fetch('https://api.open-meteo.com/v1/forecast?latitude=5.345&longitude=-4.0&current_weather=true&timezone=Africa%2FAbidjan')
       .then(r => r.json())
-      .then(data => setWeather({
-        temperature: Math.round(data.current_weather.temperature),
-        weatherCode: data.current_weather.weathercode,
-        windspeed: Math.round(data.current_weather.windspeed),
-      }))
+      .then(data => {
+        const w: WeatherData = {
+          temperature: Math.round(data.current_weather.temperature),
+          weatherCode: data.current_weather.weathercode,
+          windspeed: Math.round(data.current_weather.windspeed),
+        }
+        setCachedWeather(w)
+        setWeather(w)
+      })
       .catch(() => setWeatherError(true))
   }, [])
 
-  // Calendar grid
-  const firstDayRaw = new Date(time.getFullYear(), time.getMonth(), 1).getDay()
+  // Calendar values computed from current date — only needs day-level accuracy
+  const now = new Date()
+  const firstDayRaw = new Date(now.getFullYear(), now.getMonth(), 1).getDay()
   const firstDay = firstDayRaw === 0 ? 6 : firstDayRaw - 1
-  const daysInMonth = new Date(time.getFullYear(), time.getMonth() + 1, 0).getDate()
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const calCells: (number | null)[] = Array(firstDay).fill(null)
   for (let d = 1; d <= daysInMonth; d++) calCells.push(d)
   while (calCells.length % 7 !== 0) calCells.push(null)
@@ -85,7 +139,6 @@ export function Widgets() {
   const { label: weatherLabel, icon: weatherIcon } = weather ? wmoLabel(weather.weatherCode) : { label: '', icon: '' }
   const anyVisible = Object.values(visible).some(Boolean)
 
-  // Hidden on mobile — only renders on lg+ screens
   return (
     <div className="fixed bottom-6 right-6 z-40 hidden lg:flex flex-col items-end gap-2 pointer-events-none">
 
@@ -110,32 +163,14 @@ export function Widgets() {
       {anyVisible && (
         <div className="flex gap-3 items-end pointer-events-auto">
 
-          {/* Horloge */}
-          {visible.clock && (
-            <div className={`${CARD} w-44 p-4 flex flex-col items-center gap-0.5`}>
-              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-                {DAYS[time.getDay()]}
-              </div>
-              <div className="text-3xl font-bold text-gray-900 font-mono tabular-nums leading-none">
-                {time.getHours().toString().padStart(2, '0')}
-                <span className="text-gray-400">:</span>
-                {time.getMinutes().toString().padStart(2, '0')}
-                <span className="text-xl text-gray-400">
-                  :{time.getSeconds().toString().padStart(2, '0')}
-                </span>
-              </div>
-              <div className="text-xs text-gray-600 mt-1">
-                {time.getDate()} {MONTHS[time.getMonth()]} {time.getFullYear()}
-              </div>
-              <div className="text-[10px] text-gray-400 mt-0.5">Abidjan · UTC+0</div>
-            </div>
-          )}
+          {/* Horloge — composant isolé pour limiter les re-renders */}
+          {visible.clock && <ClockWidget />}
 
           {/* Calendrier */}
           {visible.calendar && (
             <div className={`${CARD} w-44 p-3`}>
               <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider text-center mb-2">
-                {MONTHS_SHORT[time.getMonth()]} {time.getFullYear()}
+                {MONTHS_SHORT[now.getMonth()]} {now.getFullYear()}
               </div>
               <div className="grid grid-cols-7">
                 {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
@@ -145,7 +180,7 @@ export function Widgets() {
                   <div
                     key={i}
                     className={`text-[10px] text-center py-0.5 rounded-md font-medium transition-colors ${
-                      day === time.getDate()
+                      day === now.getDate()
                         ? 'bg-[#F28C38] text-white'
                         : day
                           ? 'text-gray-700 hover:bg-gray-100'
@@ -159,7 +194,7 @@ export function Widgets() {
             </div>
           )}
 
-          {/* Météo Abidjan */}
+          {/* Météo Abidjan — mise en cache 10 min */}
           {visible.weather && (
             <div className={`${CARD} w-40 p-4 flex flex-col items-center gap-1`}>
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abidjan</div>

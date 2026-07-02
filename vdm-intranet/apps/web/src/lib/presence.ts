@@ -1,6 +1,6 @@
 'use client'
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import { API_BASE as BASE } from './api-base'
 
 export type PresenceStatus = 'PRESENT' | 'ABSENT' | 'LATE'
 
@@ -116,4 +116,6 @@ export const presenceApi = {
   mandates: () => presenceReq<DailyMandate[]>('/mandates'),
   createMandate: (data: { userId: string; date: string; expectedArrivalTime: string; reason?: string }) =>
     presenceReq<DailyMandate>('/mandates', { method: 'POST', body: JSON.stringify(data) }),
+  deleteMandate: (id: string) =>
+    presenceReq<{ deleted: boolean }>(`/mandates/${id}`, { method: 'DELETE' }),
 }

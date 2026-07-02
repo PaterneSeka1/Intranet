@@ -16,6 +16,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { TabsService } from './tabs.service'
 import { CreateTabDto } from './dto/create-tab.dto'
 import { UpdateTabDto } from './dto/update-tab.dto'
+import { CreateBusinessUnitDto } from './dto/create-business-unit.dto'
+import { UpdateBusinessUnitDto } from './dto/update-business-unit.dto'
+import { CreatePoleDto } from './dto/create-pole.dto'
+import { UpdatePoleDto } from './dto/update-pole.dto'
 import { Role } from '@prisma/client'
 
 type AuthUser = {
@@ -40,9 +44,9 @@ export class TabsController {
 
   @Post('business-units')
   @ApiOperation({ summary: 'Créer une BU (CTO_ADMIN)' })
-  createBu(@CurrentUser() user: AuthUser, @Body() body: { name: string; code: string; description?: string }) {
+  createBu(@CurrentUser() user: AuthUser, @Body() dto: CreateBusinessUnitDto) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
-    return this.tabsService.createBusinessUnit(body)
+    return this.tabsService.createBusinessUnit(dto)
   }
 
   @Patch('business-units/:id')
@@ -50,10 +54,10 @@ export class TabsController {
   updateBu(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() body: { name?: string; code?: string; description?: string; isActive?: boolean },
+    @Body() dto: UpdateBusinessUnitDto,
   ) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
-    return this.tabsService.updateBusinessUnit(id, body)
+    return this.tabsService.updateBusinessUnit(id, dto)
   }
 
   @Delete('business-units/:id')
@@ -75,10 +79,10 @@ export class TabsController {
   @ApiOperation({ summary: 'Créer un pôle (CTO_ADMIN)' })
   createPole(
     @CurrentUser() user: AuthUser,
-    @Body() body: { name: string; code: string; businessUnitId: string },
+    @Body() dto: CreatePoleDto,
   ) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
-    return this.tabsService.createPole(body)
+    return this.tabsService.createPole(dto)
   }
 
   @Patch('poles/:id')
@@ -86,10 +90,10 @@ export class TabsController {
   updatePole(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() body: { name?: string; code?: string; businessUnitId?: string; isActive?: boolean },
+    @Body() dto: UpdatePoleDto,
   ) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
-    return this.tabsService.updatePole(id, body)
+    return this.tabsService.updatePole(id, dto)
   }
 
   @Delete('poles/:id')

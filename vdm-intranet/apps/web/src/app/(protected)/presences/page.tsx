@@ -4,13 +4,14 @@ import { getCurrentUser } from '@/lib/auth'
 import { PresencesPageClient } from '@/components/presence/PresencesPageClient'
 import type { PresenceRow } from '@/lib/presence'
 import type { Mandate } from '@/components/presence/MandatesManager'
+import { API_BASE } from '@/lib/api-base'
 
 const ACCUEIL_ONLY = ['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE']
 
 async function fetchPresences(token: string, cookieName: string, date: string): Promise<PresenceRow[]> {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/presence/today/all?date=${date}`,
+      `${API_BASE}/api/presence/today/all?date=${date}`,
       { headers: { Cookie: `${cookieName}=${token}` }, cache: 'no-store' },
     )
     if (!res.ok) return []
@@ -21,7 +22,7 @@ async function fetchPresences(token: string, cookieName: string, date: string): 
 async function fetchMandates(token: string, cookieName: string): Promise<Mandate[]> {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/presence/mandates`,
+      `${API_BASE}/api/presence/mandates`,
       { headers: { Cookie: `${cookieName}=${token}` }, cache: 'no-store' },
     )
     if (!res.ok) return []
