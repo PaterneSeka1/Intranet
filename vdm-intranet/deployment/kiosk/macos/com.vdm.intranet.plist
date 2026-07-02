@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+  <!-- Identifiant unique du service -->
+  <key>Label</key>
+  <string>com.vdm.intranet</string>
+
+  <!-- Commande à exécuter -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <!-- Chemin absolu vers le script — ajustez si nécessaire -->
+    <string>/usr/local/bin/kiosk-vdm.sh</string>
+  </array>
+
+  <!-- Variable d'environnement : URL de l'intranet -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>VDM_URL</key>
+    <!-- Remplacez par votre URL de déploiement -->
+    <string>http://localhost:3000</string>
+  </dict>
+
+  <!-- Lancer automatiquement à la session -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Ne pas relancer si Chrome est fermé volontairement -->
+  <key>KeepAlive</key>
+  <false/>
+
+  <!-- Délai de 8 secondes après ouverture de session (laisse le bureau charger) -->
+  <key>StartInterval</key>
+  <integer>0</integer>
+
+  <!-- Logs -->
+  <key>StandardOutPath</key>
+  <string>/tmp/vdm-kiosk.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/vdm-kiosk-error.log</string>
+
+</dict>
+</plist>

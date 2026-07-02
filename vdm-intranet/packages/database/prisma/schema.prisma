@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  PDG
+  CTO_ADMIN
+  DAF
+  RESPONSABLE_BU
+  RESPONSABLE_POLE
+  CONSULTANT
+  STAGIAIRE
+  PRESTATAIRE
+}
+
+enum PresenceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum ConnectionLogType {
+  LOGIN
+  LOGOUT
+}
+
+enum LogAction {
+  LOGIN
+  LOGOUT
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+  EXPORT
+  GEOLOCATION
+  TAB_CREATED
+  TAB_UPDATED
+  TAB_DELETED
+  TAB_ENABLED
+  TAB_DISABLED
+  REPORT_EXPORTED
+  PRESENCE_REPORT_EXPORTED
+  ACTIVITY_REPORT_EXPORTED
+  CONNECTION_REPORT_EXPORTED
+  GENERAL_REPORT_EXPORTED
+  ANNOUNCEMENT_CREATED
+  ANNOUNCEMENT_UPDATED
+  ANNOUNCEMENT_DELETED
+  SCHEDULE_GROUP_CREATED
+  SCHEDULE_GROUP_UPDATED
+  SCHEDULE_GROUP_DELETED
+}
+
+// ============================================================
+// ENTITÉS PRINCIPALES
+// ============================================================
+
+model BusinessUnit {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users          User[]
+  poles          Pole[]
+  scheduleGroups ScheduleGroup[]
+  tabs           PortalTab[]
+  announcements  Announcement[]
+
+  @@map("business_units")
+}
+
+model Pole {
+  id             String   @id @default(cuid())
+  name           String
+  code           String   @unique
+  businessUnitId String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  businessUnit   BusinessUnit    @relation(fields: [businessUnitId], references: [id])
+  users          User[]
+  scheduleGroups ScheduleGroup[]
+
+  @@map("poles")
+}
+
+model ScheduleGroup {
+  id                  String   @id @default(cuid())
+  name                String
+  code                String   @unique
+  description         String?
+  expectedArrivalTime String
+  businessUnitId      String?
+  poleId              String?
+  isNightShift        Boolean  @default(false)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
+  pole         Pole?         @relation(fields: [poleId], references: [id])
+  users        User[]
+
+  @@map("schedule_groups")
+}
+
+model User {
+  id                            String    @id @default(cuid())
+  username                      String    @unique
+  passwordHash                  String
+  firstName                     String?
+  lastName                      String?
+  fullName                      String?
+  email                         String?   @unique
+  role                          Role
+  businessUnitId                String?
+  poleId                        String?
+  managerId                     String?
+  scheduleGroupId               String?
+  individualExpectedArrivalTime String?
+  isActive                      Boolean   @default(true)
+  lastLoginAt                   DateTime?
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+
+  businessUnit         BusinessUnit?  @relation(fields: [businessUnitId], references: [id])
+  pole                 Pole?          @relation(fields: [poleId], references: [id])
+  manager              User?          @relation("Hierarchy", fields: [managerId], references: [id])
+  subordinates         User[]         @relation("Hierarchy")
+  scheduleGroup        ScheduleGroup? @relation(fields: [scheduleGroupId], references: [id])
+  presences            Presence[]
+  connectionLogs       ConnectionLog[]
+  mandates             DailyMandate[] @relation("MandateSubject")
+  createdMandates      DailyMandate[] @relation("MandateCreator")
+  createdTabs          PortalTab[]    @relation("TabCreator")
+  createdAnnouncements Announcement[] @relation("AnnouncementCreator")
+  activityLogs         ActivityLog[]
+
+  @@map("users")
+}
+
+// ============================================================
+// PRÉSENCE & CONNEXIONS
+// ============================================================
+
+model Presence {
+  id                    String         @id @default(cuid())
+  userId                String
+  date                  DateTime       @db.Date
+  status                PresenceStatus
+  expectedArrivalTime   String
+  officialArrivalTime   DateTime?
+  delayMinutes          Int?
+  latitude              Float?
+  longitude             Float?
+  accuracy              Float?
+  address               String?
+  mapsUrl               String?
+  sourceConnectionLogId String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@map("presences")
+}
+
+model ConnectionLog {
+  id                     String            @id @default(cuid())
+  userId                 String
+  type                   ConnectionLogType
+  date                   DateTime          @db.Date
+  connectedAt            DateTime          @default(now())
+  disconnectedAt         DateTime?
+  latitude               Float?
+  longitude              Float?
+  accuracy               Float?
+  address                String?
+  mapsUrl                String?
+  userAgent              String?
+  ipAddress              String?
+  isFirstConnectionOfDay Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("connection_logs")
+}
+
+// ============================================================
+// MANDATS JOURNALIERS
+// ============================================================
+
+model DailyMandate {
+  id                  String   @id @default(cuid())
+  userId              String
+  date                DateTime @db.Date
+  expectedArrivalTime String
+  reason              String?
+  createdById         String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user      User @relation("MandateSubject", fields: [userId], references: [id])
+  createdBy User @relation("MandateCreator", fields: [createdById], references: [id])
+
+  @@unique([userId, date])
+  @@map("daily_mandates")
+}
+
+// ============================================================
+// ONGLETS PAR BU
+// ============================================================
+
+model PortalTab {
+  id             String   @id @default(cuid())
+  name           String
+  url            String
+  description    String?
+  icon           String?
+  color          String?
+  businessUnitId String
+  createdById    String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  businessUnit BusinessUnit @relation(fields: [businessUnitId], references: [id])
+  createdBy    User         @relation("TabCreator", fields: [createdById], references: [id])
+
+  @@unique([businessUnitId, url])
+  @@map("portal_tabs")
+}
+
+// ============================================================
+// ANNONCES
+// ============================================================
+
+model Announcement {
+  id             String    @id @default(cuid())
+  title          String
+  body           String
+  businessUnitId String?
+  isPinned       Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  publishedAt    DateTime  @default(now())
+  expiresAt      DateTime?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
+  createdBy    User          @relation("AnnouncementCreator", fields: [createdById], references: [id])
+
+  @@map("announcements")
+}
+
+// ============================================================
+// JOURNAL D'ACTIVITÉ
+// ============================================================
+
+model ActivityLog {
+  id         String    @id @default(cuid())
+  userId     String
+  action     LogAction
+  entity     String?
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  occurredAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}

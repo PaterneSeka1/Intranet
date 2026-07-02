@@ -1,0 +1,131 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import type { User, Role } from '@/types/user'
+import { LogoutOverlay } from '@/components/auth/LogoutOverlay'
+
+type MenuItem = { label: string; href: string; icon: string }
+
+const MENUS: Record<Role, MenuItem[]> = {
+  CTO_ADMIN: [
+    { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Utilisateurs', href: '/utilisateurs', icon: '👥' },
+    { label: 'Présences', href: '/presences', icon: '📅' },
+    { label: 'Onglets', href: '/onglets', icon: '📑' },
+    { label: 'Annonces', href: '/annonces', icon: '📢' },
+    { label: 'Pilotage', href: '/pilotage', icon: '📊' },
+    { label: 'Paramètres', href: '/parametres', icon: '⚙️' },
+    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+  ],
+  PDG: [
+    { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Annonces', href: '/annonces', icon: '📢' },
+    { label: 'Pilotage', href: '/pilotage', icon: '📊' },
+    { label: 'Présences', href: '/presences', icon: '📅' },
+    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+  ],
+  DAF: [
+    { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Annonces', href: '/annonces', icon: '📢' },
+    { label: 'Pilotage', href: '/pilotage', icon: '📊' },
+    { label: 'Présences', href: '/presences', icon: '📅' },
+    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+  ],
+  RESPONSABLE_BU: [
+    { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Présences BU', href: '/presences', icon: '📅' },
+    { label: 'Onglets BU', href: '/onglets', icon: '📑' },
+    { label: 'Pilotage BU', href: '/pilotage', icon: '📊' },
+    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+  ],
+  RESPONSABLE_POLE: [
+    { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Présences Pôle', href: '/presences', icon: '📅' },
+    { label: 'Pilotage Pôle', href: '/pilotage', icon: '📊' },
+    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+  ],
+  CONSULTANT: [],
+  STAGIAIRE: [],
+  PRESTATAIRE: [],
+}
+
+export function Sidebar({ user, onClose }: { user: User; onClose?: () => void }) {
+  const pathname = usePathname()
+  const [showLogout, setShowLogout] = useState(false)
+  const items = MENUS[user.role] ?? []
+  const initials = ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase() || user.username[0].toUpperCase()
+
+  return (
+    <aside className="w-60 h-screen sticky top-0 bg-gray-900 flex flex-col shrink-0">
+      {/* Logo */}
+      <div className="px-5 py-5 border-b border-gray-800">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-[#F28C38] flex items-center justify-center shrink-0">
+            <span className="text-white text-sm font-bold">V</span>
+          </div>
+          <div>
+            <div className="text-white text-sm font-bold leading-tight">VDM Intranet</div>
+            <div className="text-gray-500 text-xs">Veilleur des Médias</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        {items.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + '/')
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                active
+                  ? 'bg-[#F28C38] text-white font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <span className="text-base">{item.icon}</span>
+              {item.label}
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* User + profil + logout */}
+      <div className="px-3 py-4 border-t border-gray-800">
+        <Link
+          href="/mon-profil"
+          className={`flex items-center gap-3 px-3 py-2 mb-1 rounded-xl transition-colors ${
+            pathname === '/mon-profil'
+              ? 'bg-[#F28C38] text-white'
+              : 'hover:bg-gray-800'
+          }`}
+        >
+          <div className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center shrink-0">
+            <span className="text-gray-200 text-xs font-bold">{initials}</span>
+          </div>
+          <div className="min-w-0">
+            <div className={`text-xs font-medium truncate ${pathname === '/mon-profil' ? 'text-white' : 'text-gray-200'}`}>
+              {user.firstName ?? user.username}
+            </div>
+            <div className={`text-xs truncate ${pathname === '/mon-profil' ? 'text-white/70' : 'text-gray-500'}`}>
+              {user.businessUnit?.name ?? 'Mon profil'}
+            </div>
+          </div>
+        </Link>
+        <button
+          onClick={() => setShowLogout(true)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+        >
+          <span className="text-base">🚪</span>
+          Déconnexion
+        </button>
+      </div>
+
+      {showLogout && <LogoutOverlay onCancel={() => setShowLogout(false)} />}
+    </aside>
+  )
+}

@@ -1,0 +1,31 @@
+{
+  "name": "vdm-intranet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portail Intranet — Veilleur des Médias",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "format": "prettier --write \"**/*.{ts,tsx,json,yaml,md}\" --ignore-path .gitignore",
+    "db:generate": "npm run db:generate --workspace=packages/database",
+    "db:migrate": "npm run db:migrate --workspace=packages/database",
+    "db:push": "npm run db:push --workspace=packages/database",
+    "db:studio": "npm run db:studio --workspace=packages/database",
+    "db:seed": "npm run db:seed --workspace=packages/database",
+    "db:reset": "npm run db:reset --workspace=packages/database"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  }
+}

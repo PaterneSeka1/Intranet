@@ -1,0 +1,268 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+
+export default function LandingPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const t = setTimeout(() => router.push('/login'), 3800)
+    return () => clearTimeout(t)
+  }, [router])
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <main className="scene">
+
+        {/* Lumière derrière la porte */}
+        <div className="back-glow" />
+
+        {/* Porte gauche */}
+        <div className="door door-l">
+          <div className="door-surface">
+            <div className="door-panel top" />
+            <div className="door-panel bot" />
+          </div>
+          <div className="hinge" style={{ top: '18%' }} />
+          <div className="hinge" style={{ top: '78%' }} />
+          <div className="handle handle-r" />
+        </div>
+
+        {/* Porte droite */}
+        <div className="door door-r">
+          <div className="door-surface">
+            <div className="door-panel top" />
+            <div className="door-panel bot" />
+          </div>
+          <div className="hinge" style={{ top: '18%', right: 0, left: 'auto' }} />
+          <div className="hinge" style={{ top: '78%', right: 0, left: 'auto' }} />
+          <div className="handle handle-l" />
+        </div>
+
+        {/* Fissure lumineuse au centre */}
+        <div className="crack" />
+
+        {/* Sceau VDM */}
+        <div className="seal">
+          <div className="seal-mark">V</div>
+          <div className="seal-name">VEILLEUR DES MÉDIAS</div>
+          <div className="seal-rule" />
+          <div className="seal-sub">Portail interne · Abidjan, Côte d&rsquo;Ivoire</div>
+        </div>
+
+        {/* Lien de passage direct */}
+        <Link href="/login" className="skip-btn">Accéder directement →</Link>
+
+      </main>
+    </>
+  )
+}
+
+const CSS = `
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: #060A0F; }
+
+/* ─── Scène ─── */
+.scene {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #060A0F;
+  animation: scene-out 0.5s ease 3.3s both;
+}
+@keyframes scene-out {
+  to { opacity: 0; }
+}
+
+/* ─── Lumière de fond (révélée quand les portes s'ouvrent) ─── */
+.back-glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 50%,
+    rgba(242,140,56,.18) 0%,
+    rgba(242,140,56,.05) 40%,
+    transparent 70%);
+  opacity: 0;
+  animation: glow-reveal 0.9s ease 1.6s both;
+}
+@keyframes glow-reveal {
+  to { opacity: 1; }
+}
+
+/* ─── Portes ─── */
+.door {
+  position: absolute;
+  top: 0; height: 100%;
+  width: 50%;
+  will-change: transform;
+}
+.door-l {
+  left: 0;
+  transform-origin: 0% 50%;
+  animation: open-l 1.4s cubic-bezier(0.7, 0, 0.84, 0) 1.5s both;
+}
+.door-r {
+  right: 0;
+  transform-origin: 100% 50%;
+  animation: open-r 1.4s cubic-bezier(0.7, 0, 0.84, 0) 1.5s both;
+}
+@keyframes open-l {
+  from { transform: perspective(1200px) rotateY(0deg); }
+  to   { transform: perspective(1200px) rotateY(88deg); }
+}
+@keyframes open-r {
+  from { transform: perspective(1200px) rotateY(0deg); }
+  to   { transform: perspective(1200px) rotateY(-88deg); }
+}
+
+/* ─── Surface de la porte ─── */
+.door-surface {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, #16202E 0%, #101820 55%, #0C1520 100%);
+  border-top: 1px solid rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(0,0,0,.4);
+  display: flex; flex-direction: column;
+  padding: 10% 8%;
+  gap: 4%;
+}
+
+/* Panneaux décoratifs (moulures) */
+.door-panel {
+  flex: 1;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 2px;
+  background: linear-gradient(160deg,
+    rgba(255,255,255,.025) 0%,
+    rgba(255,255,255,.01) 50%,
+    rgba(0,0,0,.03) 100%);
+}
+
+/* ─── Charnières ─── */
+.hinge {
+  position: absolute;
+  left: 0;
+  width: 12px; height: 32px;
+  background: linear-gradient(90deg, #2a3a4a, #3d5060, #2a3a4a);
+  border-radius: 2px;
+  transform: translateY(-50%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 4px rgba(0,0,0,.5);
+}
+
+/* ─── Poignées ─── */
+.handle {
+  position: absolute;
+  top: 50%;
+  width: 10px; height: 56px;
+  border-radius: 5px;
+  background: linear-gradient(180deg,
+    #8a6a40 0%, #C8904A 30%, #E8A85A 50%, #C8904A 70%, #8a6a40 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    inset 0 -1px 0 rgba(0,0,0,.3),
+    0 4px 12px rgba(0,0,0,.5),
+    0 0 20px rgba(200,144,74,.15);
+  transform: translateY(-50%);
+}
+.handle-r { right: 20px; }
+.handle-l { left: 20px; }
+
+/* ─── Fissure lumineuse ─── */
+.crack {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 50%; width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(242,140,56,.6) 20%,
+    rgba(255,180,80,.9) 50%,
+    rgba(242,140,56,.6) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px 3px rgba(242,140,56,.35), 0 0 30px 8px rgba(242,140,56,.12);
+  animation: crack-glow 1.5s ease-in-out 0s infinite alternate;
+}
+@keyframes crack-glow {
+  from { opacity: .7; }
+  to   { opacity: 1; }
+}
+
+/* ─── Sceau central ─── */
+.seal {
+  position: absolute;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  pointer-events: none;
+  z-index: 10;
+  animation: seal-in 0.9s cubic-bezier(0.22,1,0.36,1) 0.1s both,
+             seal-out 0.4s ease 1.2s both;
+}
+@keyframes seal-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes seal-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.seal-mark {
+  width: 64px; height: 64px;
+  background: #F28C38;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 800;
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  letter-spacing: -.5px;
+  box-shadow: 0 0 40px rgba(242,140,56,.5), 0 8px 32px rgba(0,0,0,.6);
+  margin-bottom: 18px;
+}
+
+.seal-name {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(237,232,223,.5);
+  margin-bottom: 14px;
+}
+
+.seal-rule {
+  width: 32px; height: 1px;
+  background: linear-gradient(90deg, transparent, #F28C38, transparent);
+  margin-bottom: 14px;
+}
+
+.seal-sub {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 11px; font-weight: 400;
+  letter-spacing: .04em;
+  color: rgba(237,232,223,.25);
+}
+
+/* ─── Lien skip ─── */
+.skip-btn {
+  position: fixed; bottom: 28px; right: 32px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: rgba(237,232,223,.3);
+  text-decoration: none;
+  z-index: 100;
+  transition: color .2s;
+  animation: fade-in .5s ease 1.0s both;
+}
+.skip-btn:hover { color: rgba(237,232,223,.8); }
+@keyframes fade-in {
+  from { opacity: 0; } to { opacity: 1; }
+}
+
+/* ─── Réduction de mouvement ─── */
+@media (prefers-reduced-motion: reduce) {
+  .door-l, .door-r, .seal, .back-glow {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+`

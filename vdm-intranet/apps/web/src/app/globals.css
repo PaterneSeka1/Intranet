@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --vdm-orange: #f28c38;
+  --vdm-orange-light: #fbcb97;
+  --vdm-orange-bg: rgba(242, 140, 56, 0.1);
+  --vdm-gray: #f4f4f6;
+}
+
+html {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Modal animations */
+@keyframes vdm-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes vdm-panel-in {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+.vdm-backdrop-in { animation: vdm-backdrop-in 0.2s ease-out forwards; }
+.vdm-panel-in    { animation: vdm-panel-in    0.2s ease-out forwards; }
