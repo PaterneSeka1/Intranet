@@ -130,7 +130,6 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
     setError('')
     try {
       const payload: Record<string, unknown> = {
-        username: form.username,
         firstName: form.firstName || undefined,
         lastName: form.lastName || undefined,
         email: form.email || undefined,
@@ -142,6 +141,7 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         individualExpectedArrivalTime: form.individualExpectedArrivalTime || undefined,
       }
       if (!editing) {
+        payload.username = form.username
         payload.password = form.password
         const created = await apiReq<User>('/users', { method: 'POST', body: JSON.stringify(payload) })
         setUsers(prev => [created, ...prev])

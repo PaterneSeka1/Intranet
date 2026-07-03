@@ -417,7 +417,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
                 {bus.map(bu => (
                   <div key={bu.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-[#F28C38]/10 flex items-center justify-center shrink-0">
-                      <span className="text-[#F28C38] font-bold text-xs">{bu.code}</span>
+                      <span className="text-[#F28C38] font-bold text-xs">{bu.code.slice(0, 4)}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-gray-900 text-sm flex items-center gap-2">
