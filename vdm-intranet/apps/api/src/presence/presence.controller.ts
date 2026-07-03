@@ -130,8 +130,8 @@ export class PresenceController {
   // ----------------------------------------------------------------
 
   @Get('mandates')
-  getMandates(@CurrentUser() user: AuthUser) {
-    return this.presenceService.getMandates(user)
+  getMandates(@CurrentUser() user: AuthUser, @Query('date') date?: string) {
+    return this.presenceService.getMandates(user, date)
   }
 
   @Post('mandates')

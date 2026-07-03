@@ -139,8 +139,8 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       businessUnitId: u.businessUnit?.id ?? '',
       poleId: u.pole?.id ?? '',
       managerId: u.manager?.id ?? '',
-      scheduleGroupId: '',
-      individualExpectedArrivalTime: '',
+      scheduleGroupId: u.scheduleGroupId ?? '',
+      individualExpectedArrivalTime: u.individualExpectedArrivalTime ?? '',
     })
     setError('')
     setShowForm(true)
@@ -159,8 +159,8 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         businessUnitId: form.businessUnitId || undefined,
         poleId: form.poleId || undefined,
         managerId: form.managerId || undefined,
-        scheduleGroupId: form.scheduleGroupId || undefined,
-        individualExpectedArrivalTime: form.individualExpectedArrivalTime || undefined,
+        scheduleGroupId: form.scheduleGroupId || null,
+        individualExpectedArrivalTime: form.individualExpectedArrivalTime || null,
       }
       if (!editing) {
         payload.username = form.username
@@ -355,8 +355,8 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
                 <input
                   type="password" value={form.password}
                   onChange={e => f({ password: e.target.value })}
-                  required={!editing} minLength={4}
-                  placeholder={editing ? 'Vide = inchangé' : '4 caractères minimum'}
+                  required={!editing} minLength={8}
+                  placeholder={editing ? 'Vide = inchangé' : '8 caractères minimum'}
                   className={INPUT}
                 />
               </div>
@@ -426,11 +426,6 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
           {/* Horaires */}
           <div className="space-y-3">
             <SectionHeader icon="🕐" title="Horaires" />
-            {editing && (
-              <p className="text-[11px] text-gray-400 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
-                Les horaires actuels ne sont pas renvoyés par l'API — une modification ici remplacera les valeurs existantes.
-              </p>
-            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Groupe horaire</label>

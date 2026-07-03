@@ -25,6 +25,11 @@ function todayIso(): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
+function isWeekend(iso: string): boolean {
+  const [y, m, d] = iso.split('-').map(Number)
+  return [0, 6].includes(new Date(Date.UTC(y, m - 1, d)).getUTCDay())
+}
+
 function shiftDate(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number)
   const dt = new Date(Date.UTC(y, m - 1, d + days))
@@ -86,6 +91,13 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
         </div>
       </div>
 
+      {/* Bannière week-end */}
+      {isWeekend(date) && (
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 text-sm text-blue-600 mb-4">
+          Week-end — les absences affichées sont normales, aucune présence n&apos;est attendue.
+        </div>
+      )}
+
       {/* Compteurs */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
@@ -113,7 +125,7 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-700">Mandats exceptionnels</h2>
-            <span className="text-xs text-gray-400">{mandates.length} mandat{mandates.length > 1 ? 's' : ''} au total</span>
+            <span className="text-xs text-gray-400">{mandates.length} mandat{mandates.length > 1 ? 's' : ''} ce jour</span>
           </div>
           <MandatesManager
             initialMandates={mandates}

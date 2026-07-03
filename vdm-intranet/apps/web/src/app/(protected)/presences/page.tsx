@@ -19,10 +19,10 @@ async function fetchPresences(token: string, cookieName: string, date: string): 
   } catch { return [] }
 }
 
-async function fetchMandates(token: string, cookieName: string): Promise<Mandate[]> {
+async function fetchMandates(token: string, cookieName: string, date: string): Promise<Mandate[]> {
   try {
     const res = await fetch(
-      `${API_BASE}/api/presence/mandates`,
+      `${API_BASE}/api/presence/mandates?date=${date}`,
       { headers: { Cookie: `${cookieName}=${token}` }, cache: 'no-store' },
     )
     if (!res.ok) return []
@@ -61,7 +61,7 @@ export default async function PresencesPage({ searchParams }: Props) {
 
   const [rows, mandates] = await Promise.all([
     fetchPresences(token, cookieName, date),
-    fetchMandates(token, cookieName),
+    fetchMandates(token, cookieName, date),
   ])
 
   const canMandate = ['CTO_ADMIN', 'RESPONSABLE_BU', 'RESPONSABLE_POLE'].includes(user.role)

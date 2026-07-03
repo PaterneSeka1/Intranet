@@ -490,7 +490,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
                     <div className="flex gap-2">
                       <button onClick={() => toggleBuActive(bu)} className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${bu.isActive ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}>{bu.isActive ? 'Désactiver' : 'Activer'}</button>
                       <button onClick={() => { setEditingBu(bu); setBuForm({ name: bu.name, code: bu.code, description: bu.description ?? '' }); setBuError(''); setShowBuForm(true) }} className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">Modifier</button>
-                      <button onClick={() => deleteBu(bu)} disabled={bu._count.users > 0} className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed">Supprimer</button>
+                      <button onClick={() => deleteBu(bu)} disabled={bu._count.users > 0 || (bu._count.poles ?? 0) > 0} title={(bu._count.users > 0 || (bu._count.poles ?? 0) > 0) ? 'Impossible de supprimer — utilisateurs ou pôles rattachés' : undefined} className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed">Supprimer</button>
                     </div>
                   </div>
                 ))}
@@ -800,6 +800,10 @@ function BgPanel({
 
   return (
     <div className="space-y-4">
+
+      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
+        Ces préférences sont enregistrées localement dans ce navigateur. Elles n&apos;affectent pas les autres utilisateurs ni les autres appareils.
+      </p>
 
       {/* Sélecteur de cible + aperçus */}
       <div className="grid grid-cols-2 gap-3">

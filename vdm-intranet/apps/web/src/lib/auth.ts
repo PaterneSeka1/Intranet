@@ -1,10 +1,11 @@
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import type { User } from '@/types/user'
 import { API_BASE as API } from './api-base'
 
 const COOKIE = process.env.COOKIE_NAME ?? 'vdm_token'
 
-export async function getCurrentUser(): Promise<User | null> {
+export const getCurrentUser = cache(async (): Promise<User | null> => {
   const store = await cookies()
   const token = store.get(COOKIE)?.value
   if (!token) return null
@@ -19,7 +20,7 @@ export async function getCurrentUser(): Promise<User | null> {
   } catch {
     return null
   }
-}
+})
 
 export async function serverFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
   const store = await cookies()

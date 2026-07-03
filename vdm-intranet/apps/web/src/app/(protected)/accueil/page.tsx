@@ -91,16 +91,25 @@ export default async function AccueilPage() {
       </div>
 
       {/* Onglets de la BU */}
-      {activeTabs.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-700">Mes ressources</h2>
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-gray-700">Mes ressources</h2>
+          {['CTO_ADMIN', 'RESPONSABLE_BU'].includes(user.role) && (
+            <a href="/onglets" className="text-xs text-[#F28C38] hover:underline">
+              Gérer les onglets →
+            </a>
+          )}
+        </div>
+        {activeTabs.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
+            <p className="text-sm text-gray-400 mb-2">Aucune ressource configurée pour votre équipe.</p>
             {['CTO_ADMIN', 'RESPONSABLE_BU'].includes(user.role) && (
-              <a href="/onglets" className="text-xs text-[#F28C38] hover:underline">
-                Gérer les onglets →
+              <a href="/onglets" className="text-xs text-[#F28C38] hover:underline font-medium">
+                Ajouter des onglets →
               </a>
             )}
           </div>
+        ) : (
           <div className="flex flex-wrap justify-center gap-3">
             {activeTabs.map(tab => (
               <a
@@ -117,8 +126,8 @@ export default async function AccueilPage() {
               </a>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
     </div>
   )

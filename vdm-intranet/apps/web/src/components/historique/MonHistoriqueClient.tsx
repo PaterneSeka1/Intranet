@@ -52,7 +52,9 @@ const columns: Column<ConnectionLog>[] = [
     sortable: true,
     sortValue: l => l.connectedAt,
     render: l => (
-      <span className="font-mono text-sm text-gray-600 whitespace-nowrap">{fmtTime(l.connectedAt)}</span>
+      <span className="font-mono text-sm text-gray-600 whitespace-nowrap">
+        {fmtTime(l.type === 'LOGOUT' ? (l.disconnectedAt ?? l.connectedAt) : l.connectedAt)}
+      </span>
     ),
   },
   {
@@ -116,6 +118,8 @@ export function MonHistoriqueClient({ logs }: Props) {
       header={
         <span className="text-sm text-gray-400">
           {loginCount} connexion{loginCount > 1 ? 's' : ''} enregistrée{loginCount > 1 ? 's' : ''}
+          {' · '}
+          <span className="text-gray-300">200 dernières entrées max</span>
         </span>
       }
     />

@@ -273,6 +273,18 @@ model Announcement {
 }
 
 // ============================================================
+// PARAMÈTRES GLOBAUX DE L'APPLICATION
+// ============================================================
+
+model AppSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// ============================================================
 // JOURNAL D'ACTIVITÉ
 // ============================================================
 

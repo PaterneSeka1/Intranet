@@ -183,6 +183,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
           {filtered.map(tab => (
             <div
               key={tab.id}
+              style={tab.color ? { borderBottom: `3px solid ${tab.color}` } : undefined}
               className={`bg-white rounded-2xl border p-4 flex flex-col gap-2 transition-all ${tab.isActive ? 'border-gray-100' : 'border-gray-100 opacity-50'}`}
             >
               <div className="flex items-start justify-between gap-2">

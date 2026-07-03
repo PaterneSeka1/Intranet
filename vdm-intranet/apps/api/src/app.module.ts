@@ -12,6 +12,7 @@ import { TabsModule } from './tabs/tabs.module'
 import { PilotageModule } from './pilotage/pilotage.module'
 import { ReportsModule } from './reports/reports.module'
 import { AnnouncementsModule } from './announcements/announcements.module'
+import { SettingsModule } from './settings/settings.module'
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AnnouncementsModule } from './announcements/announcements.module'
     PilotageModule,
     ReportsModule,
     AnnouncementsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

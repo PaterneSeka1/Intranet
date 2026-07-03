@@ -370,17 +370,29 @@ export class PresenceService {
   // Mandats
   // ----------------------------------------------------------------
 
-  async getMandates(requester: Requester) {
+  async getMandates(requester: Requester, dateStr?: string) {
     const scope = this.buildUserScope(requester)
+    const include = {
+      user: { select: { id: true, username: true, fullName: true, role: true, businessUnit: { select: { name: true } } } },
+      createdBy: { select: { id: true, username: true, fullName: true } },
+    } as const
+
+    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-').map(Number)
+      const exactDate = new Date(Date.UTC(y, m - 1, d))
+      return this.prisma.dailyMandate.findMany({
+        where: { user: { isActive: true, ...scope }, date: exactDate },
+        include,
+        orderBy: [{ createdAt: 'desc' }],
+      })
+    }
+
     const since = new Date()
     since.setUTCDate(since.getUTCDate() - 30)
     since.setUTCHours(0, 0, 0, 0)
     return this.prisma.dailyMandate.findMany({
       where: { user: { isActive: true, ...scope }, date: { gte: since } },
-      include: {
-        user: { select: { id: true, username: true, fullName: true, role: true, businessUnit: { select: { name: true } } } },
-        createdBy: { select: { id: true, username: true, fullName: true } },
-      },
+      include,
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
       take: 100,
     })

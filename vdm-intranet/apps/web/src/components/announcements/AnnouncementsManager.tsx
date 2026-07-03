@@ -55,6 +55,20 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'planned' | 'expired'>('all')
+
+  const filteredItems = useMemo(() => {
+    if (filterStatus === 'all') return items
+    return items.filter(a => {
+      if (filterStatus === 'inactive') return !a.isActive
+      if (!a.isActive) return false
+      const now = new Date()
+      const pub = new Date(a.publishedAt)
+      if (filterStatus === 'planned') return pub > now
+      if (filterStatus === 'expired') return !!a.expiresAt && new Date(a.expiresAt) < now
+      return pub <= now && (!a.expiresAt || new Date(a.expiresAt) >= now)
+    })
+  }, [items, filterStatus])
 
   function openCreate() {
     setEditing(null)
@@ -143,11 +157,11 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const pageItems = useMemo(
-    () => items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [items, safePage],
+    () => filteredItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filteredItems, safePage],
   )
 
   function getStatus(a: Announcement): { label: string; cls: string } {
@@ -164,20 +178,37 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Annonces</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{items.length} annonce{items.length > 1 ? 's' : ''}</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {filteredItems.length !== items.length
+              ? `${filteredItems.length} / ${items.length} annonce${items.length > 1 ? 's' : ''}`
+              : `${items.length} annonce${items.length > 1 ? 's' : ''}`}
+          </p>
         </div>
-        <button
-          onClick={openCreate}
-          className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors"
-        >
-          + Nouvelle annonce
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={filterStatus}
+            onChange={e => { setFilterStatus(e.target.value as typeof filterStatus); setPage(1) }}
+            className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white text-gray-600"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="active">Actif</option>
+            <option value="planned">Planifié</option>
+            <option value="expired">Expiré</option>
+            <option value="inactive">Inactif</option>
+          </select>
+          <button
+            onClick={openCreate}
+            className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors"
+          >
+            + Nouvelle annonce
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
-        {items.length === 0 && (
+        {filteredItems.length === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
-            Aucune annonce pour l&apos;instant.
+            {filterStatus === "all" ? <>Aucune annonce pour l&apos;instant.</> : <>Aucune annonce pour ce filtre.</>}
           </div>
         )}
 
@@ -233,12 +264,12 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
             </div>
           )
         })}
-        {items.length > PAGE_SIZE && (
+        {filteredItems.length > PAGE_SIZE && (
           <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3">
             <ServerPagination
               page={safePage}
               totalPages={totalPages}
-              total={items.length}
+              total={filteredItems.length}
               pageSize={PAGE_SIZE}
               onPageChange={setPage}
               label="annonces"
