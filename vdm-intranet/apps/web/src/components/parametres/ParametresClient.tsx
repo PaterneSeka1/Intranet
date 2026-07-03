@@ -47,14 +47,66 @@ type GroupForm = {
 // Gradients disponibles
 // ---------------------------------------------------------------------------
 
-const BG_GRADIENTS = [
-  { label: 'Aurore orange',    value: 'linear-gradient(135deg, #F28C38 0%, #e07d29 100%)' },
-  { label: 'Océan bleu',       value: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)' },
-  { label: 'Forêt verte',      value: 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)' },
-  { label: 'Nuit violette',    value: 'linear-gradient(135deg, #2d1b69 0%, #7c3aed 100%)' },
-  { label: 'Gris ardoise',     value: 'linear-gradient(135deg, #1f2937 0%, #4b5563 100%)' },
-  { label: 'Coucher de soleil', value: 'linear-gradient(135deg, #7c3aed 0%, #F28C38 100%)' },
+const BG_GRADIENTS: { category: string; items: { label: string; value: string }[] }[] = [
+  {
+    category: 'Chauds',
+    items: [
+      { label: 'Aurore orange',    value: 'linear-gradient(135deg, #F28C38 0%, #e07d29 100%)' },
+      { label: 'Coucher de soleil', value: 'linear-gradient(135deg, #7c3aed 0%, #F28C38 100%)' },
+      { label: 'Corail',           value: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' },
+      { label: 'Caramel',          value: 'linear-gradient(135deg, #92400e 0%, #f59e0b 100%)' },
+    ],
+  },
+  {
+    category: 'Froids',
+    items: [
+      { label: 'Océan bleu',   value: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)' },
+      { label: 'Nuit violette', value: 'linear-gradient(135deg, #2d1b69 0%, #7c3aed 100%)' },
+      { label: 'Glacier',       value: 'linear-gradient(135deg, #0c4a6e 0%, #0ea5e9 100%)' },
+      { label: 'Minuit',        value: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)' },
+    ],
+  },
+  {
+    category: 'Naturels',
+    items: [
+      { label: 'Forêt verte', value: 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)' },
+      { label: 'Tropique',    value: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)' },
+      { label: 'Prairie',     value: 'linear-gradient(135deg, #365314 0%, #84cc16 100%)' },
+      { label: 'Ébène',       value: 'linear-gradient(135deg, #1c1917 0%, #44403c 100%)' },
+    ],
+  },
+  {
+    category: 'Neutres',
+    items: [
+      { label: 'Gris ardoise', value: 'linear-gradient(135deg, #1f2937 0%, #4b5563 100%)' },
+      { label: 'Anthracite',   value: 'linear-gradient(135deg, #111827 0%, #374151 100%)' },
+      { label: 'Brume',        value: 'linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%)' },
+      { label: 'Rose poudré',  value: 'linear-gradient(135deg, #fda4af 0%, #fb7185 100%)' },
+    ],
+  },
 ]
+
+function compressImage(file: File, maxWidth = 1920, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const ratio = Math.min(maxWidth / img.width, 1)
+        canvas.width = Math.round(img.width * ratio)
+        canvas.height = Math.round(img.height * ratio)
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.onerror = reject
+      img.src = e.target?.result as string
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
 
 const LS_KEY_APP = 'vdm_app_bg'
 const LS_KEY_LOGIN = 'vdm_login_bg'
@@ -112,15 +164,19 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY_APP) ?? ''
     setAppBg(stored)
-    if (stored) document.body.style.background = stored
+    if (stored) document.documentElement.style.setProperty('--vdm-app-bg', stored)
     setLoginBg(localStorage.getItem(LS_KEY_LOGIN) ?? '')
   }, [])
 
   function applyAppBg(value: string) {
     setAppBg(value)
-    localStorage.setItem(LS_KEY_APP, value)
-    document.body.style.background = value
-    toast.success('Fond d\'écran principal appliqué.')
+    document.documentElement.style.setProperty('--vdm-app-bg', value)
+    try {
+      localStorage.setItem(LS_KEY_APP, value)
+      toast.success('Fond d\'écran principal appliqué.')
+    } catch {
+      toast.warning('Fond appliqué mais image trop grande pour être sauvegardée — elle s\'effacera à la prochaine ouverture.')
+    }
   }
 
   function applyLoginBg(value: string) {
@@ -133,11 +189,12 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
     if (target === 'app') {
       setAppBg('')
       localStorage.removeItem(LS_KEY_APP)
-      document.body.style.background = ''
+      document.documentElement.style.setProperty('--vdm-app-bg', '#f4f4f6')
       toast.info('Fond d\'écran principal réinitialisé.')
     } else {
       setLoginBg('')
       localStorage.removeItem(LS_KEY_LOGIN)
+      document.documentElement.style.setProperty('--vdm-login-bg', '#f4f4f6')
       toast.info('Fond d\'écran de connexion réinitialisé.')
     }
   }
@@ -658,6 +715,13 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
 // Section fond d'écran
 // ---------------------------------------------------------------------------
 
+const ANGLES = [
+  { label: '↘', value: 135 },
+  { label: '→', value: 90 },
+  { label: '↓', value: 180 },
+  { label: '↗', value: 45 },
+]
+
 function BgSection({
   title, subtitle, current, onApply, onReset,
 }: {
@@ -667,9 +731,35 @@ function BgSection({
   onApply: (v: string) => void
   onReset: () => void
 }) {
+  const [uploading, setUploading] = useState(false)
+  const [c1, setC1] = useState('#F28C38')
+  const [c2, setC2] = useState('#e07d29')
+  const [angle, setAngle] = useState(135)
+  const [solid, setSolid] = useState(false)
+
+  const isImage = current.startsWith('url(')
+  const customValue = solid ? c1 : `linear-gradient(${angle}deg, ${c1} 0%, ${c2} 100%)`
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const dataUrl = await compressImage(file)
+      onApply(`url("${dataUrl}") center / cover no-repeat`)
+    } catch {
+      toast.error('Impossible de charger l\'image.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6">
-      <div className="flex items-start justify-between mb-4">
+    <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+
+      {/* En-tête */}
+      <div className="flex items-start justify-between">
         <div>
           <h2 className="text-sm font-bold text-gray-900">{title}</h2>
           <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
@@ -681,24 +771,146 @@ function BgSection({
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {BG_GRADIENTS.map(bg => (
-          <button
-            key={bg.value}
-            onClick={() => onApply(bg.value)}
-            title={bg.label}
-            style={{ background: bg.value }}
-            className={`relative h-16 rounded-xl transition-all ${
-              current === bg.value ? 'ring-2 ring-[#F28C38] ring-offset-2 scale-95' : 'hover:scale-95'
-            }`}
-          >
-            <span className="absolute inset-0 flex items-end justify-start p-2">
-              <span className="text-white text-xs font-semibold drop-shadow">{bg.label}</span>
+      {/* Aperçu du fond actif */}
+      {current && (
+        <div
+          className="w-full h-16 rounded-xl flex items-center justify-center"
+          style={{ background: current }}
+        >
+          <span className="text-white text-xs font-semibold drop-shadow bg-black/20 px-2.5 py-1 rounded-full">
+            {isImage ? '📷 Image personnalisée' : 'Fond actif'}
+          </span>
+        </div>
+      )}
+
+      {/* ── Image de fond ── */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Image de fond</p>
+        <label className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+          uploading
+            ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+            : 'border-gray-200 hover:border-[#F28C38]/60 text-gray-500 hover:text-[#F28C38]'
+        }`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span className="text-xs font-medium flex-1">
+            {uploading ? 'Compression en cours…' : isImage ? 'Remplacer l\'image' : 'Choisir une image (JPG, PNG, WebP)'}
+          </span>
+          {isImage && (
+            <span
+              role="button"
+              onClick={e => { e.preventDefault(); onReset() }}
+              className="text-[10px] text-red-400 hover:text-red-600 font-medium"
+            >
+              Retirer
             </span>
-            {current === bg.value && (
-              <span className="absolute top-1.5 right-1.5 text-white text-xs bg-white/20 rounded-full w-4 h-4 flex items-center justify-center">✓</span>
-            )}
+          )}
+          <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleImageUpload} />
+        </label>
+      </div>
+
+      {/* ── Couleur personnalisée ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Couleur personnalisée</p>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setSolid(false)}
+              className={`text-[10px] font-semibold px-2.5 py-1 rounded-md transition-colors ${!solid ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+            >
+              Dégradé
+            </button>
+            <button
+              onClick={() => setSolid(true)}
+              className={`text-[10px] font-semibold px-2.5 py-1 rounded-md transition-colors ${solid ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+            >
+              Uni
+            </button>
+          </div>
+        </div>
+
+        {/* Aperçu live */}
+        <div className="w-full h-12 rounded-xl mb-3" style={{ background: customValue }} />
+
+        <div className="flex items-end gap-3">
+          {/* Couleur 1 */}
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="text-[10px] text-gray-400 font-medium">{solid ? 'Couleur' : 'Couleur 1'}</span>
+            <label className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors">
+              <input type="color" value={c1} onChange={e => setC1(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              <div className="w-full h-full rounded-lg" style={{ background: c1 }} />
+            </label>
+          </div>
+
+          {/* Couleur 2 (gradient only) */}
+          {!solid && (
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 font-medium">Couleur 2</span>
+              <label className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors">
+                <input type="color" value={c2} onChange={e => setC2(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                <div className="w-full h-full rounded-lg" style={{ background: c2 }} />
+              </label>
+            </div>
+          )}
+
+          {/* Direction (gradient only) */}
+          {!solid && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] text-gray-400 font-medium">Direction</span>
+              <div className="flex gap-1">
+                {ANGLES.map(a => (
+                  <button
+                    key={a.value}
+                    onClick={() => setAngle(a.value)}
+                    className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${
+                      angle === a.value ? 'bg-[#F28C38] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => onApply(customValue)}
+            className="ml-auto px-4 py-2 bg-[#F28C38] hover:bg-[#e07d29] text-white text-xs font-semibold rounded-xl transition-colors"
+          >
+            Appliquer
           </button>
+        </div>
+      </div>
+
+      {/* ── Palettes prédéfinies ── */}
+      <div className="space-y-4">
+        {BG_GRADIENTS.map(group => (
+          <div key={group.category}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">{group.category}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {group.items.map(bg => (
+                <button
+                  key={bg.value}
+                  onClick={() => onApply(bg.value)}
+                  title={bg.label}
+                  style={{ background: bg.value }}
+                  className={`relative h-14 rounded-xl transition-all ${
+                    current === bg.value ? 'ring-2 ring-[#F28C38] ring-offset-2 scale-[0.94]' : 'hover:scale-[0.96]'
+                  }`}
+                >
+                  <span className="absolute inset-0 flex items-end justify-start p-1.5">
+                    <span className="text-white text-[10px] font-semibold drop-shadow leading-tight">{bg.label}</span>
+                  </span>
+                  {current === bg.value && (
+                    <span className="absolute top-1 right-1 bg-white/30 rounded-full w-4 h-4 flex items-center justify-center text-white text-[9px]">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>

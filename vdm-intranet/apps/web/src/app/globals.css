@@ -9,6 +9,8 @@
   --vdm-orange-light: #fbcb97;
   --vdm-orange-bg: rgba(242, 140, 56, 0.1);
   --vdm-gray: #f4f4f6;
+  --vdm-app-bg: #f4f4f6;
+  --vdm-login-bg: #f4f4f6;
 }
 
 html {

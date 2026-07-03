@@ -38,7 +38,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#F4F4F6] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--vdm-app-bg)' }}>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 max-w-sm w-full text-center">
           <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center mx-auto mb-4">
             <span className="text-[#F28C38] text-2xl">⚠</span>
@@ -62,7 +62,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   if (isAccueilOnly(user.role)) {
     return (
-      <div className="min-h-screen bg-[#F4F4F6] flex flex-col">
+      <div className="min-h-screen flex flex-col" style={{ background: 'var(--vdm-app-bg)' }}>
         <BgRestorer />
         <header className="bg-white border-b border-gray-100 px-6 h-14 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">

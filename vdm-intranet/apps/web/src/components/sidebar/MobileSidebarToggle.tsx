@@ -18,7 +18,7 @@ export function MobileSidebarToggle({ user, announcements, children }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-[#F4F4F6]">
+    <div className="flex min-h-screen" style={{ background: 'var(--vdm-app-bg)' }}>
       <BgRestorer />
       {/* Overlay mobile */}
       {mobileOpen && (

@@ -2,12 +2,10 @@
 
 import { useEffect } from 'react'
 
-const LS_KEY_APP = 'vdm_app_bg'
-
 export function BgRestorer() {
   useEffect(() => {
-    const bg = localStorage.getItem(LS_KEY_APP)
-    if (bg) document.body.style.background = bg
+    const appBg = localStorage.getItem('vdm_app_bg')
+    if (appBg) document.documentElement.style.setProperty('--vdm-app-bg', appBg)
   }, [])
   return null
 }

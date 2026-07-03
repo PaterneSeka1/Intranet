@@ -20,8 +20,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     const bg = localStorage.getItem('vdm_login_bg')
-    if (bg) document.body.style.background = bg
-    return () => { document.body.style.background = '' }
+    if (bg) document.documentElement.style.setProperty('--vdm-login-bg', bg)
+    return () => { document.documentElement.style.removeProperty('--vdm-login-bg') }
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -68,7 +68,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F4F6] flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--vdm-login-bg)' }}>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-[#F28C38] flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-100">
