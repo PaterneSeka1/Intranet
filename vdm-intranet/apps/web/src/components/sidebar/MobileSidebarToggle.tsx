@@ -6,6 +6,7 @@ import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanne
 import type { User } from '@/types/user'
 import type { Announcement } from '@/lib/announcements'
 import { BgRestorer } from '@/components/ui/BgRestorer'
+import { BgImageLayer } from '@/components/ui/BgImageLayer'
 import { Widgets } from '@/components/widgets/Widgets'
 
 interface Props {
@@ -20,6 +21,7 @@ export function MobileSidebarToggle({ user, announcements, children }: Props) {
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--vdm-app-bg)' }}>
       <BgRestorer />
+      <BgImageLayer />
       {/* Overlay mobile */}
       {mobileOpen && (
         <div
@@ -40,7 +42,7 @@ export function MobileSidebarToggle({ user, announcements, children }: Props) {
       </div>
 
       {/* Contenu principal */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="relative z-[2] flex-1 flex flex-col min-w-0">
         {/* Header mobile uniquement */}
         <div className="lg:hidden bg-white border-b border-gray-100 px-4 h-14 flex items-center gap-3 sticky top-0 z-30">
           <button

@@ -13,6 +13,8 @@
   --vdm-login-bg: #f4f4f6;
   --vdm-sidebar-bg: #111827;
   --vdm-sidebar-hover: rgba(255, 255, 255, 0.1);
+  --vdm-bg-image: none;
+  --vdm-bg-image-opacity: 0.5;
 }
 
 html {

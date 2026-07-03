@@ -10,6 +10,7 @@ import type { Announcement } from '@/lib/announcements'
 import { API_BASE } from '@/lib/api-base'
 import Link from 'next/link'
 import { BgRestorer } from '@/components/ui/BgRestorer'
+import { BgImageLayer } from '@/components/ui/BgImageLayer'
 
 async function getActiveAnnouncements(): Promise<Announcement[]> {
   try {
@@ -64,6 +65,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     return (
       <div className="min-h-screen flex flex-col" style={{ background: 'var(--vdm-app-bg)' }}>
         <BgRestorer />
+        <BgImageLayer />
         <header className="bg-white border-b border-gray-100 px-6 h-14 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-[#F28C38] flex items-center justify-center">

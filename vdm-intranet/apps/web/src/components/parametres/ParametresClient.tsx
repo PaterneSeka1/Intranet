@@ -763,9 +763,17 @@ function BgPanel({
   const [hoverColor, setHoverColor] = useState('#ffffff')
   const [hoverOpacity, setHoverOpacity] = useState(10)
 
+  // Image overlay (indépendante de la couleur)
+  const [bgImage, setBgImage] = useState('')
+  const [bgImageOpacity, setBgImageOpacity] = useState(50)
+
   useEffect(() => {
     const stored = localStorage.getItem('vdm_sidebar_hover')
     if (stored) setSidebarHover(stored)
+    const storedImg = localStorage.getItem('vdm_bg_image')
+    if (storedImg) setBgImage(storedImg)
+    const storedOpacity = localStorage.getItem('vdm_bg_image_opacity')
+    if (storedOpacity) setBgImageOpacity(Math.round(Number(storedOpacity) * 100))
   }, [])
 
   function applyHover(value: string) {
@@ -778,11 +786,20 @@ function BgPanel({
     applyHover(`rgba(${hexToRgb(hoverColor)},${(hoverOpacity / 100).toFixed(2)})`)
   }
 
-  const current = target === 'app' ? appBg : loginBg
-  const onApply = target === 'app' ? onApplyApp : onApplyLogin
-  const onReset = target === 'app' ? onResetApp : onResetLogin
-  const isImage = current.startsWith('url(')
-  const customValue = solid ? c1 : `linear-gradient(${angle}deg, ${c1} 0%, ${c2} 100%)`
+  function applyImageOpacity(value: number) {
+    setBgImageOpacity(value)
+    const opacity = (value / 100).toFixed(2)
+    document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
+    localStorage.setItem('vdm_bg_image_opacity', opacity)
+  }
+
+  function removeImage() {
+    setBgImage('')
+    document.documentElement.style.setProperty('--vdm-bg-image', 'none')
+    document.documentElement.style.setProperty('--vdm-bg-image-opacity', '0')
+    localStorage.removeItem('vdm_bg_image')
+    localStorage.removeItem('vdm_bg_image_opacity')
+  }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -790,7 +807,17 @@ function BgPanel({
     setUploading(true)
     try {
       const dataUrl = await compressImage(file)
-      onApply(`url("${dataUrl}") center / cover no-repeat`)
+      setBgImage(dataUrl)
+      const opacity = (bgImageOpacity / 100).toFixed(2)
+      document.documentElement.style.setProperty('--vdm-bg-image', `url("${dataUrl}")`)
+      document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
+      try {
+        localStorage.setItem('vdm_bg_image', dataUrl)
+        localStorage.setItem('vdm_bg_image_opacity', opacity)
+        toast.success('Image de fond appliquée.')
+      } catch {
+        toast.warning('Image appliquée mais trop grande pour être sauvegardée — elle s\'effacera à la prochaine ouverture.')
+      }
     } catch {
       toast.error('Impossible de charger l\'image.')
     } finally {
@@ -798,6 +825,11 @@ function BgPanel({
       e.target.value = ''
     }
   }
+
+  const current = target === 'app' ? appBg : loginBg
+  const onApply = target === 'app' ? onApplyApp : onApplyLogin
+  const onReset = target === 'app' ? onResetApp : onResetLogin
+  const customValue = solid ? c1 : `linear-gradient(${angle}deg, ${c1} 0%, ${c2} 100%)`
 
   return (
     <div className="space-y-4">
@@ -846,29 +878,59 @@ function BgPanel({
       {/* Panneau de sélection */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
 
-        {/* Image */}
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Image de fond</p>
-          <label className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-dashed cursor-pointer transition-colors ${
-            uploading
-              ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-              : 'border-gray-200 hover:border-[#F28C38]/60 text-gray-500 hover:text-[#F28C38]'
-          }`}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-            <span className="text-xs font-medium flex-1">
-              {uploading ? 'Compression…' : isImage ? 'Remplacer l\'image' : 'Choisir une image (JPG, PNG, WebP)'}
-            </span>
-            {isImage && (
-              <span role="button" onClick={e => { e.preventDefault(); onReset() }} className="text-[10px] text-red-400 hover:text-red-600 font-medium">
-                Retirer
-              </span>
+        {/* Image overlay — uniquement pour l'application */}
+        {target === 'app' && (
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Image de fond</p>
+            {bgImage ? (
+              <div className="space-y-3">
+                {/* Prévisualisation */}
+                <div className="relative rounded-xl overflow-hidden h-24 border border-gray-100">
+                  <img src={bgImage} alt="" className="w-full h-full object-cover" style={{ opacity: bgImageOpacity / 100 }} />
+                  <div className="absolute inset-0" style={{ background: 'var(--vdm-app-bg)' }} />
+                  <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-normal" style={{ opacity: bgImageOpacity / 100 }} />
+                  <button
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors"
+                  >
+                    Retirer
+                  </button>
+                </div>
+                {/* Opacité */}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <span className="text-[10px] text-gray-500 font-medium shrink-0">Opacité</span>
+                  <input
+                    type="range" min="5" max="100" value={bgImageOpacity}
+                    onChange={e => applyImageOpacity(Number(e.target.value))}
+                    className="flex-1 h-1.5 rounded-full accent-[#F28C38]"
+                  />
+                  <span className="text-[10px] font-semibold text-gray-700 w-8 text-right">{bgImageOpacity}%</span>
+                </div>
+                {/* Remplacer */}
+                <label className="flex items-center gap-2 text-[10px] text-gray-400 hover:text-[#F28C38] cursor-pointer transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  {uploading ? 'Compression…' : 'Remplacer l\'image'}
+                  <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleImageUpload} />
+                </label>
+              </div>
+            ) : (
+              <label className={`flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-dashed cursor-pointer transition-colors ${
+                uploading ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-200 hover:border-[#F28C38]/60 text-gray-500 hover:text-[#F28C38]'
+              }`}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span className="text-xs font-medium flex-1">
+                  {uploading ? 'Compression…' : 'Choisir une image (JPG, PNG, WebP)'}
+                </span>
+                <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleImageUpload} />
+              </label>
             )}
-            <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleImageUpload} />
-          </label>
-        </div>
+          </div>
+        )}
 
         {/* Survol de la sidebar — visible uniquement pour la cible login */}
         {target === 'login' && (
