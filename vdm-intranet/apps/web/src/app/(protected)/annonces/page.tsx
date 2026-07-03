@@ -13,8 +13,8 @@ export default async function AnnoncesPage() {
   if (!CAN_MANAGE.includes(user.role)) redirect('/acces-refuse')
 
   const [announcements, bus] = await Promise.all([
-    serverFetch<Announcement[]>('/announcements') ?? [],
-    serverFetch<Bu[]>('/tabs/business-units') ?? [],
+    serverFetch<Announcement[]>('/announcements'),
+    serverFetch<Bu[]>('/tabs/business-units'),
   ])
 
   return (

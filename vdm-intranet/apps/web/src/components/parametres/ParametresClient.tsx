@@ -517,32 +517,14 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
           {/* Pôles */}
           {orgSubTab === 'poles' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-500">{poles.length} pôle{poles.length > 1 ? 's' : ''}</p>
-                <button onClick={() => { setEditingPole(null); setPoleForm(EMPTY_POLE); setPoleError(''); setShowPoleForm(true) }} className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors">+ Nouveau pôle</button>
-              </div>
-              <div className="space-y-3">
-                {poles.map(pole => (
-                  <div key={pole.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                      <span className="text-blue-600 font-bold text-xs">{pole.code.slice(0, 4)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                        {pole.name}
-                        {!pole.isActive && <span className="text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">Inactif</span>}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5">{pole.businessUnit?.name ?? '—'} · {pole._count.users} utilisateur{pole._count.users > 1 ? 's' : ''}</div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => togglePoleActive(pole)} className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${pole.isActive ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}>{pole.isActive ? 'Désactiver' : 'Activer'}</button>
-                      <button onClick={() => { setEditingPole(pole); setPoleForm({ name: pole.name, code: pole.code, businessUnitId: pole.businessUnitId }); setPoleError(''); setShowPoleForm(true) }} className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">Modifier</button>
-                      <button onClick={() => deletePole(pole)} disabled={pole._count.users > 0} className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed">Supprimer</button>
-                    </div>
-                  </div>
-                ))}
-                {poles.length === 0 && <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">Aucun pôle défini.</div>}
-              </div>
+              <PolesSection
+                poles={poles}
+                bus={bus}
+                onAdd={() => { setEditingPole(null); setPoleForm(EMPTY_POLE); setPoleError(''); setShowPoleForm(true) }}
+                onEdit={pole => { setEditingPole(pole); setPoleForm({ name: pole.name, code: pole.code, businessUnitId: pole.businessUnitId }); setPoleError(''); setShowPoleForm(true) }}
+                onToggle={togglePoleActive}
+                onDelete={deletePole}
+              />
 
               <Modal open={showPoleForm} onClose={() => setShowPoleForm(false)} title={editingPole ? 'Modifier le pôle' : 'Nouveau pôle'} subtitle={editingPole ? `Éditer « ${editingPole.name} »` : 'Créer un nouveau pôle'} size="md">
                 <form onSubmit={handlePoleSubmit} className="space-y-4">
@@ -574,58 +556,14 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
       {/* ------------------------------------------------------------------ */}
       {tab === 'groups' && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">{groups.length} groupe{groups.length > 1 ? 's' : ''}</p>
-            <button
-              onClick={openCreateGroup}
-              className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors"
-            >
-              + Nouveau groupe
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {groups.map(g => (
-              <div key={g.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#F28C38]/10 flex items-center justify-center shrink-0">
-                  <span className="text-[#F28C38] font-bold text-sm">{g.expectedArrivalTime}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 text-sm">
-                    {g.name}
-                    {g.isNightShift && (
-                      <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">Nuit</span>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    Code : {g.code}
-                    {g.businessUnit && ` · ${g.businessUnit.name}`}
-                    {` · ${g._count.users} utilisateur${g._count.users > 1 ? 's' : ''}`}
-                  </div>
-                  {g.description && <p className="text-xs text-gray-500 mt-1">{g.description}</p>}
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => openEditGroup(g)}
-                    className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Modifier
-                  </button>
-                  <button
-                    onClick={() => deleteGroup(g)}
-                    className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            ))}
-            {groups.length === 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
-                Aucun groupe horaire défini.
-              </div>
-            )}
-          </div>
+          <GroupsSection
+            groups={groups}
+            bus={bus}
+            poles={poles}
+            onOpenCreate={openCreateGroup}
+            onOpenEdit={openEditGroup}
+            onDelete={deleteGroup}
+          />
 
           {/* Modale groupe */}
           <Modal
@@ -1161,6 +1099,238 @@ function BgPanel({
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Groupes horaires — section refactorisée
+// ---------------------------------------------------------------------------
+
+type BuMin = { id: string; name: string; code: string }
+type PoleMin = { id: string; name: string; code: string; businessUnitId: string }
+
+function GroupsSection({
+  groups, bus, poles, onOpenCreate, onOpenEdit, onDelete,
+}: {
+  groups: ScheduleGroup[]
+  bus: BuMin[]
+  poles: PoleMin[]
+  onOpenCreate: () => void
+  onOpenEdit: (g: ScheduleGroup) => void
+  onDelete: (g: ScheduleGroup) => Promise<void>
+}) {
+  const [search, setSearch] = useState('')
+  const [filterBu, setFilterBu] = useState('')
+
+  const filtered = groups.filter(g => {
+    if (filterBu && g.businessUnitId !== filterBu) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return g.name.toLowerCase().includes(q) || g.code.toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  return (
+    <div>
+      {/* Barre d'outils */}
+      <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+        <div className="flex gap-2 flex-wrap">
+          <input
+            type="text"
+            placeholder="Rechercher un groupe…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300 w-52"
+          />
+          {bus.length > 0 && (
+            <select
+              value={filterBu}
+              onChange={e => setFilterBu(e.target.value)}
+              className="px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white"
+            >
+              <option value="">Toutes les BU</option>
+              {bus.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
+          <span className="self-center text-sm text-gray-400">{filtered.length} groupe{filtered.length !== 1 ? 's' : ''}</span>
+        </div>
+        <button onClick={onOpenCreate} className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors shrink-0">
+          + Nouveau groupe
+        </button>
+      </div>
+
+      {/* Liste */}
+      <div className="space-y-2">
+        {filtered.map(g => {
+          const isNight = g.isNightShift
+          const pole = poles.find(p => p.id === g.poleId)
+          return (
+            <div
+              key={g.id}
+              className={`rounded-2xl border p-4 flex items-center gap-4 transition-all ${
+                isNight
+                  ? 'bg-indigo-950/5 border-indigo-100'
+                  : 'bg-white border-gray-100'
+              }`}
+            >
+              {/* Horloge */}
+              <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 ${isNight ? 'bg-indigo-100' : 'bg-[#F28C38]/10'}`}>
+                <span className={`font-bold text-sm leading-tight ${isNight ? 'text-indigo-700' : 'text-[#F28C38]'}`}>{g.expectedArrivalTime}</span>
+                <span className={`text-[9px] font-medium mt-0.5 ${isNight ? 'text-indigo-400' : 'text-[#F28C38]/60'}`}>{isNight ? '🌙 Nuit' : '☀️ Jour'}</span>
+              </div>
+
+              {/* Infos */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-gray-900 text-sm">{g.name}</span>
+                  <span className="text-[10px] bg-gray-100 text-gray-500 font-mono px-1.5 py-0.5 rounded-md">{g.code}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap mt-1">
+                  {g.businessUnit && (
+                    <span className="text-[10px] bg-[#F28C38]/10 text-[#F28C38] px-2 py-0.5 rounded-full font-medium">{g.businessUnit.name}</span>
+                  )}
+                  {pole && (
+                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{pole.name}</span>
+                  )}
+                  {!g.businessUnit && !pole && (
+                    <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">Global</span>
+                  )}
+                  <span className="text-[10px] text-gray-400">
+                    {g._count.users} utilisateur{g._count.users !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                {g.description && <p className="text-xs text-gray-400 mt-1 truncate">{g.description}</p>}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => onOpenEdit(g)} className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">Modifier</button>
+                <button
+                  onClick={() => onDelete(g)}
+                  disabled={g._count.users > 0}
+                  title={g._count.users > 0 ? `${g._count.users} utilisateur(s) assigné(s)` : undefined}
+                  className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          )
+        })}
+        {filtered.length === 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-gray-400 text-sm">
+            {search || filterBu ? 'Aucun groupe correspondant.' : 'Aucun groupe horaire défini.'}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Pôles — section refactorisée
+// ---------------------------------------------------------------------------
+
+function PolesSection({
+  poles, bus, onAdd, onEdit, onToggle, onDelete,
+}: {
+  poles: Pole[]
+  bus: BuMin[]
+  onAdd: () => void
+  onEdit: (p: Pole) => void
+  onToggle: (p: Pole) => Promise<void>
+  onDelete: (p: Pole) => Promise<void>
+}) {
+  const [search, setSearch] = useState('')
+  const [filterBu, setFilterBu] = useState('')
+
+  const filtered = poles.filter(p => {
+    if (filterBu && p.businessUnitId !== filterBu) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  const totalUsers = poles.reduce((acc, p) => acc + p._count.users, 0)
+
+  return (
+    <div>
+      {/* Barre d'outils */}
+      <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+        <div className="flex gap-2 flex-wrap">
+          <input
+            type="text"
+            placeholder="Rechercher un pôle…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300 w-52"
+          />
+          {bus.length > 0 && (
+            <select
+              value={filterBu}
+              onChange={e => setFilterBu(e.target.value)}
+              className="px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white"
+            >
+              <option value="">Toutes les BU</option>
+              {bus.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
+          <span className="self-center text-sm text-gray-400">
+            {filtered.length} pôle{filtered.length !== 1 ? 's' : ''} · {totalUsers} membre{totalUsers !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <button onClick={onAdd} className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors shrink-0">
+          + Nouveau pôle
+        </button>
+      </div>
+
+      {/* Liste */}
+      <div className="space-y-2">
+        {filtered.map(pole => (
+          <div key={pole.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+              <span className="text-blue-600 font-bold text-[10px]">{pole.code.slice(0, 5)}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-gray-900 text-sm">{pole.name}</span>
+                {!pole.isActive && <span className="text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">Inactif</span>}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                {pole.businessUnit && (
+                  <span className="text-[10px] bg-[#F28C38]/10 text-[#F28C38] px-2 py-0.5 rounded-full font-medium">{pole.businessUnit.name}</span>
+                )}
+                <span className="text-[10px] text-gray-400">
+                  {pole._count.users} utilisateur{pole._count.users !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => onToggle(pole)} className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${pole.isActive ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}>
+                {pole.isActive ? 'Désactiver' : 'Activer'}
+              </button>
+              <button onClick={() => onEdit(pole)} className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">Modifier</button>
+              <button
+                onClick={() => onDelete(pole)}
+                disabled={pole._count.users > 0}
+                title={pole._count.users > 0 ? `${pole._count.users} utilisateur(s) assigné(s)` : undefined}
+                className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-gray-400 text-sm">
+            {search || filterBu ? 'Aucun pôle correspondant.' : 'Aucun pôle défini.'}
+          </div>
+        )}
       </div>
     </div>
   )

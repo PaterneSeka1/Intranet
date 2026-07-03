@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useId } from 'react'
+import React, { useState } from 'react'
 import { ROLE_LABELS, type Role, type User } from '@/types/user'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
 import { Modal } from '@/components/ui/Modal'
+import { API_BASE as API } from '@/lib/api-base'
 
 type Bu = { id: string; name: string; code: string }
 type Pole = { id: string; name: string; code: string; businessUnitId: string }
@@ -46,8 +47,6 @@ const EMPTY_FORM: FormData = {
   individualExpectedArrivalTime: '',
 }
 
-import { API_BASE as API } from '@/lib/api-base'
-
 async function apiReq<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API}/api${path}`, {
     ...init,
@@ -62,32 +61,53 @@ async function apiReq<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const ROLE_BADGE: Record<Role, string> = {
-  CTO_ADMIN: 'bg-red-100 text-red-700',
-  PDG: 'bg-orange-100 text-orange-700',
-  DAF: 'bg-yellow-100 text-yellow-700',
-  RESPONSABLE_BU: 'bg-blue-100 text-blue-700',
-  RESPONSABLE_POLE: 'bg-indigo-100 text-indigo-700',
-  CONSULTANT: 'bg-gray-100 text-gray-600',
-  STAGIAIRE: 'bg-green-100 text-green-700',
-  PRESTATAIRE: 'bg-purple-100 text-purple-700',
+  CTO_ADMIN:       'bg-red-100 text-red-700',
+  PDG:             'bg-orange-100 text-orange-700',
+  DAF:             'bg-yellow-100 text-yellow-700',
+  RESPONSABLE_BU:  'bg-blue-100 text-blue-700',
+  RESPONSABLE_POLE:'bg-indigo-100 text-indigo-700',
+  CONSULTANT:      'bg-gray-100 text-gray-600',
+  STAGIAIRE:       'bg-green-100 text-green-700',
+  PRESTATAIRE:     'bg-purple-100 text-purple-700',
 }
+
+const ROLE_HINTS: Record<Role, string> = {
+  CTO_ADMIN:        'Accès total — administration de la plateforme',
+  PDG:              'Direction générale — tableaux de bord & présences',
+  DAF:              'Direction administrative — tableaux de bord & présences',
+  RESPONSABLE_BU:   'Gestion d\'une Business Unit et de ses membres',
+  RESPONSABLE_POLE: 'Supervision d\'un pôle au sein d\'une BU',
+  CONSULTANT:       'Accueil uniquement — aucun accès aux modules',
+  STAGIAIRE:        'Accueil uniquement — aucun accès aux modules',
+  PRESTATAIRE:      'Accueil uniquement — aucun accès aux modules',
+}
+
+const NO_BU_ROLES: Role[] = ['CTO_ADMIN', 'PDG', 'DAF']
 
 const ALL_ROLES: Role[] = [
   'CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE',
   'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE',
 ]
 
-const INPUT = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-shadow'
-const SELECT = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white transition-shadow'
+const INPUT  = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-shadow'
+const SELECT = `${INPUT} bg-white`
 
-function Field({ label, children }: { label: string; children: React.ReactElement<{ id?: string }> }) {
-  const id = useId()
+function SectionHeader({ icon, title }: { icon: string; title: string }) {
   return (
-    <div>
-      <label htmlFor={id} className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">{label}</label>
-      {React.cloneElement(children, { id })}
+    <div className="flex items-center gap-2 pt-1">
+      <span className="text-base">{icon}</span>
+      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</span>
+      <div className="flex-1 h-px bg-gray-100" />
     </div>
   )
+}
+
+function getInitials(firstName: string, lastName: string, username: string): string {
+  const f = firstName.trim()
+  const l = lastName.trim()
+  if (f && l) return (f[0] + l[0]).toUpperCase()
+  if (f) return f.slice(0, 2).toUpperCase()
+  return username.slice(0, 2).toUpperCase()
 }
 
 export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, canManage }: Props) {
@@ -97,6 +117,8 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  function f(patch: Partial<FormData>) { setForm(prev => ({ ...prev, ...patch })) }
 
   function openCreate() {
     setEditing(null)
@@ -146,14 +168,12 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         const created = await apiReq<User>('/users', { method: 'POST', body: JSON.stringify(payload) })
         setUsers(prev => [created, ...prev])
         setShowForm(false)
-        setEditing(null)
-        toast.success(`Utilisateur « ${created.username} » créé avec succès.`)
+        toast.success(`Compte « ${created.username} » créé avec succès.`)
       } else {
         if (form.password) payload.password = form.password
         const updated = await apiReq<User>(`/users/${editing.id}`, { method: 'PATCH', body: JSON.stringify(payload) })
         setUsers(prev => prev.map(u => u.id === editing.id ? updated : u))
         setShowForm(false)
-        setEditing(null)
         toast.success('Utilisateur mis à jour.')
       }
     } catch (err) {
@@ -174,9 +194,9 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Column definitions
-  // -------------------------------------------------------------------------
+  const noBuRole = NO_BU_ROLES.includes(form.role)
+  const filteredPoles = poleList.filter(p => !form.businessUnitId || p.businessUnitId === form.businessUnitId)
+  const initials = getInitials(form.firstName, form.lastName, form.username || '?')
 
   const columns: Column<User>[] = [
     {
@@ -184,17 +204,21 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       label: 'Nom',
       sortable: true,
       sortValue: u => u.fullName ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
-      render: u => (
-        <span className="font-medium text-gray-800">
-          {u.fullName ?? (`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || '—')}
-        </span>
-      ),
-    },
-    {
-      key: 'username',
-      label: 'Identifiant',
-      sortable: true,
-      render: u => <span className="font-mono text-xs text-gray-500">{u.username}</span>,
+      render: u => {
+        const name = u.fullName ?? (`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || null)
+        const ini = getInitials(u.firstName ?? '', u.lastName ?? '', u.username)
+        return (
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[#F28C38]/10 flex items-center justify-center shrink-0">
+              <span className="text-[#F28C38] text-[10px] font-bold">{ini}</span>
+            </div>
+            <div>
+              <div className="font-medium text-gray-800 text-sm">{name ?? '—'}</div>
+              <div className="text-[10px] text-gray-400 font-mono">{u.username}</div>
+            </div>
+          </div>
+        )
+      },
     },
     {
       key: 'role',
@@ -248,10 +272,7 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
           <>
             <span className="text-sm text-gray-500">{users.length} compte{users.length > 1 ? 's' : ''}</span>
             {canManage && (
-              <button
-                onClick={openCreate}
-                className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors"
-              >
+              <button onClick={openCreate} className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors">
                 + Nouveau
               </button>
             )}
@@ -259,109 +280,183 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         }
         actions={canManage ? u => (
           <>
-            <button
-              onClick={e => { e.stopPropagation(); openEdit(u) }}
-              className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
-            >
-              Modifier
-            </button>
-            <button
-              onClick={e => { e.stopPropagation(); toggleActive(u) }}
-              className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${
-                u.isActive
-                  ? 'border-red-100 text-red-500 hover:bg-red-50'
-                  : 'border-green-100 text-green-600 hover:bg-green-50'
-              }`}
-            >
+            <button onClick={e => { e.stopPropagation(); openEdit(u) }} className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors">Modifier</button>
+            <button onClick={e => { e.stopPropagation(); toggleActive(u) }} className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}>
               {u.isActive ? 'Désactiver' : 'Activer'}
             </button>
           </>
         ) : undefined}
       />
 
-      {/* Modale */}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
         title={editing ? `Modifier — ${editing.username}` : 'Nouvel utilisateur'}
-        subtitle={editing ? 'Mise à jour des informations du compte' : 'Création d\'un nouveau compte utilisateur'}
+        subtitle={editing ? 'Mise à jour du compte' : 'Créer un nouveau compte sur le portail'}
         size="xl"
       >
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Prénom">
-                  <input type="text" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} className={INPUT} />
-                </Field>
-                <Field label="Nom">
-                  <input type="text" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} className={INPUT} />
-                </Field>
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* Aperçu identité */}
+          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
+            <div className="w-12 h-12 rounded-xl bg-[#F28C38] flex items-center justify-center shrink-0">
+              <span className="text-white text-base font-bold">{initials}</span>
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-gray-900 text-sm">
+                {(form.firstName || form.lastName)
+                  ? `${form.firstName} ${form.lastName}`.trim()
+                  : <span className="text-gray-400 font-normal">Prénom Nom</span>}
               </div>
+              <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                {form.username && <span className="text-[10px] font-mono text-gray-400">{form.username}</span>}
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[form.role]}`}>{ROLE_LABELS[form.role]}</span>
+              </div>
+            </div>
+          </div>
 
-              <Field label="Identifiant *">
-                <input type="text" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} required disabled={!!editing} className={`${INPUT} ${editing ? 'bg-gray-50 text-gray-400' : ''}`} />
-              </Field>
+          {/* Identité */}
+          <div className="space-y-3">
+            <SectionHeader icon="👤" title="Identité" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Prénom</label>
+                <input type="text" value={form.firstName} onChange={e => f({ firstName: e.target.value })} className={INPUT} placeholder="Ex : Konan" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nom</label>
+                <input type="text" value={form.lastName} onChange={e => f({ lastName: e.target.value })} className={INPUT} placeholder="Ex : Yao" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Email</label>
+              <input type="email" value={form.email} onChange={e => f({ email: e.target.value })} className={INPUT} placeholder="prenom.nom@veilleurdesmedias.com" />
+            </div>
+          </div>
 
-              <Field label={editing ? 'Nouveau mot de passe (vide = inchangé)' : 'Mot de passe *'}>
-                <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required={!editing} minLength={4} placeholder={editing ? 'Laisser vide pour ne pas changer' : ''} className={INPUT} />
-              </Field>
+          {/* Compte */}
+          <div className="space-y-3">
+            <SectionHeader icon="🔑" title="Compte" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Identifiant *</label>
+                <input
+                  type="text" value={form.username}
+                  onChange={e => f({ username: e.target.value })}
+                  required disabled={!!editing}
+                  className={`${INPUT} ${editing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`}
+                  placeholder="Ex : KYao"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  {editing ? 'Nouveau mot de passe' : 'Mot de passe *'}
+                </label>
+                <input
+                  type="password" value={form.password}
+                  onChange={e => f({ password: e.target.value })}
+                  required={!editing} minLength={4}
+                  placeholder={editing ? 'Vide = inchangé' : '4 caractères minimum'}
+                  className={INPUT}
+                />
+              </div>
+            </div>
+          </div>
 
-              <Field label="Email">
-                <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={INPUT} />
-              </Field>
+          {/* Rôle & Organisation */}
+          <div className="space-y-3">
+            <SectionHeader icon="🏢" title="Rôle & Organisation" />
 
-              <Field label="Rôle *">
-                <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as Role })} required className={SELECT}>
-                  {ALL_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-                </select>
-              </Field>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Rôle *</label>
+              <select value={form.role} onChange={e => f({ role: e.target.value as Role, businessUnitId: '', poleId: '' })} required className={SELECT}>
+                {ALL_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              </select>
+              <p className="text-[11px] text-gray-400 mt-1">{ROLE_HINTS[form.role]}</p>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Business Unit">
+            {noBuRole ? (
+              <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl text-xs text-gray-400 border border-gray-100">
+                Ce rôle n'est pas rattaché à une Business Unit.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Business Unit</label>
                   <select
                     value={form.businessUnitId}
-                    onChange={e => setForm({ ...form, businessUnitId: e.target.value, poleId: '' })}
+                    onChange={e => f({ businessUnitId: e.target.value, poleId: '' })}
                     className={SELECT}
                   >
                     <option value="">— Aucune —</option>
                     {buList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
-                </Field>
-                <Field label="Pôle">
-                  <select value={form.poleId} onChange={e => setForm({ ...form, poleId: e.target.value })} className={SELECT}>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Pôle</label>
+                  <select
+                    value={form.poleId}
+                    onChange={e => f({ poleId: e.target.value })}
+                    disabled={!form.businessUnitId}
+                    className={`${SELECT} ${!form.businessUnitId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
                     <option value="">— Aucun —</option>
-                    {poleList
-                      .filter(p => !form.businessUnitId || p.businessUnitId === form.businessUnitId)
-                      .map(p => <option key={p.id} value={p.id}>{p.name}</option>)
-                    }
+                    {filteredPoles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
-                </Field>
+                </div>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Groupe horaire">
-                  <select value={form.scheduleGroupId} onChange={e => setForm({ ...form, scheduleGroupId: e.target.value })} className={SELECT}>
-                    <option value="">— Aucun —</option>
-                    {scheduleGroups.map(g => <option key={g.id} value={g.id}>{g.name} ({g.expectedArrivalTime})</option>)}
-                  </select>
-                </Field>
-                <Field label="Heure individuelle">
-                  <input type="time" value={form.individualExpectedArrivalTime} onChange={e => setForm({ ...form, individualExpectedArrivalTime: e.target.value })} className={INPUT} />
-                </Field>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Manager direct <span className="text-gray-300 normal-case font-normal">(optionnel)</span></label>
+              <select value={form.managerId} onChange={e => f({ managerId: e.target.value })} className={SELECT}>
+                <option value="">— Aucun —</option>
+                {users
+                  .filter(u => u.isActive && (!editing || u.id !== editing.id))
+                  .sort((a, b) => (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.fullName ?? u.username} — {ROLE_LABELS[u.role]}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Horaires */}
+          <div className="space-y-3">
+            <SectionHeader icon="🕐" title="Horaires" />
+            {editing && (
+              <p className="text-[11px] text-gray-400 bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
+                Les horaires actuels ne sont pas renvoyés par l'API — une modification ici remplacera les valeurs existantes.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Groupe horaire</label>
+                <select value={form.scheduleGroupId} onChange={e => f({ scheduleGroupId: e.target.value })} className={SELECT}>
+                  <option value="">— Aucun —</option>
+                  {scheduleGroups.map(g => <option key={g.id} value={g.id}>{g.name} ({g.expectedArrivalTime})</option>)}
+                </select>
               </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">{error}</div>
-              )}
-
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                  Annuler
-                </button>
-                <button type="submit" disabled={saving} className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50">
-                  {saving ? 'Enregistrement…' : editing ? 'Mettre à jour' : 'Créer'}
-                </button>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Heure individuelle <span className="text-gray-300 normal-case font-normal">(prioritaire)</span></label>
+                <input type="time" value={form.individualExpectedArrivalTime} onChange={e => f({ individualExpectedArrivalTime: e.target.value })} className={INPUT} />
               </div>
-            </form>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">{error}</div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">Annuler</button>
+            <button type="submit" disabled={saving} className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50">
+              {saving ? 'Enregistrement…' : editing ? 'Mettre à jour' : 'Créer le compte'}
+            </button>
+          </div>
+        </form>
       </Modal>
     </>
   )

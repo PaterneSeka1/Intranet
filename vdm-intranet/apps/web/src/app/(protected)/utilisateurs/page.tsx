@@ -16,10 +16,10 @@ export default async function UtilisateursPage() {
   if (!CAN_VIEW.includes(user.role)) redirect('/acces-refuse')
 
   const [users, buList, poleList, scheduleGroups] = await Promise.all([
-    serverFetch<User[]>('/users') ?? [],
-    serverFetch<Bu[]>('/tabs/business-units') ?? [],
-    serverFetch<Pole[]>('/tabs/poles') ?? [],
-    serverFetch<ScheduleGroup[]>('/presence/schedule-groups') ?? [],
+    serverFetch<User[]>('/users'),
+    serverFetch<Bu[]>('/tabs/business-units'),
+    serverFetch<Pole[]>('/tabs/poles'),
+    serverFetch<ScheduleGroup[]>('/presence/schedule-groups'),
   ])
 
   return (

@@ -34,6 +34,8 @@ export interface User {
   businessUnit?: BU | null
   pole?: Pole | null
   manager?: Pick<User, 'id' | 'username' | 'fullName'> | null
+  scheduleGroupId?: string | null
+  individualExpectedArrivalTime?: string | null
 }
 
 export const ROLE_LABELS: Record<Role, string> = {

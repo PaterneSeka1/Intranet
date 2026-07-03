@@ -150,10 +150,9 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
     [items, safePage],
   )
 
-  const now = new Date()
-
   function getStatus(a: Announcement): { label: string; cls: string } {
     if (!a.isActive) return { label: 'Inactif', cls: 'bg-gray-100 text-gray-500' }
+    const now = new Date()
     const pub = new Date(a.publishedAt)
     if (pub > now) return { label: 'Planifié', cls: 'bg-blue-100 text-blue-700' }
     if (a.expiresAt && new Date(a.expiresAt) < now) return { label: 'Expiré', cls: 'bg-red-100 text-red-600' }

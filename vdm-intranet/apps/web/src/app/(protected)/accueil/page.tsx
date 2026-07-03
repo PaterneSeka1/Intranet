@@ -15,6 +15,8 @@ const STATUS_LABEL: Record<string, string> = {
   ABSENT: 'Non enregistré',
 }
 
+const DEFAULT_STATUS_STYLE = 'bg-gray-100 text-gray-500'
+
 function formatTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -32,9 +34,7 @@ export default async function AccueilPage() {
 
   const [presenceData, allTabs] = await Promise.all([
     serverFetch<TodayPresenceResult>('/presence/today'),
-    user.businessUnit
-      ? serverFetch<Tab[]>(`/tabs?businessUnitId=${user.businessUnit.id}`)
-      : Promise.resolve([] as Tab[]),
+    serverFetch<Tab[]>(user.businessUnit ? `/tabs?businessUnitId=${user.businessUnit.id}` : '/tabs'),
   ])
 
   const presence = presenceData?.presence ?? null
@@ -48,8 +48,8 @@ export default async function AccueilPage() {
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-medium text-gray-500 capitalize">{formatDate()}</p>
-          <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_STYLE[status]}`}>
-            {STATUS_LABEL[status]}
+          <span className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_STYLE[status] ?? DEFAULT_STATUS_STYLE}`}>
+            {STATUS_LABEL[status] ?? status}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

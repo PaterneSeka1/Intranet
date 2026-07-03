@@ -106,7 +106,7 @@ export function MonProfilClient({ user }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
             { label: 'Business Unit', value: user.businessUnit?.name },
-            { label: 'Pôle', value: (user as { pole?: { name: string } }).pole?.name },
+            { label: 'Pôle', value: user.pole?.name },
             { label: 'Dernière connexion', value: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : undefined },
             { label: 'Compte créé le', value: user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : undefined },
           ].map(({ label, value }) => value ? (
