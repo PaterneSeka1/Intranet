@@ -58,16 +58,16 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
   const initials = ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase() || user.username[0].toUpperCase()
 
   return (
-    <aside className="w-60 h-screen sticky top-0 bg-gray-900 flex flex-col shrink-0">
+    <aside className="w-60 h-screen sticky top-0 flex flex-col shrink-0" style={{ background: 'var(--vdm-sidebar-bg)' }}>
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-800">
+      <div className="px-5 py-5 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#F28C38] flex items-center justify-center shrink-0">
             <span className="text-white text-sm font-bold">V</span>
           </div>
           <div>
             <div className="text-white text-sm font-bold leading-tight">VDM Intranet</div>
-            <div className="text-gray-500 text-xs">Veilleur des Médias</div>
+            <div className="text-white/40 text-xs">Veilleur des Médias</div>
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                 active
                   ? 'bg-[#F28C38] text-white font-semibold'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  : 'vdm-sb-link text-white/50 hover:text-white'
               }`}
             >
               <span className="text-base">{item.icon}</span>
@@ -95,30 +95,30 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
       </nav>
 
       {/* User + profil + logout */}
-      <div className="px-3 py-4 border-t border-gray-800">
+      <div className="px-3 py-4 border-t border-white/10">
         <Link
           href="/mon-profil"
           className={`flex items-center gap-3 px-3 py-2 mb-1 rounded-xl transition-colors ${
             pathname === '/mon-profil'
               ? 'bg-[#F28C38] text-white'
-              : 'hover:bg-gray-800'
+              : 'vdm-sb-link'
           }`}
         >
-          <div className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center shrink-0">
-            <span className="text-gray-200 text-xs font-bold">{initials}</span>
+          <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+            <span className="text-white text-xs font-bold">{initials}</span>
           </div>
           <div className="min-w-0">
-            <div className={`text-xs font-medium truncate ${pathname === '/mon-profil' ? 'text-white' : 'text-gray-200'}`}>
+            <div className={`text-xs font-medium truncate ${pathname === '/mon-profil' ? 'text-white' : 'text-white/80'}`}>
               {user.firstName ?? user.username}
             </div>
-            <div className={`text-xs truncate ${pathname === '/mon-profil' ? 'text-white/70' : 'text-gray-500'}`}>
+            <div className={`text-xs truncate ${pathname === '/mon-profil' ? 'text-white/70' : 'text-white/40'}`}>
               {user.businessUnit?.name ?? 'Mon profil'}
             </div>
           </div>
         </Link>
         <button
           onClick={() => setShowLogout(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+          className="vdm-sb-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/50 hover:text-white transition-colors"
         >
           <span className="text-base">🚪</span>
           Déconnexion

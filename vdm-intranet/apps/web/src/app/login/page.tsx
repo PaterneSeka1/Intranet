@@ -20,7 +20,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     const bg = localStorage.getItem('vdm_login_bg')
-    if (bg) document.documentElement.style.setProperty('--vdm-login-bg', bg)
+    if (bg) {
+      document.documentElement.style.setProperty('--vdm-login-bg', bg)
+      if (!bg.startsWith('url(')) {
+        document.documentElement.style.setProperty('--vdm-sidebar-bg', bg)
+      }
+    }
     return () => { document.documentElement.style.removeProperty('--vdm-login-bg') }
   }, [])
 

@@ -165,7 +165,11 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
     const stored = localStorage.getItem(LS_KEY_APP) ?? ''
     setAppBg(stored)
     if (stored) document.documentElement.style.setProperty('--vdm-app-bg', stored)
-    setLoginBg(localStorage.getItem(LS_KEY_LOGIN) ?? '')
+    const storedLogin = localStorage.getItem(LS_KEY_LOGIN) ?? ''
+    setLoginBg(storedLogin)
+    if (storedLogin) document.documentElement.style.setProperty('--vdm-sidebar-bg', storedLogin)
+    const storedHover = localStorage.getItem('vdm_sidebar_hover')
+    if (storedHover) document.documentElement.style.setProperty('--vdm-sidebar-hover', storedHover)
   }, [])
 
   function applyAppBg(value: string) {
@@ -181,8 +185,15 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
 
   function applyLoginBg(value: string) {
     setLoginBg(value)
-    localStorage.setItem(LS_KEY_LOGIN, value)
-    toast.success('Fond d\'écran de connexion appliqué.')
+    if (!value.startsWith('url(')) {
+      document.documentElement.style.setProperty('--vdm-sidebar-bg', value)
+    }
+    try {
+      localStorage.setItem(LS_KEY_LOGIN, value)
+      toast.success(value.startsWith('url(') ? 'Image de connexion appliquée.' : 'Fond de connexion et sidebar appliqués.')
+    } catch {
+      toast.warning('Fond appliqué mais image trop grande pour être sauvegardée — elle s\'effacera à la prochaine ouverture.')
+    }
   }
 
   function resetBg(target: 'app' | 'login') {
@@ -194,8 +205,8 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
     } else {
       setLoginBg('')
       localStorage.removeItem(LS_KEY_LOGIN)
-      document.documentElement.style.setProperty('--vdm-login-bg', '#f4f4f6')
-      toast.info('Fond d\'écran de connexion réinitialisé.')
+      document.documentElement.style.setProperty('--vdm-sidebar-bg', '#111827')
+      toast.info('Fond de connexion et sidebar réinitialisés.')
     }
   }
 
@@ -431,22 +442,14 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
       {/* Tab : Fond d'écran */}
       {/* ------------------------------------------------------------------ */}
       {tab === 'bg' && (
-        <div className="space-y-6">
-          <BgSection
-            title="Fond de l'application"
-            subtitle="Appliqué immédiatement à l'interface principale."
-            current={appBg}
-            onApply={applyAppBg}
-            onReset={() => resetBg('app')}
-          />
-          <BgSection
-            title="Fond de la page de connexion"
-            subtitle="Affiché sur l'écran de login au prochain chargement."
-            current={loginBg}
-            onApply={applyLoginBg}
-            onReset={() => resetBg('login')}
-          />
-        </div>
+        <BgPanel
+          appBg={appBg}
+          loginBg={loginBg}
+          onApplyApp={applyAppBg}
+          onApplyLogin={applyLoginBg}
+          onResetApp={() => resetBg('app')}
+          onResetLogin={() => resetBg('login')}
+        />
       )}
 
       {/* ------------------------------------------------------------------ */}
@@ -712,7 +715,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
 }
 
 // ---------------------------------------------------------------------------
-// Section fond d'écran
+// Panneau fond d'écran unifié
 // ---------------------------------------------------------------------------
 
 const ANGLES = [
@@ -722,21 +725,62 @@ const ANGLES = [
   { label: '↗', value: 45 },
 ]
 
-function BgSection({
-  title, subtitle, current, onApply, onReset,
+const HOVER_PRESETS = [
+  { label: 'Blanc subtil',  value: 'rgba(255,255,255,0.08)' },
+  { label: 'Blanc léger',   value: 'rgba(255,255,255,0.15)' },
+  { label: 'Blanc marqué',  value: 'rgba(255,255,255,0.25)' },
+  { label: 'Orange VDM',    value: 'rgba(242,140,56,0.22)' },
+  { label: 'Noir subtil',   value: 'rgba(0,0,0,0.15)' },
+  { label: 'Aucun',         value: 'rgba(0,0,0,0)' },
+]
+
+function hexToRgb(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `${r},${g},${b}`
+}
+
+function BgPanel({
+  appBg, loginBg, onApplyApp, onApplyLogin, onResetApp, onResetLogin,
 }: {
-  title: string
-  subtitle: string
-  current: string
-  onApply: (v: string) => void
-  onReset: () => void
+  appBg: string
+  loginBg: string
+  onApplyApp: (v: string) => void
+  onApplyLogin: (v: string) => void
+  onResetApp: () => void
+  onResetLogin: () => void
 }) {
+  const [target, setTarget] = useState<'app' | 'login'>('app')
+  const [showCustom, setShowCustom] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [c1, setC1] = useState('#F28C38')
   const [c2, setC2] = useState('#e07d29')
   const [angle, setAngle] = useState(135)
   const [solid, setSolid] = useState(false)
 
+  const [sidebarHover, setSidebarHover] = useState('rgba(255,255,255,0.1)')
+  const [hoverColor, setHoverColor] = useState('#ffffff')
+  const [hoverOpacity, setHoverOpacity] = useState(10)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('vdm_sidebar_hover')
+    if (stored) setSidebarHover(stored)
+  }, [])
+
+  function applyHover(value: string) {
+    setSidebarHover(value)
+    document.documentElement.style.setProperty('--vdm-sidebar-hover', value)
+    localStorage.setItem('vdm_sidebar_hover', value)
+  }
+
+  function applyCustomHover() {
+    applyHover(`rgba(${hexToRgb(hoverColor)},${(hoverOpacity / 100).toFixed(2)})`)
+  }
+
+  const current = target === 'app' ? appBg : loginBg
+  const onApply = target === 'app' ? onApplyApp : onApplyLogin
+  const onReset = target === 'app' ? onResetApp : onResetLogin
   const isImage = current.startsWith('url(')
   const customValue = solid ? c1 : `linear-gradient(${angle}deg, ${c1} 0%, ${c2} 100%)`
 
@@ -756,162 +800,224 @@ function BgSection({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+    <div className="space-y-4">
 
-      {/* En-tête */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-sm font-bold text-gray-900">{title}</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
-        </div>
-        {current && (
-          <button onClick={onReset} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-            Réinitialiser
+      {/* Sélecteur de cible + aperçus */}
+      <div className="grid grid-cols-2 gap-3">
+        {([
+          { key: 'app' as const, label: 'Application', desc: 'Interface principale', bg: appBg, onReset: onResetApp },
+          { key: 'login' as const, label: 'Connexion & Sidebar', desc: 'Page de login · Navigation', bg: loginBg, onReset: onResetLogin },
+        ]).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTarget(t.key)}
+            className={`relative rounded-2xl overflow-hidden border-2 transition-all text-left ${
+              target === t.key ? 'border-[#F28C38]' : 'border-gray-100 hover:border-gray-200'
+            }`}
+          >
+            {/* Bande de couleur */}
+            <div
+              className="h-16 w-full"
+              style={{ background: t.bg || '#f4f4f6' }}
+            />
+            {/* Infos */}
+            <div className="bg-white px-3 py-2.5 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-semibold text-gray-900">{t.label}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{t.desc}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                {t.bg && (
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); t.onReset() }}
+                    className="text-[10px] text-gray-300 hover:text-red-400 transition-colors font-medium"
+                  >
+                    Réinit.
+                  </span>
+                )}
+                <div className={`w-2 h-2 rounded-full ${target === t.key ? 'bg-[#F28C38]' : 'bg-gray-200'}`} />
+              </div>
+            </div>
           </button>
-        )}
+        ))}
       </div>
 
-      {/* Aperçu du fond actif */}
-      {current && (
-        <div
-          className="w-full h-16 rounded-xl flex items-center justify-center"
-          style={{ background: current }}
-        >
-          <span className="text-white text-xs font-semibold drop-shadow bg-black/20 px-2.5 py-1 rounded-full">
-            {isImage ? '📷 Image personnalisée' : 'Fond actif'}
-          </span>
-        </div>
-      )}
+      {/* Panneau de sélection */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
 
-      {/* ── Image de fond ── */}
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Image de fond</p>
-        <label className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
-          uploading
-            ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-            : 'border-gray-200 hover:border-[#F28C38]/60 text-gray-500 hover:text-[#F28C38]'
-        }`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-          <span className="text-xs font-medium flex-1">
-            {uploading ? 'Compression en cours…' : isImage ? 'Remplacer l\'image' : 'Choisir une image (JPG, PNG, WebP)'}
-          </span>
-          {isImage && (
-            <span
-              role="button"
-              onClick={e => { e.preventDefault(); onReset() }}
-              className="text-[10px] text-red-400 hover:text-red-600 font-medium"
-            >
-              Retirer
+        {/* Image */}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Image de fond</p>
+          <label className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-dashed cursor-pointer transition-colors ${
+            uploading
+              ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+              : 'border-gray-200 hover:border-[#F28C38]/60 text-gray-500 hover:text-[#F28C38]'
+          }`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span className="text-xs font-medium flex-1">
+              {uploading ? 'Compression…' : isImage ? 'Remplacer l\'image' : 'Choisir une image (JPG, PNG, WebP)'}
             </span>
-          )}
-          <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleImageUpload} />
-        </label>
-      </div>
-
-      {/* ── Couleur personnalisée ── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Couleur personnalisée</p>
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-            <button
-              onClick={() => setSolid(false)}
-              className={`text-[10px] font-semibold px-2.5 py-1 rounded-md transition-colors ${!solid ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
-            >
-              Dégradé
-            </button>
-            <button
-              onClick={() => setSolid(true)}
-              className={`text-[10px] font-semibold px-2.5 py-1 rounded-md transition-colors ${solid ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
-            >
-              Uni
-            </button>
-          </div>
+            {isImage && (
+              <span role="button" onClick={e => { e.preventDefault(); onReset() }} className="text-[10px] text-red-400 hover:text-red-600 font-medium">
+                Retirer
+              </span>
+            )}
+            <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleImageUpload} />
+          </label>
         </div>
 
-        {/* Aperçu live */}
-        <div className="w-full h-12 rounded-xl mb-3" style={{ background: customValue }} />
+        {/* Survol de la sidebar — visible uniquement pour la cible login */}
+        {target === 'login' && (
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Couleur de survol</p>
 
-        <div className="flex items-end gap-3">
-          {/* Couleur 1 */}
-          <div className="flex flex-col items-center gap-1.5">
-            <span className="text-[10px] text-gray-400 font-medium">{solid ? 'Couleur' : 'Couleur 1'}</span>
-            <label className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors">
-              <input type="color" value={c1} onChange={e => setC1(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-              <div className="w-full h-full rounded-lg" style={{ background: c1 }} />
-            </label>
+            {/* Aperçu simulé */}
+            <div className="rounded-xl overflow-hidden mb-3 border border-gray-100" style={{ background: 'var(--vdm-sidebar-bg, #111827)' }}>
+              <div className="px-3 py-2 text-xs text-white/40">Accueil</div>
+              <div className="px-3 py-2 text-xs text-white transition-colors" style={{ background: 'var(--vdm-sidebar-hover)' }}>Utilisateurs (survolé)</div>
+              <div className="px-3 py-2 text-xs text-white/40">Présences</div>
+            </div>
+
+            {/* Presets */}
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {HOVER_PRESETS.map(h => (
+                <button
+                  key={h.value}
+                  onClick={() => applyHover(h.value)}
+                  title={h.label}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all ${
+                    sidebarHover === h.value
+                      ? 'border-[#F28C38] bg-[#F28C38]/10 text-[#F28C38]'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  {h.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Personnalisé */}
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-gray-400">Couleur</span>
+                <label className="relative w-8 h-8 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors">
+                  <input type="color" value={hoverColor} onChange={e => setHoverColor(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                  <div className="w-full h-full" style={{ background: hoverColor }} />
+                </label>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-gray-400">Opacité</span>
+                  <span className="text-[10px] font-medium text-gray-600">{hoverOpacity}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="40" value={hoverOpacity}
+                  onChange={e => setHoverOpacity(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full accent-[#F28C38]"
+                />
+              </div>
+              <button
+                onClick={applyCustomHover}
+                className="px-3 py-1.5 bg-[#F28C38] hover:bg-[#e07d29] text-white text-[10px] font-semibold rounded-lg transition-colors"
+              >
+                Appliquer
+              </button>
+            </div>
           </div>
+        )}
 
-          {/* Couleur 2 (gradient only) */}
-          {!solid && (
-            <div className="flex flex-col items-center gap-1.5">
-              <span className="text-[10px] text-gray-400 font-medium">Couleur 2</span>
-              <label className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors">
-                <input type="color" value={c2} onChange={e => setC2(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                <div className="w-full h-full rounded-lg" style={{ background: c2 }} />
-              </label>
+        {/* Couleur personnalisée (escamotable) */}
+        <div>
+          <button
+            onClick={() => setShowCustom(v => !v)}
+            className="flex items-center justify-between w-full text-left"
+          >
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Couleur personnalisée</p>
+            <svg
+              width="12" height="12" viewBox="0 0 12 12" fill="none"
+              className={`text-gray-300 transition-transform ${showCustom ? 'rotate-180' : ''}`}
+            >
+              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {showCustom && (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                  <button onClick={() => setSolid(false)} className={`text-[10px] font-semibold px-2.5 py-1 rounded-md transition-colors ${!solid ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>Dégradé</button>
+                  <button onClick={() => setSolid(true)} className={`text-[10px] font-semibold px-2.5 py-1 rounded-md transition-colors ${solid ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>Uni</button>
+                </div>
+              </div>
+              <div className="h-9 rounded-xl" style={{ background: customValue }} />
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-gray-400">{solid ? 'Couleur' : 'C1'}</span>
+                  <label className="relative w-8 h-8 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors">
+                    <input type="color" value={c1} onChange={e => setC1(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <div className="w-full h-full" style={{ background: c1 }} />
+                  </label>
+                </div>
+                {!solid && (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] text-gray-400">C2</span>
+                    <label className="relative w-8 h-8 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors">
+                      <input type="color" value={c2} onChange={e => setC2(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                      <div className="w-full h-full" style={{ background: c2 }} />
+                    </label>
+                  </div>
+                )}
+                {!solid && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-gray-400">Direction</span>
+                    <div className="flex gap-1">
+                      {ANGLES.map(a => (
+                        <button key={a.value} onClick={() => setAngle(a.value)} className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${angle === a.value ? 'bg-[#F28C38] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{a.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button onClick={() => onApply(customValue)} className="ml-auto px-4 py-1.5 bg-[#F28C38] hover:bg-[#e07d29] text-white text-xs font-semibold rounded-xl transition-colors">
+                  Appliquer
+                </button>
+              </div>
             </div>
           )}
+        </div>
 
-          {/* Direction (gradient only) */}
-          {!solid && (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] text-gray-400 font-medium">Direction</span>
-              <div className="flex gap-1">
-                {ANGLES.map(a => (
+        {/* Palette prédéfinie — une seule fois */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Palettes</p>
+          {BG_GRADIENTS.map(group => (
+            <div key={group.category}>
+              <p className="text-[10px] text-gray-300 font-medium mb-1.5">{group.category}</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {group.items.map(bg => (
                   <button
-                    key={a.value}
-                    onClick={() => setAngle(a.value)}
-                    className={`w-8 h-8 rounded-lg text-sm font-bold transition-colors ${
-                      angle === a.value ? 'bg-[#F28C38] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    key={bg.value}
+                    onClick={() => onApply(bg.value)}
+                    title={bg.label}
+                    style={{ background: bg.value }}
+                    className={`relative h-10 rounded-xl transition-all ${
+                      current === bg.value ? 'ring-2 ring-[#F28C38] ring-offset-1 scale-[0.93]' : 'hover:scale-[0.96]'
                     }`}
                   >
-                    {a.label}
+                    <span className="absolute inset-0 flex items-end p-1">
+                      <span className="text-white text-[9px] font-semibold drop-shadow leading-tight line-clamp-1">{bg.label}</span>
+                    </span>
+                    {current === bg.value && (
+                      <span className="absolute top-0.5 right-0.5 bg-white/30 rounded-full w-3.5 h-3.5 flex items-center justify-center text-white text-[8px]">✓</span>
+                    )}
                   </button>
                 ))}
               </div>
             </div>
-          )}
-
-          <button
-            onClick={() => onApply(customValue)}
-            className="ml-auto px-4 py-2 bg-[#F28C38] hover:bg-[#e07d29] text-white text-xs font-semibold rounded-xl transition-colors"
-          >
-            Appliquer
-          </button>
+          ))}
         </div>
-      </div>
-
-      {/* ── Palettes prédéfinies ── */}
-      <div className="space-y-4">
-        {BG_GRADIENTS.map(group => (
-          <div key={group.category}>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">{group.category}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {group.items.map(bg => (
-                <button
-                  key={bg.value}
-                  onClick={() => onApply(bg.value)}
-                  title={bg.label}
-                  style={{ background: bg.value }}
-                  className={`relative h-14 rounded-xl transition-all ${
-                    current === bg.value ? 'ring-2 ring-[#F28C38] ring-offset-2 scale-[0.94]' : 'hover:scale-[0.96]'
-                  }`}
-                >
-                  <span className="absolute inset-0 flex items-end justify-start p-1.5">
-                    <span className="text-white text-[10px] font-semibold drop-shadow leading-tight">{bg.label}</span>
-                  </span>
-                  {current === bg.value && (
-                    <span className="absolute top-1 right-1 bg-white/30 rounded-full w-4 h-4 flex items-center justify-center text-white text-[9px]">✓</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   )
