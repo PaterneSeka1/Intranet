@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VDM Intranet — Hors ligne</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --orange:#F28C38;--orange-dark:#e07d29;
+    --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+    --gray-400:#9ca3af;--gray-500:#6b7280;--gray-900:#111827;
+  }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:linear-gradient(135deg,#f0f2f5 0%,#e4e8ed 100%);
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:1rem;
+    -webkit-font-smoothing:antialiased;
+  }
+  .card{
+    background:#fff;border-radius:24px;
+    box-shadow:0 20px 60px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);
+    border:1px solid #f0f0f0;overflow:hidden;
+    width:100%;max-width:420px;
+  }
+  .accent-bar{
+    height:6px;
+    background:linear-gradient(90deg,var(--orange),var(--orange-dark),var(--orange));
+    background-size:200% 100%;
+    animation:shimmer 2.5s linear infinite;
+  }
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .body{padding:2rem 2rem 1.5rem}
+  .icon-wrap{
+    position:relative;width:80px;height:80px;margin:0 auto 1.25rem;
+  }
+  .ring{
+    position:absolute;inset:0;border-radius:50%;
+    background:rgba(242,140,56,.15);
+    animation:ring-pulse 2s ease-out infinite;
+  }
+  .ring2{animation-delay:.5s;background:rgba(242,140,56,.1)}
+  @keyframes ring-pulse{
+    0%{transform:scale(1);opacity:1}
+    100%{transform:scale(1.6);opacity:0}
+  }
+  .icon-box{
+    position:relative;width:80px;height:80px;border-radius:18px;
+    background:linear-gradient(135deg,#fff8f2,#fff3ea);
+    border:1px solid #ffe8d0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 12px;border-radius:999px;
+    font-size:11px;font-weight:600;margin:0 auto 1rem;
+    background:#fff8f2;color:#c2570a;
+    border:1px solid #fddbb4;
+  }
+  .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:#F28C38;animation:blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  h1{font-size:18px;font-weight:700;color:var(--gray-900);text-align:center;margin-bottom:.5rem}
+  p{font-size:13px;color:var(--gray-400);text-align:center;line-height:1.6;margin-bottom:1.75rem}
+  .progress-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+  .progress-label{font-size:11px;color:var(--gray-400)}
+  .progress-time{font-size:11px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums}
+  .track{height:6px;background:var(--gray-100);border-radius:999px;overflow:hidden;margin-bottom:1.5rem}
+  .fill{
+    height:100%;border-radius:999px;
+    background:linear-gradient(90deg,var(--orange),var(--orange-dark));
+    width:0%;transition:width 1s linear;
+  }
+  .btn{
+    width:100%;background:var(--orange);color:#fff;
+    font-size:13px;font-weight:600;border:none;cursor:pointer;
+    padding:12px;border-radius:14px;display:flex;align-items:center;
+    justify-content:center;gap:8px;margin-bottom:.75rem;
+    transition:background .15s;
+  }
+  .btn:hover{background:var(--orange-dark)}
+  .btn:active{background:#c96e20}
+  .link{
+    display:block;text-align:center;font-size:11px;
+    color:var(--gray-400);text-decoration:none;
+    padding:.25rem;transition:color .15s;
+  }
+  .link:hover{color:var(--gray-500)}
+  .footer{
+    padding:.75rem 2rem;background:rgba(249,250,251,.7);
+    border-top:1px solid var(--gray-100);
+    display:flex;align-items:center;justify-content:center;gap:.5rem;
+  }
+  .logo{
+    width:20px;height:20px;border-radius:6px;background:var(--orange);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:700;color:#fff;
+  }
+  .footer-text{font-size:11px;color:var(--gray-400)}
+  .hint{font-size:10px;color:var(--gray-200);text-align:center;margin-top:1rem}
+  /* Online state */
+  .online .ring,.online .ring2{animation:none;background:rgba(34,197,94,.15)}
+  .online .icon-box{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#bbf7d0}
+  .online .badge{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+  .online .dot{background:#22c55e}
+  .online .fill{background:linear-gradient(90deg,#22c55e,#16a34a)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="accent-bar"></div>
+  <div class="body">
+
+    <div class="icon-wrap">
+      <div class="ring"></div>
+      <div class="ring ring2"></div>
+      <div class="icon-box">
+        <svg id="icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F28C38" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <!-- wifi-off icon -->
+          <line x1="1" y1="1" x2="23" y2="23"/>
+          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+          <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center">
+      <div class="badge"><span class="dot"></span><span id="badge-text">Hors ligne</span></div>
+    </div>
+
+    <h1 id="title">Vous êtes hors connexion</h1>
+    <p id="desc">Vérifiez votre connexion Wi-Fi ou réseau mobile. Cette page se rechargera automatiquement dès que la connexion sera rétablie.</p>
+
+    <div class="progress-row">
+      <span class="progress-label" id="label">Nouvelle tentative<span id="dots"></span></span>
+      <span class="progress-time" id="countdown">30s</span>
+    </div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+
+    <button class="btn" onclick="window.location.reload()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Réessayer maintenant
+    </button>
+    <a class="link" href="/login">Retour à la connexion</a>
+
+  </div>
+  <div class="footer">
+    <div class="logo">V</div>
+    <span class="footer-text">VDM Intranet · Veilleur des Médias</span>
+  </div>
+</div>
+<p class="hint">Abidjan, Côte d'Ivoire</p>
+
+<script>
+  const TOTAL = 30
+  let remaining = TOTAL
+  let dotN = 0
+
+  const countdownEl = document.getElementById('countdown')
+  const fillEl = document.getElementById('fill')
+  const dotsEl = document.getElementById('dots')
+  const card = document.querySelector('.card')
+  const titleEl = document.getElementById('title')
+  const descEl = document.getElementById('desc')
+  const badgeEl = document.getElementById('badge-text')
+
+  function setOnlineState(online) {
+    if (online) {
+      card.classList.add('online')
+      titleEl.textContent = 'Connexion rétablie !'
+      descEl.textContent = 'Reconnexion en cours…'
+      badgeEl.textContent = 'En ligne'
+    } else {
+      card.classList.remove('online')
+      titleEl.textContent = 'Vous êtes hors connexion'
+      descEl.textContent = 'Vérifiez votre connexion Wi-Fi ou réseau mobile. Cette page se rechargera automatiquement dès que la connexion sera rétablie.'
+      badgeEl.textContent = 'Hors ligne'
+    }
+  }
+
+  setOnlineState(navigator.onLine)
+
+  window.addEventListener('online', () => {
+    setOnlineState(true)
+    setTimeout(() => window.location.reload(), 800)
+  })
+  window.addEventListener('offline', () => setOnlineState(false))
+
+  const dots = ['', '.', '..', '...']
+  function tick() {
+    dotN = (dotN + 1) % 4
+    dotsEl.textContent = dots[dotN]
+    remaining--
+    if (remaining <= 0) { window.location.reload(); return }
+    const pct = ((TOTAL - remaining) / TOTAL * 100).toFixed(1)
+    fillEl.style.width = pct + '%'
+    countdownEl.textContent = remaining + 's'
+    setTimeout(tick, 1000)
+  }
+  setTimeout(tick, 1000)
+</script>
+</body>
+</html>

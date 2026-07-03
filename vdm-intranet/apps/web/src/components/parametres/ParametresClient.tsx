@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useRef } from 'react'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { Modal } from '@/components/ui/Modal'
 
 import { API_BASE as API } from '@/lib/api-base'
+import { saveSettings, deleteSetting } from '@/lib/settings'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,9 +109,6 @@ function compressImage(file: File, maxWidth = 1920, quality = 0.8): Promise<stri
   })
 }
 
-const LS_KEY_APP = 'vdm_app_bg'
-const LS_KEY_LOGIN = 'vdm_login_bg'
-
 // ---------------------------------------------------------------------------
 // API helper
 // ---------------------------------------------------------------------------
@@ -149,64 +147,54 @@ interface Props {
   initialGroups: ScheduleGroup[]
   buList: Bu[]
   initialPoles?: Pole[]
+  initialSettings?: Record<string, string>
 }
 
 const EMPTY_BU: BuForm = { name: '', code: '', description: '' }
 const EMPTY_POLE: PoleForm = { name: '', code: '', businessUnitId: '' }
 
-export function ParametresClient({ initialGroups, buList: initialBuList, initialPoles = [] }: Props) {
+export function ParametresClient({ initialGroups, buList: initialBuList, initialPoles = [], initialSettings = {} }: Props) {
   const [tab, setTab] = useState<'bg' | 'groups' | 'org'>('bg')
 
   // --- Fond d'écran ---
-  const [appBg, setAppBg] = useState('')
-  const [loginBg, setLoginBg] = useState('')
+  const [appBg, setAppBg] = useState(initialSettings['vdm_app_bg'] ?? '')
+  const [loginBg, setLoginBg] = useState(initialSettings['vdm_login_bg'] ?? '')
 
-  useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY_APP) ?? ''
-    setAppBg(stored)
-    if (stored) document.documentElement.style.setProperty('--vdm-app-bg', stored)
-    const storedLogin = localStorage.getItem(LS_KEY_LOGIN) ?? ''
-    setLoginBg(storedLogin)
-    if (storedLogin) document.documentElement.style.setProperty('--vdm-sidebar-bg', storedLogin)
-    const storedHover = localStorage.getItem('vdm_sidebar_hover')
-    if (storedHover) document.documentElement.style.setProperty('--vdm-sidebar-hover', storedHover)
-  }, [])
-
-  function applyAppBg(value: string) {
+  async function applyAppBg(value: string) {
     setAppBg(value)
     document.documentElement.style.setProperty('--vdm-app-bg', value)
     try {
-      localStorage.setItem(LS_KEY_APP, value)
-      toast.success('Fond d\'écran principal appliqué.')
-    } catch {
-      toast.warning('Fond appliqué mais image trop grande pour être sauvegardée — elle s\'effacera à la prochaine ouverture.')
+      await saveSettings([{ key: 'vdm_app_bg', value }])
+      toast.success('Fond d\'écran principal appliqué pour tous les utilisateurs.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.')
     }
   }
 
-  function applyLoginBg(value: string) {
+  async function applyLoginBg(value: string) {
     setLoginBg(value)
     if (!value.startsWith('url(')) {
       document.documentElement.style.setProperty('--vdm-sidebar-bg', value)
     }
     try {
-      localStorage.setItem(LS_KEY_LOGIN, value)
-      toast.success(value.startsWith('url(') ? 'Image de connexion appliquée.' : 'Fond de connexion et sidebar appliqués.')
-    } catch {
-      toast.warning('Fond appliqué mais image trop grande pour être sauvegardée — elle s\'effacera à la prochaine ouverture.')
+      await saveSettings([{ key: 'vdm_login_bg', value }])
+      toast.success(value.startsWith('url(') ? 'Image de connexion appliquée pour tous.' : 'Fond de connexion et sidebar appliqués pour tous.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.')
     }
   }
 
-  function resetBg(target: 'app' | 'login') {
+  async function resetBg(target: 'app' | 'login') {
     if (target === 'app') {
       setAppBg('')
-      localStorage.removeItem(LS_KEY_APP)
+      try { await deleteSetting('vdm_app_bg') } catch {}
       document.documentElement.style.setProperty('--vdm-app-bg', '#f4f4f6')
-      toast.info('Fond d\'écran principal réinitialisé.')
+      toast.info('Fond d\'écran principal réinitialisé pour tous.')
     } else {
       setLoginBg('')
-      localStorage.removeItem(LS_KEY_LOGIN)
+      try { await deleteSetting('vdm_login_bg') } catch {}
       document.documentElement.style.setProperty('--vdm-sidebar-bg', '#111827')
-      toast.info('Fond de connexion et sidebar réinitialisés.')
+      toast.info('Fond de connexion et sidebar réinitialisés pour tous.')
     }
   }
 
@@ -449,6 +437,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
           onApplyLogin={applyLoginBg}
           onResetApp={() => resetBg('app')}
           onResetLogin={() => resetBg('login')}
+          initialSettings={initialSettings}
         />
       )}
 
@@ -691,7 +680,7 @@ function hexToRgb(hex: string): string {
 }
 
 function BgPanel({
-  appBg, loginBg, onApplyApp, onApplyLogin, onResetApp, onResetLogin,
+  appBg, loginBg, onApplyApp, onApplyLogin, onResetApp, onResetLogin, initialSettings,
 }: {
   appBg: string
   loginBg: string
@@ -699,6 +688,7 @@ function BgPanel({
   onApplyLogin: (v: string) => void
   onResetApp: () => void
   onResetLogin: () => void
+  initialSettings: Record<string, string>
 }) {
   const [target, setTarget] = useState<'app' | 'login'>('app')
   const [showCustom, setShowCustom] = useState(false)
@@ -708,45 +698,38 @@ function BgPanel({
   const [angle, setAngle] = useState(135)
   const [solid, setSolid] = useState(false)
 
-  const [sidebarActive, setSidebarActive] = useState('#f28c38')
-  const [sidebarText, setSidebarText] = useState('#ffffff')
-  const [sidebarHover, setSidebarHover] = useState('rgba(255,255,255,0.1)')
+  const [sidebarActive, setSidebarActive] = useState(initialSettings['vdm_sidebar_active'] ?? '#f28c38')
+  const [sidebarText, setSidebarText] = useState(initialSettings['vdm_sidebar_text'] ?? '#ffffff')
+  const [sidebarHover, setSidebarHover] = useState(initialSettings['vdm_sidebar_hover'] ?? 'rgba(255,255,255,0.1)')
   const [hoverColor, setHoverColor] = useState('#ffffff')
   const [hoverOpacity, setHoverOpacity] = useState(10)
 
-  // Image overlay (indépendante de la couleur)
-  const [bgImage, setBgImage] = useState('')
-  const [bgImageOpacity, setBgImageOpacity] = useState(30)
+  const [bgImage, setBgImage] = useState(initialSettings['vdm_bg_image'] ?? '')
+  const [bgImageOpacity, setBgImageOpacity] = useState(initialSettings['vdm_bg_image_opacity'] ? Math.round(Number(initialSettings['vdm_bg_image_opacity']) * 100) : 30)
 
-  useEffect(() => {
-    const storedActive = localStorage.getItem('vdm_sidebar_active')
-    if (storedActive) setSidebarActive(storedActive)
-    const storedText = localStorage.getItem('vdm_sidebar_text')
-    if (storedText) setSidebarText(storedText)
-    const stored = localStorage.getItem('vdm_sidebar_hover')
-    if (stored) setSidebarHover(stored)
-    const storedImg = localStorage.getItem('vdm_bg_image')
-    if (storedImg) setBgImage(storedImg)
-    const storedOpacity = localStorage.getItem('vdm_bg_image_opacity')
-    if (storedOpacity) setBgImageOpacity(Math.round(Number(storedOpacity) * 100))
-  }, [])
+  const saveDebounce = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  function debouncedSave(key: string, value: string) {
+    clearTimeout(saveDebounce.current[key])
+    saveDebounce.current[key] = setTimeout(() => saveSettings([{ key, value }]).catch(() => {}), 600)
+  }
 
   function applySidebarActive(value: string) {
     setSidebarActive(value)
     document.documentElement.style.setProperty('--vdm-sidebar-active', value)
-    localStorage.setItem('vdm_sidebar_active', value)
+    debouncedSave('vdm_sidebar_active', value)
   }
 
   function applySidebarText(value: string) {
     setSidebarText(value)
     document.documentElement.style.setProperty('--vdm-sidebar-text', value)
-    localStorage.setItem('vdm_sidebar_text', value)
+    debouncedSave('vdm_sidebar_text', value)
   }
 
   function applyHover(value: string) {
     setSidebarHover(value)
     document.documentElement.style.setProperty('--vdm-sidebar-hover', value)
-    localStorage.setItem('vdm_sidebar_hover', value)
+    debouncedSave('vdm_sidebar_hover', value)
   }
 
   function applyCustomHover() {
@@ -757,15 +740,15 @@ function BgPanel({
     setBgImageOpacity(value)
     const opacity = (value / 100).toFixed(2)
     document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
-    localStorage.setItem('vdm_bg_image_opacity', opacity)
+    debouncedSave('vdm_bg_image_opacity', opacity)
   }
 
   function removeImage() {
     setBgImage('')
     document.documentElement.style.setProperty('--vdm-bg-image', 'none')
     document.documentElement.style.setProperty('--vdm-bg-image-opacity', '0')
-    localStorage.removeItem('vdm_bg_image')
-    localStorage.removeItem('vdm_bg_image_opacity')
+    deleteSetting('vdm_bg_image').catch(() => {})
+    deleteSetting('vdm_bg_image_opacity').catch(() => {})
   }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -779,11 +762,13 @@ function BgPanel({
       document.documentElement.style.setProperty('--vdm-bg-image', `url("${dataUrl}")`)
       document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
       try {
-        localStorage.setItem('vdm_bg_image', dataUrl)
-        localStorage.setItem('vdm_bg_image_opacity', opacity)
-        toast.success('Image de fond appliquée.')
-      } catch {
-        toast.warning('Image appliquée mais trop grande pour être sauvegardée — elle s\'effacera à la prochaine ouverture.')
+        await saveSettings([
+          { key: 'vdm_bg_image', value: dataUrl },
+          { key: 'vdm_bg_image_opacity', value: opacity },
+        ])
+        toast.success('Image de fond appliquée pour tous les utilisateurs.')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.')
       }
     } catch {
       toast.error('Impossible de charger l\'image.')
@@ -800,10 +785,6 @@ function BgPanel({
 
   return (
     <div className="space-y-4">
-
-      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
-        Ces préférences sont enregistrées localement dans ce navigateur. Elles n&apos;affectent pas les autres utilisateurs ni les autres appareils.
-      </p>
 
       {/* Sélecteur de cible + aperçus */}
       <div className="grid grid-cols-2 gap-3">

@@ -1,30 +1,19 @@
 'use client'
 
 import { useEffect } from 'react'
+import { fetchSettings } from '@/lib/settings'
 
 export function BgRestorer() {
   useEffect(() => {
-    const appBg = localStorage.getItem('vdm_app_bg')
-    if (appBg) document.documentElement.style.setProperty('--vdm-app-bg', appBg)
-
-    const loginBg = localStorage.getItem('vdm_login_bg')
-    if (loginBg && !loginBg.startsWith('url(')) {
-      document.documentElement.style.setProperty('--vdm-sidebar-bg', loginBg)
-    }
-
-    const sidebarActive = localStorage.getItem('vdm_sidebar_active')
-    if (sidebarActive) document.documentElement.style.setProperty('--vdm-sidebar-active', sidebarActive)
-    const sidebarHover = localStorage.getItem('vdm_sidebar_hover')
-    if (sidebarHover) document.documentElement.style.setProperty('--vdm-sidebar-hover', sidebarHover)
-    const sidebarText = localStorage.getItem('vdm_sidebar_text')
-    if (sidebarText) document.documentElement.style.setProperty('--vdm-sidebar-text', sidebarText)
-
-    const bgImage = localStorage.getItem('vdm_bg_image')
-    if (bgImage) {
-      document.documentElement.style.setProperty('--vdm-bg-image', `url("${bgImage}")`)
-      const opacity = localStorage.getItem('vdm_bg_image_opacity') ?? '0.5'
-      document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
-    }
+    let cancelled = false
+    fetchSettings().then(settings => {
+      if (cancelled) return
+      const m = Object.fromEntries(settings.map(s => [s.key, s.value]))
+      if (m['vdm_bg_image']) {
+        document.documentElement.style.setProperty('--vdm-bg-image', `url("${m['vdm_bg_image']}")`)
+      }
+    }).catch(() => {})
+    return () => { cancelled = true }
   }, [])
   return null
 }

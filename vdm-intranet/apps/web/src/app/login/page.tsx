@@ -8,6 +8,7 @@ import { toast } from '@/lib/toast'
 import { GeoLocationScreen } from '@/components/presence/GeoLocationScreen'
 import { LoginAnimation } from '@/components/auth/LoginAnimation'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
+import { fetchSettings } from '@/lib/settings'
 
 type Step = 'form' | 'geo' | 'animating'
 
@@ -20,21 +21,18 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const bg = localStorage.getItem('vdm_login_bg')
-    if (bg) {
-      document.documentElement.style.setProperty('--vdm-login-bg', bg)
-      if (!bg.startsWith('url(')) {
-        document.documentElement.style.setProperty('--vdm-sidebar-bg', bg)
+    let cancelled = false
+    fetchSettings().then(settings => {
+      if (cancelled) return
+      const m = Object.fromEntries(settings.map(s => [s.key, s.value]))
+      if (m['vdm_bg_image']) {
+        document.documentElement.style.setProperty('--vdm-bg-image', `url("${m['vdm_bg_image']}")`)
+        const opacity = m['vdm_bg_image_opacity'] ?? '0.3'
+        document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
       }
-    }
-    const bgImage = localStorage.getItem('vdm_bg_image')
-    if (bgImage) {
-      document.documentElement.style.setProperty('--vdm-bg-image', `url("${bgImage}")`)
-      const opacity = localStorage.getItem('vdm_bg_image_opacity') ?? '0.3'
-      document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
-    }
+    }).catch(() => {})
     return () => {
-      document.documentElement.style.removeProperty('--vdm-login-bg')
+      cancelled = true
       document.documentElement.style.removeProperty('--vdm-bg-image')
     }
   }, [])

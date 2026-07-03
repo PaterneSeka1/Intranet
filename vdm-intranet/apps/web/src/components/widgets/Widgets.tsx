@@ -57,8 +57,9 @@ function setCachedWeather(data: WeatherData) {
 
 // Isolated clock — only this component re-renders every second
 function ClockWidget() {
-  const [time, setTime] = useState(new Date())
+  const [time, setTime] = useState<Date | null>(null)
   useEffect(() => {
+    setTime(new Date())
     const id = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
@@ -66,18 +67,18 @@ function ClockWidget() {
   return (
     <div className={`${CARD} w-44 p-4 flex flex-col items-center gap-0.5`}>
       <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-        {DAYS[time.getDay()]}
+        {time ? DAYS[time.getDay()] : ' '}
       </div>
       <div className="text-3xl font-bold text-gray-900 font-mono tabular-nums leading-none">
-        {time.getHours().toString().padStart(2, '0')}
+        {time ? time.getHours().toString().padStart(2, '0') : '--'}
         <span className="text-gray-400">:</span>
-        {time.getMinutes().toString().padStart(2, '0')}
+        {time ? time.getMinutes().toString().padStart(2, '0') : '--'}
         <span className="text-xl text-gray-400">
-          :{time.getSeconds().toString().padStart(2, '0')}
+          :{time ? time.getSeconds().toString().padStart(2, '0') : '--'}
         </span>
       </div>
       <div className="text-xs text-gray-600 mt-1">
-        {time.getDate()} {MONTHS[time.getMonth()]} {time.getFullYear()}
+        {time ? `${time.getDate()} ${MONTHS[time.getMonth()]} ${time.getFullYear()}` : ' '}
       </div>
       <div className="text-[10px] text-gray-400 mt-0.5">Abidjan · UTC+0</div>
     </div>
