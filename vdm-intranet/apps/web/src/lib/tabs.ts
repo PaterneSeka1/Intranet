@@ -8,11 +8,11 @@ export type Tab = {
   icon?: string | null
   color?: string | null
   isActive: boolean
-  businessUnitId: string
+  businessUnitId: string | null
   createdById: string
   createdAt: string
   updatedAt: string
-  businessUnit: { id: string; name: string; code: string }
+  businessUnit: { id: string; name: string; code: string } | null
   createdBy: { id: string; username: string; fullName?: string | null }
 }
 

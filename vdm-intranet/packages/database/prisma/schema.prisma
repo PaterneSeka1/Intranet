@@ -236,14 +236,14 @@ model PortalTab {
   description    String?
   icon           String?
   color          String?
-  businessUnitId String
+  businessUnitId String?
   createdById    String
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  businessUnit BusinessUnit @relation(fields: [businessUnitId], references: [id])
-  createdBy    User         @relation("TabCreator", fields: [createdById], references: [id])
+  businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
+  createdBy    User          @relation("TabCreator", fields: [createdById], references: [id])
 
   @@unique([businessUnitId, url])
   @@map("portal_tabs")

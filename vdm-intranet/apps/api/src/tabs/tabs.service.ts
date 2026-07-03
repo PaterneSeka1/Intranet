@@ -132,25 +132,34 @@ export class TabsService {
   }
 
   async findAll(requester: Requester, buId?: string) {
-    const where: Record<string, unknown> = {}
-
     if (FULL_ACCESS.includes(requester.role)) {
-      if (buId) where.businessUnitId = buId
-    } else if (MANAGE_OWN_BU.includes(requester.role) || READ_OWN_BU.includes(requester.role)) {
-      where.businessUnitId = requester.businessUnitId
-      if (READ_OWN_BU.includes(requester.role)) {
-        where.isActive = true
-      }
-    } else {
-      return []
+      // Global tabs always included; optionally narrow by BU
+      const where = buId
+        ? { OR: [{ businessUnitId: buId }, { businessUnitId: null }] }
+        : {}
+      return this.prisma.portalTab.findMany({
+        where,
+        select: TAB_SELECT,
+        orderBy: [{ businessUnit: { name: 'asc' } }, { name: 'asc' }],
+        take: 200,
+      })
     }
 
-    return this.prisma.portalTab.findMany({
-      where,
-      select: TAB_SELECT,
-      orderBy: [{ businessUnit: { name: 'asc' } }, { name: 'asc' }],
-      take: 200,
-    })
+    if (MANAGE_OWN_BU.includes(requester.role) || READ_OWN_BU.includes(requester.role)) {
+      const orConditions = requester.businessUnitId
+        ? [{ businessUnitId: requester.businessUnitId }, { businessUnitId: null }]
+        : [{ businessUnitId: null }]
+      const where: Record<string, unknown> = { OR: orConditions }
+      if (READ_OWN_BU.includes(requester.role)) where.isActive = true
+      return this.prisma.portalTab.findMany({
+        where,
+        select: TAB_SELECT,
+        orderBy: [{ businessUnit: { name: 'asc' } }, { name: 'asc' }],
+        take: 200,
+      })
+    }
+
+    return []
   }
 
   async create(requester: Requester, dto: CreateTabDto) {
@@ -158,19 +167,27 @@ export class TabsService {
       throw new ForbiddenException('Vous ne pouvez pas créer un onglet.')
     }
 
-    let targetBuId: string
+    let targetBuId: string | null
     if (FULL_ACCESS.includes(requester.role)) {
-      if (!dto.businessUnitId) throw new BadRequestException('businessUnitId est requis.')
-      targetBuId = dto.businessUnitId
+      // No businessUnitId = global tab (visible to all users)
+      targetBuId = dto.businessUnitId ?? null
     } else {
       if (!requester.businessUnitId) throw new ForbiddenException('Aucune BU assignée.')
       targetBuId = requester.businessUnitId
     }
 
-    const existing = await this.prisma.portalTab.findUnique({
-      where: { businessUnitId_url: { businessUnitId: targetBuId, url: dto.url } },
-    })
-    if (existing) throw new BadRequestException('Cet URL existe déjà pour cette BU.')
+    // Uniqueness check: Prisma @@unique ignores NULL rows, so check manually for global tabs
+    if (targetBuId === null) {
+      const existing = await this.prisma.portalTab.findFirst({
+        where: { businessUnitId: null, url: dto.url },
+      })
+      if (existing) throw new BadRequestException('Cet URL existe déjà dans les onglets globaux.')
+    } else {
+      const existing = await this.prisma.portalTab.findUnique({
+        where: { businessUnitId_url: { businessUnitId: targetBuId, url: dto.url } },
+      })
+      if (existing) throw new BadRequestException('Cet URL existe déjà pour cette BU.')
+    }
 
     const tab = await this.prisma.portalTab.create({
       data: {
@@ -235,8 +252,9 @@ export class TabsService {
     return tab
   }
 
-  private assertCanManage(requester: Requester, tabBuId: string) {
+  private assertCanManage(requester: Requester, tabBuId: string | null) {
     if (FULL_ACCESS.includes(requester.role)) return
+    if (tabBuId === null) throw new ForbiddenException('Seuls les administrateurs peuvent gérer les onglets globaux.')
     if (MANAGE_OWN_BU.includes(requester.role) && requester.businessUnitId === tabBuId) return
     throw new ForbiddenException('Accès refusé à cet onglet.')
   }

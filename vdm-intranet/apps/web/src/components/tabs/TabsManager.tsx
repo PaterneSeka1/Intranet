@@ -24,7 +24,7 @@ type FormData = {
   description: string
   icon: string
   color: string
-  businessUnitId: string
+  businessUnitId: string // '' = global tab
 }
 
 const EMPTY_FORM: FormData = { name: '', url: '', description: '', icon: '🔗', color: '#F28C38', businessUnitId: '' }
@@ -40,6 +40,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
 
   const canManage = (tab: Tab) => {
     if (['CTO_ADMIN', 'PDG', 'DAF'].includes(userRole)) return true
+    if (tab.businessUnitId === null) return false
     return userRole === 'RESPONSABLE_BU' && tab.businessUnitId === userBuId
   }
 
@@ -56,7 +57,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
       description: tab.description ?? '',
       icon: tab.icon ?? '🔗',
       color: tab.color ?? '#F28C38',
-      businessUnitId: tab.businessUnitId,
+      businessUnitId: tab.businessUnitId ?? '',
     })
     setError('')
     setModal({ mode: 'edit', tab })
@@ -74,7 +75,8 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
           description: form.description || undefined,
           icon: form.icon || undefined,
           color: form.color || undefined,
-          businessUnitId: canManageAll ? form.businessUnitId : undefined,
+          // '' means global: omit businessUnitId so API treats it as null
+          businessUnitId: canManageAll ? (form.businessUnitId || undefined) : undefined,
         }
         const created = await tabsApi.create(payload)
         setTabs(prev => [...prev, created])
@@ -128,7 +130,11 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
   }
 
   const filtered = tabs.filter(t => {
-    if (filterBu && t.businessUnitId !== filterBu) return false
+    if (filterBu === '__global__') {
+      if (t.businessUnitId !== null) return false
+    } else if (filterBu) {
+      if (t.businessUnitId !== filterBu) return false
+    }
     if (search && !t.name.toLowerCase().includes(search.toLowerCase()) && !t.url.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
@@ -152,6 +158,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
               className="px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] text-gray-700"
             >
               <option value="">Toutes les BU</option>
+              <option value="__global__">Onglets globaux</option>
               {buList.map(bu => (
                 <option key={bu.id} value={bu.id}>{bu.name}</option>
               ))}
@@ -183,7 +190,11 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                   <span className="text-2xl flex-shrink-0">{tab.icon ?? '🔗'}</span>
                   <div className="min-w-0">
                     <div className="font-semibold text-gray-800 text-sm truncate">{tab.name}</div>
-                    <div className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block mt-0.5">{tab.businessUnit.code}</div>
+                    {tab.businessUnit ? (
+                      <div className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block mt-0.5">{tab.businessUnit.code}</div>
+                    ) : (
+                      <div className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full inline-block mt-0.5">Global</div>
+                    )}
                   </div>
                 </div>
                 {canManage(tab) && (
@@ -225,19 +236,21 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             <form onSubmit={handleSubmit} className="space-y-4">
               {canManageAll && modal?.mode === 'create' && (
                 <div>
-                  <label htmlFor="tab-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Business Unit</label>
+                  <label htmlFor="tab-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Audience</label>
                   <select
                     id="tab-bu"
                     value={form.businessUnitId}
                     onChange={e => setForm(f => ({ ...f, businessUnitId: e.target.value }))}
                     className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-                    required
                   >
-                    <option value="">Sélectionner une BU…</option>
+                    <option value="">Tous les utilisateurs (Global)</option>
                     {buList.map(bu => (
                       <option key={bu.id} value={bu.id}>{bu.name}</option>
                     ))}
                   </select>
+                  {form.businessUnitId === '' && (
+                    <p className="text-[11px] text-[#F28C38] mt-1.5">Cet onglet sera visible par tous les utilisateurs sans exception.</p>
+                  )}
                 </div>
               )}
 
