@@ -66,8 +66,8 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
             <span className="text-white text-sm font-bold">V</span>
           </div>
           <div>
-            <div className="text-white text-sm font-bold leading-tight">VDM Intranet</div>
-            <div className="text-white/40 text-xs">Veilleur des Médias</div>
+            <div className="vdm-sb-text text-sm font-bold leading-tight">VDM Intranet</div>
+            <div className="vdm-sb-text-faint text-xs">Veilleur des Médias</div>
           </div>
         </div>
       </div>
@@ -84,8 +84,8 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
               style={active ? { background: 'var(--vdm-sidebar-active)' } : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                 active
-                  ? 'text-white font-semibold'
-                  : 'vdm-sb-link text-white/50 hover:text-white'
+                  ? 'vdm-sb-text font-semibold'
+                  : 'vdm-sb-link vdm-sb-text-dim'
               }`}
             >
               <span className="text-base">{item.icon}</span>
@@ -101,24 +101,24 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
           href="/mon-profil"
           style={pathname === '/mon-profil' ? { background: 'var(--vdm-sidebar-active)' } : undefined}
           className={`flex items-center gap-3 px-3 py-2 mb-1 rounded-xl transition-colors ${
-            pathname === '/mon-profil' ? 'text-white' : 'vdm-sb-link'
+            pathname === '/mon-profil' ? 'vdm-sb-text' : 'vdm-sb-link'
           }`}
         >
           <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold">{initials}</span>
+            <span className="vdm-sb-text text-xs font-bold">{initials}</span>
           </div>
           <div className="min-w-0">
-            <div className={`text-xs font-medium truncate ${pathname === '/mon-profil' ? 'text-white' : 'text-white/80'}`}>
+            <div className={`text-xs font-medium truncate ${pathname === '/mon-profil' ? 'vdm-sb-text' : 'vdm-sb-text-mid'}`}>
               {user.firstName ?? user.username}
             </div>
-            <div className={`text-xs truncate ${pathname === '/mon-profil' ? 'text-white/70' : 'text-white/40'}`}>
+            <div className={`text-xs truncate ${pathname === '/mon-profil' ? 'vdm-sb-text-mid' : 'vdm-sb-text-faint'}`}>
               {user.businessUnit?.name ?? 'Mon profil'}
             </div>
           </div>
         </Link>
         <button
           onClick={() => setShowLogout(true)}
-          className="vdm-sb-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/50 hover:text-white transition-colors"
+          className="vdm-sb-link vdm-sb-text-dim w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors"
         >
           <span className="text-base">🚪</span>
           Déconnexion

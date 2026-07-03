@@ -725,6 +725,17 @@ const ANGLES = [
   { label: '↗', value: 45 },
 ]
 
+const TEXT_PRESETS = [
+  { label: 'Blanc pur',   value: '#ffffff' },
+  { label: 'Blanc cassé', value: '#f8fafc' },
+  { label: 'Gris clair',  value: '#cbd5e1' },
+  { label: 'Crème',       value: '#fef3c7' },
+  { label: 'Bleu clair',  value: '#bfdbfe' },
+  { label: 'Vert clair',  value: '#bbf7d0' },
+  { label: 'Orange clair',value: '#fed7aa' },
+  { label: 'Gris foncé',  value: '#374151' },
+]
+
 const HOVER_PRESETS = [
   { label: 'Blanc subtil',  value: 'rgba(255,255,255,0.08)' },
   { label: 'Blanc léger',   value: 'rgba(255,255,255,0.15)' },
@@ -760,6 +771,7 @@ function BgPanel({
   const [solid, setSolid] = useState(false)
 
   const [sidebarActive, setSidebarActive] = useState('#f28c38')
+  const [sidebarText, setSidebarText] = useState('#ffffff')
   const [sidebarHover, setSidebarHover] = useState('rgba(255,255,255,0.1)')
   const [hoverColor, setHoverColor] = useState('#ffffff')
   const [hoverOpacity, setHoverOpacity] = useState(10)
@@ -771,6 +783,8 @@ function BgPanel({
   useEffect(() => {
     const storedActive = localStorage.getItem('vdm_sidebar_active')
     if (storedActive) setSidebarActive(storedActive)
+    const storedText = localStorage.getItem('vdm_sidebar_text')
+    if (storedText) setSidebarText(storedText)
     const stored = localStorage.getItem('vdm_sidebar_hover')
     if (stored) setSidebarHover(stored)
     const storedImg = localStorage.getItem('vdm_bg_image')
@@ -783,6 +797,12 @@ function BgPanel({
     setSidebarActive(value)
     document.documentElement.style.setProperty('--vdm-sidebar-active', value)
     localStorage.setItem('vdm_sidebar_active', value)
+  }
+
+  function applySidebarText(value: string) {
+    setSidebarText(value)
+    document.documentElement.style.setProperty('--vdm-sidebar-text', value)
+    localStorage.setItem('vdm_sidebar_text', value)
   }
 
   function applyHover(value: string) {
@@ -960,6 +980,35 @@ function BgPanel({
               <div className="px-3 py-2 text-xs text-white/40">Accueil</div>
               <div className="px-3 py-2 text-xs text-white font-semibold" style={{ background: 'var(--vdm-sidebar-active)' }}>Utilisateurs (actif)</div>
               <div className="px-3 py-2 text-xs text-white/40">Présences</div>
+            </div>
+          </div>
+
+          {/* Texte */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Couleur du texte</p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {TEXT_PRESETS.map(t => (
+                <button
+                  key={t.value}
+                  onClick={() => applySidebarText(t.value)}
+                  title={t.label}
+                  style={{ background: t.value, border: sidebarText === t.value ? '2px solid #F28C38' : '2px solid #e5e7eb' }}
+                  className="w-7 h-7 rounded-lg transition-all hover:scale-110"
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="relative w-9 h-9 rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors shrink-0">
+                <input type="color" value={sidebarText} onChange={e => applySidebarText(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                <div className="w-full h-full" style={{ background: sidebarText }} />
+              </label>
+              <span className="text-xs font-mono text-gray-500 flex-1">{sidebarText}</span>
+              <button onClick={() => applySidebarText('#ffffff')} className="text-[10px] text-gray-400 hover:text-red-400 transition-colors">Réinit.</button>
+            </div>
+            <div className="mt-2 rounded-xl overflow-hidden border border-gray-100" style={{ background: 'var(--vdm-sidebar-bg, #111827)' }}>
+              <div className="px-3 py-2 text-xs font-semibold" style={{ color: 'var(--vdm-sidebar-text)' }}>Accueil (actif)</div>
+              <div className="px-3 py-2 text-xs" style={{ color: `color-mix(in srgb, ${sidebarText} 50%, transparent)` }}>Utilisateurs</div>
+              <div className="px-3 py-2 text-xs" style={{ color: `color-mix(in srgb, ${sidebarText} 40%, transparent)` }}>Veilleur des Médias</div>
             </div>
           </div>
 

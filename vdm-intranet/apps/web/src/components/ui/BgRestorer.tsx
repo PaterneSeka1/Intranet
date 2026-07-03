@@ -16,6 +16,8 @@ export function BgRestorer() {
     if (sidebarActive) document.documentElement.style.setProperty('--vdm-sidebar-active', sidebarActive)
     const sidebarHover = localStorage.getItem('vdm_sidebar_hover')
     if (sidebarHover) document.documentElement.style.setProperty('--vdm-sidebar-hover', sidebarHover)
+    const sidebarText = localStorage.getItem('vdm_sidebar_text')
+    if (sidebarText) document.documentElement.style.setProperty('--vdm-sidebar-text', sidebarText)
 
     const bgImage = localStorage.getItem('vdm_bg_image')
     if (bgImage) {

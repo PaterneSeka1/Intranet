@@ -14,9 +14,15 @@
   --vdm-sidebar-bg: #111827;
   --vdm-sidebar-active: #f28c38;
   --vdm-sidebar-hover: rgba(255, 255, 255, 0.1);
+  --vdm-sidebar-text: #ffffff;
   --vdm-bg-image: none;
   --vdm-bg-image-opacity: 0.3;
 }
+
+.vdm-sb-text       { color: var(--vdm-sidebar-text); }
+.vdm-sb-text-mid   { color: color-mix(in srgb, var(--vdm-sidebar-text) 80%, transparent); }
+.vdm-sb-text-dim   { color: color-mix(in srgb, var(--vdm-sidebar-text) 50%, transparent); }
+.vdm-sb-text-faint { color: color-mix(in srgb, var(--vdm-sidebar-text) 40%, transparent); }
 
 .vdm-bg-image-overlay {
   position: fixed;
@@ -37,6 +43,7 @@ html {
 /* Sidebar hover via variable */
 .vdm-sb-link:hover {
   background: var(--vdm-sidebar-hover);
+  color: var(--vdm-sidebar-text);
 }
 
 /* Modal animations */
