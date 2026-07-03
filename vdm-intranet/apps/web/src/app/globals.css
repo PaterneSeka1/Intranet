@@ -12,9 +12,22 @@
   --vdm-app-bg: #f4f4f6;
   --vdm-login-bg: #f4f4f6;
   --vdm-sidebar-bg: #111827;
+  --vdm-sidebar-active: #f28c38;
   --vdm-sidebar-hover: rgba(255, 255, 255, 0.1);
   --vdm-bg-image: none;
-  --vdm-bg-image-opacity: 0.5;
+  --vdm-bg-image-opacity: 0.3;
+}
+
+.vdm-bg-image-overlay {
+  position: fixed;
+  inset: 0;
+  background-image: var(--vdm-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--vdm-bg-image-opacity, 0.3);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 1;
 }
 
 html {

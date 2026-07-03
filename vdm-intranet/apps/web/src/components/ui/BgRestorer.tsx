@@ -12,6 +12,8 @@ export function BgRestorer() {
       document.documentElement.style.setProperty('--vdm-sidebar-bg', loginBg)
     }
 
+    const sidebarActive = localStorage.getItem('vdm_sidebar_active')
+    if (sidebarActive) document.documentElement.style.setProperty('--vdm-sidebar-active', sidebarActive)
     const sidebarHover = localStorage.getItem('vdm_sidebar_hover')
     if (sidebarHover) document.documentElement.style.setProperty('--vdm-sidebar-hover', sidebarHover)
 

@@ -7,6 +7,7 @@ import { presenceApi } from '@/lib/presence'
 import { toast } from '@/lib/toast'
 import { GeoLocationScreen } from '@/components/presence/GeoLocationScreen'
 import { LoginAnimation } from '@/components/auth/LoginAnimation'
+import { BgImageLayer } from '@/components/ui/BgImageLayer'
 
 type Step = 'form' | 'geo' | 'animating'
 
@@ -26,7 +27,16 @@ export default function LoginPage() {
         document.documentElement.style.setProperty('--vdm-sidebar-bg', bg)
       }
     }
-    return () => { document.documentElement.style.removeProperty('--vdm-login-bg') }
+    const bgImage = localStorage.getItem('vdm_bg_image')
+    if (bgImage) {
+      document.documentElement.style.setProperty('--vdm-bg-image', `url("${bgImage}")`)
+      const opacity = localStorage.getItem('vdm_bg_image_opacity') ?? '0.3'
+      document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
+    }
+    return () => {
+      document.documentElement.style.removeProperty('--vdm-login-bg')
+      document.documentElement.style.removeProperty('--vdm-bg-image')
+    }
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -74,6 +84,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--vdm-login-bg)' }}>
+      <BgImageLayer />
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-[#F28C38] flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-100">

@@ -759,15 +759,18 @@ function BgPanel({
   const [angle, setAngle] = useState(135)
   const [solid, setSolid] = useState(false)
 
+  const [sidebarActive, setSidebarActive] = useState('#f28c38')
   const [sidebarHover, setSidebarHover] = useState('rgba(255,255,255,0.1)')
   const [hoverColor, setHoverColor] = useState('#ffffff')
   const [hoverOpacity, setHoverOpacity] = useState(10)
 
   // Image overlay (indépendante de la couleur)
   const [bgImage, setBgImage] = useState('')
-  const [bgImageOpacity, setBgImageOpacity] = useState(50)
+  const [bgImageOpacity, setBgImageOpacity] = useState(30)
 
   useEffect(() => {
+    const storedActive = localStorage.getItem('vdm_sidebar_active')
+    if (storedActive) setSidebarActive(storedActive)
     const stored = localStorage.getItem('vdm_sidebar_hover')
     if (stored) setSidebarHover(stored)
     const storedImg = localStorage.getItem('vdm_bg_image')
@@ -775,6 +778,12 @@ function BgPanel({
     const storedOpacity = localStorage.getItem('vdm_bg_image_opacity')
     if (storedOpacity) setBgImageOpacity(Math.round(Number(storedOpacity) * 100))
   }, [])
+
+  function applySidebarActive(value: string) {
+    setSidebarActive(value)
+    document.documentElement.style.setProperty('--vdm-sidebar-active', value)
+    localStorage.setItem('vdm_sidebar_active', value)
+  }
 
   function applyHover(value: string) {
     setSidebarHover(value)
@@ -932,8 +941,29 @@ function BgPanel({
           </div>
         )}
 
-        {/* Survol de la sidebar — visible uniquement pour la cible login */}
+        {/* Couleur active + survol — sidebar seulement */}
         {target === 'login' && (
+          <div className="space-y-5">
+
+          {/* Lien actif */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Couleur du lien actif</p>
+            <div className="flex items-center gap-3">
+              <label className="relative w-9 h-9 rounded-xl overflow-hidden border-2 border-gray-200 cursor-pointer hover:border-[#F28C38] transition-colors shrink-0">
+                <input type="color" value={sidebarActive} onChange={e => applySidebarActive(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                <div className="w-full h-full" style={{ background: sidebarActive }} />
+              </label>
+              <span className="text-xs font-mono text-gray-500 flex-1">{sidebarActive}</span>
+              <button onClick={() => applySidebarActive('#f28c38')} className="text-[10px] text-gray-400 hover:text-red-400 transition-colors">Réinit.</button>
+            </div>
+            <div className="mt-2 rounded-xl overflow-hidden border border-gray-100" style={{ background: 'var(--vdm-sidebar-bg, #111827)' }}>
+              <div className="px-3 py-2 text-xs text-white/40">Accueil</div>
+              <div className="px-3 py-2 text-xs text-white font-semibold" style={{ background: 'var(--vdm-sidebar-active)' }}>Utilisateurs (actif)</div>
+              <div className="px-3 py-2 text-xs text-white/40">Présences</div>
+            </div>
+          </div>
+
+          {/* Survol */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Couleur de survol</p>
 
@@ -989,6 +1019,8 @@ function BgPanel({
                 Appliquer
               </button>
             </div>
+          </div>
+
           </div>
         )}
 
