@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { PresenceScheduleService } from './presence.schedule.service'
 import { FirstLoginDto } from './dto/first-login.dto'
 import { LoginLogDto } from './dto/login-log.dto'
+import { EndDayDto } from './dto/end-day.dto'
 import { CreateMandateDto } from './dto/create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
@@ -32,9 +33,10 @@ const USER_SUMMARY = {
   poleId: true,
   scheduleGroupId: true,
   individualExpectedArrivalTime: true,
+  individualExpectedDepartureTime: true,
   businessUnit: { select: { id: true, name: true, code: true } },
   pole: { select: { id: true, name: true, code: true } },
-  scheduleGroup: { select: { id: true, name: true, expectedArrivalTime: true, isNightShift: true } },
+  scheduleGroup: { select: { id: true, name: true, expectedArrivalTime: true, expectedDepartureTime: true, isNightShift: true } },
 } as const
 
 function getToday(): Date {
@@ -277,6 +279,80 @@ export class PresenceService {
     })
 
     return log
+  }
+
+  // ----------------------------------------------------------------
+  // Fin de journée — utilisateur courant
+  // ----------------------------------------------------------------
+
+  async processEndDay(userId: string, dto: EndDayDto, ipAddress: string) {
+    const today = getToday()
+    const now = new Date()
+
+    const presence = await this.prisma.presence.findUnique({
+      where: { userId_date: { userId, date: today } },
+    })
+    if (!presence) {
+      throw new BadRequestException("Aucune arrivée enregistrée aujourd'hui — impossible de marquer un départ.")
+    }
+    if (presence.officialDepartureTime) {
+      throw new BadRequestException("Départ déjà enregistré pour aujourd'hui.")
+    }
+
+    const { time: expectedTime, isNightShift } = await this.schedule.getDepartureScheduleSource(userId, today)
+    const departureDelayMinutes = expectedTime
+      ? this.schedule.calculateDepartureDelayMinutes(expectedTime, now, isNightShift)
+      : null
+
+    // mapsUrl toujours construit côté serveur — jamais depuis le client
+    const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
+
+    return this.prisma.$transaction(async (tx) => {
+      const logEntry = await tx.connectionLog.create({
+        data: {
+          userId,
+          type: 'LOGOUT',
+          date: today,
+          connectedAt: now,
+          disconnectedAt: now,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          accuracy: dto.accuracy,
+          address: dto.address,
+          mapsUrl,
+          userAgent: dto.userAgent,
+          ipAddress,
+          isFirstConnectionOfDay: false,
+        },
+      })
+
+      const updated = await tx.presence.update({
+        where: { id: presence.id },
+        data: {
+          expectedDepartureTime: expectedTime,
+          officialDepartureTime: now,
+          departureDelayMinutes,
+          departureLatitude: dto.latitude,
+          departureLongitude: dto.longitude,
+          departureAccuracy: dto.accuracy,
+          departureAddress: dto.address,
+          departureMapsUrl: mapsUrl,
+        },
+      })
+
+      await tx.activityLog.create({
+        data: {
+          userId,
+          action: 'DAY_ENDED',
+          entity: 'Presence',
+          entityId: updated.id,
+          ipAddress,
+          details: { sourceConnectionLogId: logEntry.id },
+        },
+      })
+
+      return updated
+    })
   }
 
   // ----------------------------------------------------------------

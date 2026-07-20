@@ -12,11 +12,19 @@ export interface Presence {
   expectedArrivalTime: string
   officialArrivalTime: string | null
   delayMinutes: number | null
+  expectedDepartureTime: string | null
+  officialDepartureTime: string | null
+  departureDelayMinutes: number | null
   latitude: number | null
   longitude: number | null
   accuracy: number | null
   address: string | null
   mapsUrl: string | null
+  departureLatitude: number | null
+  departureLongitude: number | null
+  departureAccuracy: number | null
+  departureAddress: string | null
+  departureMapsUrl: string | null
   sourceConnectionLogId: string | null
   createdAt: string
   updatedAt: string
@@ -44,8 +52,9 @@ export interface PresenceRow {
     role: string
     businessUnit: { id: string; name: string; code: string } | null
     pole: { id: string; name: string; code: string } | null
-    scheduleGroup: { id: string; name: string; expectedArrivalTime: string; isNightShift: boolean } | null
+    scheduleGroup: { id: string; name: string; expectedArrivalTime: string; expectedDepartureTime: string | null; isNightShift: boolean } | null
     individualExpectedArrivalTime: string | null
+    individualExpectedDepartureTime: string | null
   }
   presence: Presence | null
   status: PresenceStatus
@@ -59,6 +68,7 @@ export interface ScheduleGroup {
   code: string
   description: string | null
   expectedArrivalTime: string
+  expectedDepartureTime: string | null
   isNightShift: boolean
   isActive: boolean
   businessUnit: { id: string; name: string } | null
@@ -84,6 +94,8 @@ export interface FirstLoginPayload {
   address?: string
   userAgent?: string
 }
+
+export type EndDayPayload = FirstLoginPayload
 
 async function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController()
@@ -125,6 +137,8 @@ export const presenceApi = {
     presenceReq<unknown>('/login-log', { method: 'POST', body: JSON.stringify(data ?? {}) }),
   logoutLog: (data?: Partial<FirstLoginPayload>) =>
     presenceReq<unknown>('/logout-log', { method: 'POST', body: JSON.stringify(data ?? {}) }),
+  endDay: (data: EndDayPayload) =>
+    presenceReq<Presence>('/end-day', { method: 'POST', body: JSON.stringify(data) }),
   scheduleGroups: () => presenceReq<ScheduleGroup[]>('/schedule-groups'),
   mandates: () => presenceReq<DailyMandate[]>('/mandates'),
   createMandate: (data: { userId: string; date: string; expectedArrivalTime: string; reason?: string }) =>

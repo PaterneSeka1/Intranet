@@ -22,6 +22,11 @@ export class CreateScheduleGroupDto {
 
   @IsString()
   @IsOptional()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'expectedDepartureTime must be HH:mm' })
+  expectedDepartureTime?: string
+
+  @IsString()
+  @IsOptional()
   businessUnitId?: string
 
   @IsString()

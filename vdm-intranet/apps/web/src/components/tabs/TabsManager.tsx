@@ -165,7 +165,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             </select>
           )}
         </div>
-        {(userRole === 'CTO_ADMIN' || userRole === 'RESPONSABLE_BU') && (
+        {(userRole === 'CTO_ADMIN' || userRole === 'PDG' || userRole === 'RESPONSABLE_BU') && (
           <button
             onClick={openCreate}
             className="bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors flex items-center gap-2"

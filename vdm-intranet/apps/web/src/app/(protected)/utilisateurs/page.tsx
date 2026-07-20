@@ -5,7 +5,7 @@ import type { User } from '@/types/user'
 
 type Bu = { id: string; name: string; code: string }
 type Pole = { id: string; name: string; code: string; businessUnitId: string }
-type ScheduleGroup = { id: string; name: string; expectedArrivalTime: string }
+type ScheduleGroup = { id: string; name: string; expectedArrivalTime: string; expectedDepartureTime: string | null }
 
 const CAN_VIEW = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE']
 const CAN_MANAGE = ['CTO_ADMIN']

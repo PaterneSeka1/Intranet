@@ -59,17 +59,17 @@ async function main() {
 
   // ---- Groupes horaires ----
   const groupDefs = [
-    { code: 'JOUR_0800', name: 'Jour — 08h00', expectedArrivalTime: '08:00', isNightShift: false },
-    { code: 'JOUR_0830', name: 'Jour — 08h30', expectedArrivalTime: '08:30', isNightShift: false },
-    { code: 'JOUR_0900', name: 'Jour — 09h00', expectedArrivalTime: '09:00', isNightShift: false },
-    { code: 'NUIT_2000', name: 'Nuit — 20h00', expectedArrivalTime: '20:00', isNightShift: true },
+    { code: 'JOUR_0800', name: 'Jour — 08h00', expectedArrivalTime: '08:00', expectedDepartureTime: '17:00', isNightShift: false },
+    { code: 'JOUR_0830', name: 'Jour — 08h30', expectedArrivalTime: '08:30', expectedDepartureTime: '17:30', isNightShift: false },
+    { code: 'JOUR_0900', name: 'Jour — 09h00', expectedArrivalTime: '09:00', expectedDepartureTime: '18:00', isNightShift: false },
+    { code: 'NUIT_2000', name: 'Nuit — 20h00', expectedArrivalTime: '20:00', expectedDepartureTime: '05:00', isNightShift: true },
   ]
 
   const groups: Record<string, string> = {}
   for (const g of groupDefs) {
     const r = await prisma.scheduleGroup.upsert({
       where: { code: g.code },
-      update: { name: g.name, expectedArrivalTime: g.expectedArrivalTime },
+      update: { name: g.name, expectedArrivalTime: g.expectedArrivalTime, expectedDepartureTime: g.expectedDepartureTime },
       create: g,
     })
     groups[g.code] = r.id

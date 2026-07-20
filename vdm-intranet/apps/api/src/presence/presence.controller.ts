@@ -17,6 +17,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { PresenceService } from './presence.service'
 import { FirstLoginDto } from './dto/first-login.dto'
 import { LoginLogDto } from './dto/login-log.dto'
+import { EndDayDto } from './dto/end-day.dto'
 import { Role } from '@prisma/client'
 import { CreateMandateDto } from './dto/create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
@@ -73,6 +74,15 @@ export class PresenceController {
     @Req() req: Request,
   ) {
     return this.presenceService.recordLogoutLog(user.id, dto, this.getIp(req))
+  }
+
+  @Post('end-day')
+  endDay(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: EndDayDto,
+    @Req() req: Request,
+  ) {
+    return this.presenceService.processEndDay(user.id, dto, this.getIp(req))
   }
 
   // ----------------------------------------------------------------

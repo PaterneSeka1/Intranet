@@ -22,6 +22,7 @@ const MENUS: Record<Role, MenuItem[]> = {
   PDG: [
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
     { label: 'Annonces', href: '/annonces', icon: '📢' },
+    { label: 'Mes onglets', href: '/onglets', icon: '📑' },
     { label: 'Pilotage', href: '/pilotage', icon: '📊' },
     { label: 'Présences', href: '/presences', icon: '📅' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },

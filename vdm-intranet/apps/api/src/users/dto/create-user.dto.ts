@@ -46,4 +46,8 @@ export class CreateUserDto {
   @ApiPropertyOptional({ example: '08:00' })
   @IsString() @IsOptional() @Matches(/^\d{2}:\d{2}$/, { message: 'Format HH:mm requis' })
   individualExpectedArrivalTime?: string
+
+  @ApiPropertyOptional({ example: '17:00' })
+  @IsString() @IsOptional() @Matches(/^\d{2}:\d{2}$/, { message: 'Format HH:mm requis' })
+  individualExpectedDepartureTime?: string
 }

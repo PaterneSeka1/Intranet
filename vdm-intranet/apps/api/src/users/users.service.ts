@@ -19,6 +19,7 @@ const SAFE_SELECT = {
   updatedAt: true,
   scheduleGroupId: true,
   individualExpectedArrivalTime: true,
+  individualExpectedDepartureTime: true,
   businessUnit: { select: { id: true, name: true, code: true } },
   pole: { select: { id: true, name: true, code: true } },
   manager: { select: { id: true, username: true, fullName: true } },

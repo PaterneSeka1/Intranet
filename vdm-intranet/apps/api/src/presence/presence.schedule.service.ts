@@ -51,6 +51,31 @@ export class PresenceScheduleService {
     return { time: null, source: 'none', isNightShift: false }
   }
 
+  async getDepartureScheduleSource(userId: string, date: Date): Promise<ScheduleSource> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        individualExpectedDepartureTime: true,
+        scheduleGroup: { select: { expectedDepartureTime: true, isNightShift: true } },
+      },
+    })
+    if (!user) return { time: null, source: 'none', isNightShift: false }
+
+    if (user.scheduleGroup?.expectedDepartureTime) {
+      return {
+        time: user.scheduleGroup.expectedDepartureTime,
+        source: 'group',
+        isNightShift: user.scheduleGroup.isNightShift,
+      }
+    }
+
+    if (user.individualExpectedDepartureTime) {
+      return { time: user.individualExpectedDepartureTime, source: 'individual', isNightShift: false }
+    }
+
+    return { time: null, source: 'none', isNightShift: false }
+  }
+
   private async getDailyMandate(userId: string, date: Date) {
     return this.prisma.dailyMandate.findUnique({
       where: { userId_date: { userId, date } },
@@ -87,5 +112,10 @@ export class PresenceScheduleService {
       status: delay > tolerance ? 'LATE' : 'PRESENT',
       delayMinutes: delay > 0 ? delay : null,
     }
+  }
+
+  // Écart signé par rapport à l'heure de départ attendue : positif = parti plus tard, négatif = parti plus tôt.
+  calculateDepartureDelayMinutes(expectedTime: string, actualDateTime: Date, isNightShift = false): number {
+    return this.calculateDelayMinutes(expectedTime, actualDateTime, isNightShift)
   }
 }

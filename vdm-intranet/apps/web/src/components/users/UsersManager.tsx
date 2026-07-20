@@ -10,7 +10,7 @@ import { API_BASE as API } from '@/lib/api-base'
 
 type Bu = { id: string; name: string; code: string }
 type Pole = { id: string; name: string; code: string; businessUnitId: string }
-type ScheduleGroup = { id: string; name: string; expectedArrivalTime: string }
+type ScheduleGroup = { id: string; name: string; expectedArrivalTime: string; expectedDepartureTime: string | null }
 
 interface Props {
   initialUsers: User[]
@@ -32,6 +32,7 @@ type FormData = {
   managerId: string
   scheduleGroupId: string
   individualExpectedArrivalTime: string
+  individualExpectedDepartureTime: string
 }
 
 const EMPTY_FORM: FormData = {
@@ -46,6 +47,7 @@ const EMPTY_FORM: FormData = {
   managerId: '',
   scheduleGroupId: '',
   individualExpectedArrivalTime: '',
+  individualExpectedDepartureTime: '',
 }
 
 async function apiReq<T>(path: string, init?: RequestInit): Promise<T> {
@@ -142,6 +144,7 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       managerId: u.manager?.id ?? '',
       scheduleGroupId: u.scheduleGroupId ?? '',
       individualExpectedArrivalTime: u.individualExpectedArrivalTime ?? '',
+      individualExpectedDepartureTime: u.individualExpectedDepartureTime ?? '',
     })
     setError('')
     setShowForm(true)
@@ -162,6 +165,7 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         managerId: form.managerId || undefined,
         scheduleGroupId: form.scheduleGroupId || null,
         individualExpectedArrivalTime: form.individualExpectedArrivalTime || null,
+        individualExpectedDepartureTime: form.individualExpectedDepartureTime || null,
       }
       if (!editing) {
         payload.username = form.username
@@ -436,8 +440,12 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Heure individuelle <span className="text-gray-300 normal-case font-normal">(prioritaire)</span></label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Arrivée individuelle <span className="text-gray-300 normal-case font-normal">(prioritaire)</span></label>
                 <input type="time" value={form.individualExpectedArrivalTime} onChange={e => f({ individualExpectedArrivalTime: e.target.value })} className={INPUT} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Départ individuel <span className="text-gray-300 normal-case font-normal">(prioritaire)</span></label>
+                <input type="time" value={form.individualExpectedDepartureTime} onChange={e => f({ individualExpectedDepartureTime: e.target.value })} className={INPUT} />
               </div>
             </div>
           </div>

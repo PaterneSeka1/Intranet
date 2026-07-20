@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab } from '@/lib/tabs'
+import { EndDayButton } from '@/components/presence/EndDayButton'
 
 const STATUS_STYLE: Record<string, string> = {
   PRESENT: 'bg-green-100 text-green-700',
@@ -26,6 +27,11 @@ function formatTime(iso: string | null | undefined): string {
 function formatDate(): string {
   const d = new Date()
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+function formatDepartureDelay(minutes: number | null | undefined): string {
+  if (!minutes) return 'À l\'heure'
+  return minutes > 0 ? `+${minutes} min (plus tard)` : `${minutes} min (plus tôt)`
 }
 
 export default async function AccueilPage() {
@@ -88,13 +94,59 @@ export default async function AccueilPage() {
             {presence.address}
           </div>
         )}
+
+        {/* Départ */}
+        {presence && (
+          <div className="mt-5 pt-4 border-t border-gray-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Départ attendu</div>
+                <div className="text-sm font-semibold text-gray-800">
+                  {presence.expectedDepartureTime ?? '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Départ officiel</div>
+                <div className="text-sm font-semibold text-gray-800">{formatTime(presence.officialDepartureTime)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Écart</div>
+                <div className={`text-sm font-semibold ${presence.departureDelayMinutes ? 'text-orange-600' : 'text-gray-800'}`}>
+                  {presence.officialDepartureTime ? formatDepartureDelay(presence.departureDelayMinutes) : '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Localisation</div>
+                <div className="text-sm font-semibold">
+                  {presence.departureMapsUrl ? (
+                    <a href={presence.departureMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#F28C38] underline underline-offset-2">
+                      Voir carte
+                    </a>
+                  ) : '—'}
+                </div>
+              </div>
+            </div>
+
+            {presence.departureAddress && (
+              <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                {presence.departureAddress}
+              </div>
+            )}
+
+            {!presence.officialDepartureTime && (
+              <div className="mt-4">
+                <EndDayButton />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Onglets de la BU */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold text-gray-700">Mes ressources</h2>
-          {['CTO_ADMIN', 'RESPONSABLE_BU'].includes(user.role) && (
+          {['CTO_ADMIN', 'PDG', 'RESPONSABLE_BU'].includes(user.role) && (
             <a href="/onglets" className="text-xs text-[#F28C38] hover:underline">
               Gérer les onglets →
             </a>
@@ -103,7 +155,7 @@ export default async function AccueilPage() {
         {activeTabs.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
             <p className="text-sm text-gray-400 mb-2">Aucune ressource configurée pour votre équipe.</p>
-            {['CTO_ADMIN', 'RESPONSABLE_BU'].includes(user.role) && (
+            {['CTO_ADMIN', 'PDG', 'RESPONSABLE_BU'].includes(user.role) && (
               <a href="/onglets" className="text-xs text-[#F28C38] hover:underline font-medium">
                 Ajouter des onglets →
               </a>

@@ -25,6 +25,7 @@ type ScheduleGroup = {
   code: string
   description: string | null
   expectedArrivalTime: string
+  expectedDepartureTime: string | null
   businessUnitId: string | null
   poleId: string | null
   isNightShift: boolean
@@ -39,6 +40,7 @@ type GroupForm = {
   code: string
   description: string
   expectedArrivalTime: string
+  expectedDepartureTime: string
   businessUnitId: string
   poleId: string
   isNightShift: boolean
@@ -131,6 +133,7 @@ const EMPTY_GROUP: GroupForm = {
   code: '',
   description: '',
   expectedArrivalTime: '08:00',
+  expectedDepartureTime: '',
   businessUnitId: '',
   poleId: '',
   isNightShift: false,
@@ -340,6 +343,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
       code: g.code,
       description: g.description ?? '',
       expectedArrivalTime: g.expectedArrivalTime,
+      expectedDepartureTime: g.expectedDepartureTime ?? '',
       businessUnitId: g.businessUnitId ?? '',
       poleId: g.poleId ?? '',
       isNightShift: g.isNightShift,
@@ -358,6 +362,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
         code: groupForm.code,
         description: groupForm.description || undefined,
         expectedArrivalTime: groupForm.expectedArrivalTime,
+        expectedDepartureTime: groupForm.expectedDepartureTime || undefined,
         businessUnitId: groupForm.businessUnitId || undefined,
         poleId: groupForm.poleId || undefined,
         isNightShift: groupForm.isNightShift,
@@ -577,9 +582,17 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
                     </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="grp-arrival" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Heure d'arrivée attendue *</label>
-                    <input id="grp-arrival" type="time" value={groupForm.expectedArrivalTime} onChange={e => setGroupForm({ ...groupForm, expectedArrivalTime: e.target.value })} required className={INPUT} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="grp-arrival" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Heure d'arrivée attendue *</label>
+                      <input id="grp-arrival" type="time" value={groupForm.expectedArrivalTime} onChange={e => setGroupForm({ ...groupForm, expectedArrivalTime: e.target.value })} required className={INPUT} />
+                    </div>
+                    <div>
+                      <label htmlFor="grp-departure" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                        Heure de départ attendue <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+                      </label>
+                      <input id="grp-departure" type="time" value={groupForm.expectedDepartureTime} onChange={e => setGroupForm({ ...groupForm, expectedDepartureTime: e.target.value })} className={INPUT} />
+                    </div>
                   </div>
 
                   <div>
@@ -1346,6 +1359,9 @@ function GroupsSection({
                   )}
                   {!g.businessUnit && !pole && (
                     <span className="text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">Global</span>
+                  )}
+                  {g.expectedDepartureTime && (
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">🚪 {g.expectedDepartureTime}</span>
                   )}
                   <span className="text-[10px] text-gray-400">
                     {g._count.users} utilisateur{g._count.users !== 1 ? 's' : ''}

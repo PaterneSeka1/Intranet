@@ -199,6 +199,48 @@ export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) 
         </a>
       ) : <span className="text-gray-200">—</span>,
     },
+    {
+      key: 'officialDepartureTime',
+      label: 'Départ',
+      sortable: true,
+      sortValue: r => r.presence?.officialDepartureTime ?? '',
+      render: r => (
+        <span className="font-mono text-sm text-gray-700 whitespace-nowrap">
+          {fmtTime(r.presence?.officialDepartureTime)}
+        </span>
+      ),
+    },
+    {
+      key: 'departureDelayMinutes',
+      label: 'Écart départ',
+      sortable: true,
+      sortValue: r => r.presence?.departureDelayMinutes ?? 0,
+      render: r => {
+        const d = r.presence?.departureDelayMinutes
+        if (!r.presence?.officialDepartureTime) return <span className="text-gray-200">—</span>
+        if (!d) return <span className="text-gray-400 text-sm">À l'heure</span>
+        return (
+          <span className={`font-semibold text-sm whitespace-nowrap ${d > 0 ? 'text-orange-600' : 'text-blue-600'}`}>
+            {d > 0 ? `+${d} min` : `${d} min`}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'departureLocation',
+      label: 'Localisation départ',
+      render: r => r.presence?.departureMapsUrl ? (
+        <a
+          href={r.presence.departureMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap"
+        >
+          📍 Carte
+        </a>
+      ) : <span className="text-gray-200">—</span>,
+    },
   ]
 
   return (
