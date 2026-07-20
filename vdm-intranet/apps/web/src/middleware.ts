@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const COOKIE = process.env.COOKIE_NAME ?? 'vdm_token'
-const PUBLIC = ['/', '/login', '/acces-refuse']
-const LOGIN_ONLY = ['/login']
+const PUBLIC = ['/', '/login', '/acces-refuse', '/mot-de-passe-oublie', '/reinitialiser-mot-de-passe']
+const LOGIN_ONLY = ['/login', '/mot-de-passe-oublie', '/reinitialiser-mot-de-passe']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

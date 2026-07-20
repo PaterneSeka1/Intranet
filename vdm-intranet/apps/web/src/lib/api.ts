@@ -52,6 +52,10 @@ export const api = {
       req<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
     logout: () => req<{ message: string }>('/auth/logout', { method: 'POST' }),
     me: () => req<User>('/auth/me'),
+    forgotPassword: (identifier: string) =>
+      req<{ message: string }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ identifier }) }),
+    resetPassword: (token: string, newPassword: string) =>
+      req<{ message: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
   },
   users: {
     list: () => req<User[]>('/users'),

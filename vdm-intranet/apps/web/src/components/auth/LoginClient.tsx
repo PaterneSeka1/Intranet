@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { api, ApiError } from '@/lib/api'
 import { presenceApi } from '@/lib/presence'
 import { toast } from '@/lib/toast'
@@ -153,6 +154,12 @@ export function LoginClient({
           >
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>
+
+          <div className="flex justify-end -mt-1">
+            <Link href="/mot-de-passe-oublie" className="text-xs text-gray-400 hover:text-[#F28C38] transition-colors">
+              Mot de passe oublié ?
+            </Link>
+          </div>
         </form>
       </div>
     </div>
