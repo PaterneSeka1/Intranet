@@ -51,7 +51,15 @@ const MENUS: Record<Role, MenuItem[]> = {
   PRESTATAIRE: [],
 }
 
-export function Sidebar({ user, onClose }: { user: User; onClose?: () => void }) {
+interface SidebarProps {
+  user: User
+  onClose?: () => void
+  appName?: string
+  appSubtitle?: string
+  logo?: string
+}
+
+export function Sidebar({ user, onClose, appName = 'VDM Intranet', appSubtitle = 'Veilleur des Médias', logo }: SidebarProps) {
   const pathname = usePathname()
   const [showLogout, setShowLogout] = useState(false)
   const items = MENUS[user.role] ?? []
@@ -62,12 +70,16 @@ export function Sidebar({ user, onClose }: { user: User; onClose?: () => void })
       {/* Logo */}
       <div className="px-5 py-5 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#F28C38] flex items-center justify-center shrink-0">
-            <span className="text-white text-sm font-bold">V</span>
-          </div>
+          {logo ? (
+            <img src={logo} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-[#F28C38] flex items-center justify-center shrink-0">
+              <span className="text-white text-sm font-bold">{appName[0]?.toUpperCase() ?? 'V'}</span>
+            </div>
+          )}
           <div>
-            <div className="vdm-sb-text text-sm font-bold leading-tight">VDM Intranet</div>
-            <div className="vdm-sb-text-faint text-xs">Veilleur des Médias</div>
+            <div className="vdm-sb-text text-sm font-bold leading-tight">{appName}</div>
+            <div className="vdm-sb-text-faint text-xs">{appSubtitle}</div>
           </div>
         </div>
       </div>

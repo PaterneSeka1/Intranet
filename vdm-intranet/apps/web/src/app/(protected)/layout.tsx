@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { BgRestorer } from '@/components/ui/BgRestorer'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
 import { ServiceUnavailablePage } from '@/components/ui/ServiceUnavailablePage'
+import { fetchSettings } from '@/lib/settings'
 
 async function getActiveAnnouncements(): Promise<Announcement[]> {
   try {
@@ -43,6 +44,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   }
 
   const announcements = await getActiveAnnouncements()
+  const settings = await fetchSettings()
+  const s = Object.fromEntries(settings.map(x => [x.key, x.value]))
+  const appName = s['vdm_app_name'] || 'VDM Intranet'
+  const appSubtitle = s['vdm_app_subtitle'] || 'Veilleur des Médias'
+  const logo = s['vdm_logo']
 
   if (isAccueilOnly(user.role)) {
     return (
@@ -51,10 +57,14 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         <BgImageLayer />
         <header className="bg-white border-b border-gray-100 px-6 h-14 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#F28C38] flex items-center justify-center">
-              <span className="text-white text-xs font-bold">V</span>
-            </div>
-            <span className="font-bold text-gray-800 text-sm">VDM Intranet</span>
+            {logo ? (
+              <img src={logo} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="w-7 h-7 rounded-lg bg-[#F28C38] flex items-center justify-center">
+                <span className="text-white text-xs font-bold">{appName[0]?.toUpperCase()}</span>
+              </div>
+            )}
+            <span className="font-bold text-gray-800 text-sm">{appName}</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/mon-profil" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">Mon profil</Link>
@@ -69,7 +79,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   }
 
   return (
-    <MobileSidebarToggle user={user} announcements={announcements}>
+    <MobileSidebarToggle user={user} announcements={announcements} appName={appName} appSubtitle={appSubtitle} logo={logo}>
       {children}
     </MobileSidebarToggle>
   )

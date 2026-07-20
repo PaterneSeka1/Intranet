@@ -421,7 +421,7 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
               tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t === 'bg' ? 'Fond d\'écran' : t === 'groups' ? 'Groupes horaires' : 'Organisation'}
+            {t === 'bg' ? 'Apparence' : t === 'groups' ? 'Groupes horaires' : 'Organisation'}
           </button>
         ))}
       </div>
@@ -430,15 +430,18 @@ export function ParametresClient({ initialGroups, buList: initialBuList, initial
       {/* Tab : Fond d'écran */}
       {/* ------------------------------------------------------------------ */}
       {tab === 'bg' && (
-        <BgPanel
-          appBg={appBg}
-          loginBg={loginBg}
-          onApplyApp={applyAppBg}
-          onApplyLogin={applyLoginBg}
-          onResetApp={() => resetBg('app')}
-          onResetLogin={() => resetBg('login')}
-          initialSettings={initialSettings}
-        />
+        <div className="space-y-4">
+          <IdentityPanel initialSettings={initialSettings} />
+          <BgPanel
+            appBg={appBg}
+            loginBg={loginBg}
+            onApplyApp={applyAppBg}
+            onApplyLogin={applyLoginBg}
+            onResetApp={() => resetBg('app')}
+            onResetLogin={() => resetBg('login')}
+            initialSettings={initialSettings}
+          />
+        </div>
       )}
 
       {/* ------------------------------------------------------------------ */}
@@ -677,6 +680,167 @@ function hexToRgb(hex: string): string {
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   return `${r},${g},${b}`
+}
+
+function IdentityPanel({ initialSettings }: { initialSettings: Record<string, string> }) {
+  const [appName, setAppName] = useState(initialSettings['vdm_app_name'] ?? '')
+  const [appSubtitle, setAppSubtitle] = useState(initialSettings['vdm_app_subtitle'] ?? '')
+  const [logo, setLogo] = useState(initialSettings['vdm_logo'] ?? '')
+  const [favicon, setFavicon] = useState(initialSettings['vdm_favicon'] ?? '')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingFavicon, setUploadingFavicon] = useState(false)
+
+  const saveDebounce = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  function debouncedSave(key: string, value: string) {
+    clearTimeout(saveDebounce.current[key])
+    saveDebounce.current[key] = setTimeout(() => saveSettings([{ key, value }]).catch(() => {}), 600)
+  }
+
+  function applyAppName(value: string) {
+    setAppName(value)
+    debouncedSave('vdm_app_name', value)
+  }
+
+  function resetAppName() {
+    setAppName('')
+    clearTimeout(saveDebounce.current['vdm_app_name'])
+    deleteSetting('vdm_app_name').catch(() => {})
+  }
+
+  function applyAppSubtitle(value: string) {
+    setAppSubtitle(value)
+    debouncedSave('vdm_app_subtitle', value)
+  }
+
+  function resetAppSubtitle() {
+    setAppSubtitle('')
+    clearTimeout(saveDebounce.current['vdm_app_subtitle'])
+    deleteSetting('vdm_app_subtitle').catch(() => {})
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const dataUrl = await compressImage(file, 512, 0.85)
+      setLogo(dataUrl)
+      await saveSettings([{ key: 'vdm_logo', value: dataUrl }])
+      toast.success('Logo appliqué pour tous les utilisateurs.')
+    } catch {
+      toast.error('Impossible de charger le logo.')
+    } finally {
+      setUploadingLogo(false)
+      e.target.value = ''
+    }
+  }
+
+  async function removeLogo() {
+    setLogo('')
+    try { await deleteSetting('vdm_logo') } catch {}
+    toast.info('Logo réinitialisé.')
+  }
+
+  async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingFavicon(true)
+    try {
+      const dataUrl = await compressImage(file, 256, 0.85)
+      setFavicon(dataUrl)
+      await saveSettings([{ key: 'vdm_favicon', value: dataUrl }])
+      toast.success('Favicon appliqué — visible au prochain chargement complet de la page.')
+    } catch {
+      toast.error('Impossible de charger le favicon.')
+    } finally {
+      setUploadingFavicon(false)
+      e.target.value = ''
+    }
+  }
+
+  async function removeFavicon() {
+    setFavicon('')
+    try { await deleteSetting('vdm_favicon') } catch {}
+    toast.info('Favicon réinitialisé.')
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-5">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Nom de l'application</p>
+          {appName && <button onClick={resetAppName} className="text-[10px] text-gray-400 hover:text-red-400 transition-colors">Réinit.</button>}
+        </div>
+        <input
+          type="text"
+          value={appName}
+          onChange={e => applyAppName(e.target.value)}
+          placeholder="VDM Intranet"
+          className={INPUT}
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sous-titre</p>
+          {appSubtitle && <button onClick={resetAppSubtitle} className="text-[10px] text-gray-400 hover:text-red-400 transition-colors">Réinit.</button>}
+        </div>
+        <input
+          type="text"
+          value={appSubtitle}
+          onChange={e => applyAppSubtitle(e.target.value)}
+          placeholder="Veilleur des Médias"
+          className={INPUT}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Logo */}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Logo</p>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50 shrink-0">
+              {logo ? (
+                <img src={logo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-300 text-[10px]">Aucun</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={`text-xs font-medium cursor-pointer ${uploadingLogo ? 'text-gray-300' : 'text-[#F28C38] hover:underline'}`}>
+                {uploadingLogo ? 'Compression…' : logo ? 'Remplacer' : 'Choisir une image'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingLogo} onChange={handleLogoUpload} />
+              </label>
+              {logo && <button onClick={removeLogo} className="text-xs text-gray-400 hover:text-red-400 text-left">Retirer</button>}
+            </div>
+          </div>
+        </div>
+
+        {/* Favicon */}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Favicon</p>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50 shrink-0">
+              {favicon ? (
+                <img src={favicon} alt="Favicon" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-300 text-[10px]">Aucun</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={`text-xs font-medium cursor-pointer ${uploadingFavicon ? 'text-gray-300' : 'text-[#F28C38] hover:underline'}`}>
+                {uploadingFavicon ? 'Compression…' : favicon ? 'Remplacer' : 'Choisir une image'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingFavicon} onChange={handleFaviconUpload} />
+              </label>
+              {favicon && <button onClick={removeFavicon} className="text-xs text-gray-400 hover:text-red-400 text-left">Retirer</button>}
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1.5">Si vide, le logo est utilisé comme favicon. Un rechargement forcé (Ctrl/Cmd+Maj+R) peut être nécessaire pour voir le changement dans l'onglet du navigateur.</p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function BgPanel({

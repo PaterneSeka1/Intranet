@@ -7,19 +7,26 @@ import { PwaInstallGate } from '@/components/PwaInstallGate'
 import { PwaAutoStart } from '@/components/PwaAutoStart'
 import { fetchSettings } from '@/lib/settings'
 
-export const metadata: Metadata = {
-  title: 'VDM Intranet',
-  description: 'Portail interne Veilleur des Médias — Abidjan, Côte d\'Ivoire',
-  manifest: '/manifest.webmanifest',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'VDM Intranet',
-  },
-  icons: {
-    icon: '/icon.svg',
-    apple: '/icon.svg',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await fetchSettings()
+  const s = Object.fromEntries(settings.map(x => [x.key, x.value]))
+  const appName = s['vdm_app_name'] || 'VDM Intranet'
+  const favicon = s['vdm_favicon'] || s['vdm_logo'] || '/icon.svg'
+
+  return {
+    title: appName,
+    description: 'Portail interne Veilleur des Médias — Abidjan, Côte d\'Ivoire',
+    manifest: '/manifest.webmanifest',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'black-translucent',
+      title: appName,
+    },
+    icons: {
+      icon: favicon,
+      apple: favicon,
+    },
+  }
 }
 
 export const viewport: Viewport = {
