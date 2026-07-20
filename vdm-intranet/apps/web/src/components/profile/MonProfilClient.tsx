@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/lib/toast'
 import { ROLE_LABELS, type User } from '@/types/user'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 
 import { API_BASE as API } from '@/lib/api-base'
 
@@ -194,9 +195,8 @@ export function MonProfilClient({ user }: Props) {
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
               <label htmlFor="current-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Mot de passe actuel</label>
-              <input
+              <PasswordInput
                 id="current-pwd"
-                type="password"
                 value={currentPwd}
                 onChange={e => setCurrentPwd(e.target.value)}
                 required
@@ -207,9 +207,8 @@ export function MonProfilClient({ user }: Props) {
             </div>
             <div>
               <label htmlFor="new-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nouveau mot de passe</label>
-              <input
+              <PasswordInput
                 id="new-pwd"
-                type="password"
                 value={newPwd}
                 onChange={e => setNewPwd(e.target.value)}
                 required
@@ -221,9 +220,8 @@ export function MonProfilClient({ user }: Props) {
             </div>
             <div>
               <label htmlFor="confirm-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Confirmer le mot de passe</label>
-              <input
+              <PasswordInput
                 id="confirm-pwd"
-                type="password"
                 value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
                 required

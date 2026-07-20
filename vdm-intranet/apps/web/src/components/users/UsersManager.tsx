@@ -5,6 +5,7 @@ import { ROLE_LABELS, type Role, type User } from '@/types/user'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
 import { Modal } from '@/components/ui/Modal'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { API_BASE as API } from '@/lib/api-base'
 
 type Bu = { id: string; name: string; code: string }
@@ -352,8 +353,8 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
                   {editing ? 'Nouveau mot de passe' : 'Mot de passe *'}
                 </label>
-                <input
-                  type="password" value={form.password}
+                <PasswordInput
+                  value={form.password}
                   onChange={e => f({ password: e.target.value })}
                   required={!editing} minLength={8}
                   placeholder={editing ? 'Vide = inchangé' : '8 caractères minimum'}

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
 import { toast } from '@/lib/toast'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 
 interface Props {
   token?: string
@@ -108,9 +109,8 @@ export function ResetPasswordClient({
           <label htmlFor="rp-password" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
             Nouveau mot de passe
           </label>
-          <input
+          <PasswordInput
             id="rp-password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-all placeholder-gray-300"
@@ -125,9 +125,8 @@ export function ResetPasswordClient({
           <label htmlFor="rp-confirm" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
             Confirmer le mot de passe
           </label>
-          <input
+          <PasswordInput
             id="rp-confirm"
-            type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-all placeholder-gray-300"

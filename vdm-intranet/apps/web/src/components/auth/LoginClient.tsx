@@ -9,6 +9,7 @@ import { toast } from '@/lib/toast'
 import { GeoLocationScreen } from '@/components/presence/GeoLocationScreen'
 import { LoginAnimation } from '@/components/auth/LoginAnimation'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { fetchSettings } from '@/lib/settings'
 
 type Step = 'form' | 'geo' | 'animating'
@@ -129,9 +130,8 @@ export function LoginClient({
             <label htmlFor="login-password" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
               Mot de passe
             </label>
-            <input
+            <PasswordInput
               id="login-password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-all placeholder-gray-300"
