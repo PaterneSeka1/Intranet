@@ -13,6 +13,7 @@ import { CreateMandateDto } from './dto/create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
 import { Role } from '@prisma/client'
+import { ACCUEIL_ONLY_ROLES } from '../common/permissions'
 
 type Requester = {
   id: string
@@ -60,12 +61,30 @@ export class PresenceService {
   // Présence du jour — utilisateur courant
   // ----------------------------------------------------------------
 
-  async getTodayPresence(userId: string) {
+  async getTodayPresence(userId: string, role?: Role) {
     const today = getToday()
     const presence = await this.prisma.presence.findUnique({
       where: { userId_date: { userId, date: today } },
     })
     const scheduleSource = await this.schedule.getScheduleSource(userId, today)
+
+    if (presence && !presence.expectedDepartureTime) {
+      const departureSource = await this.schedule.getDepartureScheduleSource(userId, today)
+      presence.expectedDepartureTime = departureSource?.time ?? null
+    }
+
+    if (presence && role && ACCUEIL_ONLY_ROLES.includes(role)) {
+      presence.latitude = null
+      presence.longitude = null
+      presence.accuracy = null
+      presence.address = null
+      presence.mapsUrl = null
+      presence.departureLatitude = null
+      presence.departureLongitude = null
+      presence.departureAccuracy = null
+      presence.departureAddress = null
+      presence.departureMapsUrl = null
+    }
 
     return { presence, scheduleSource, date: today }
   }
@@ -134,7 +153,7 @@ export class PresenceService {
   // Première connexion du jour (géolocalisation obligatoire)
   // ----------------------------------------------------------------
 
-  async processFirstLogin(userId: string, dto: FirstLoginDto, ipAddress: string) {
+  async processFirstLogin(userId: string, dto: FirstLoginDto, ipAddress: string, role?: Role) {
     if (dto.latitude == null || dto.longitude == null) {
       throw new BadRequestException('latitude et longitude sont obligatoires')
     }
@@ -144,6 +163,7 @@ export class PresenceService {
 
     // Calculer le groupe horaire hors transaction (lecture seule, non critique)
     const { time: expectedTime, isNightShift } = await this.schedule.getScheduleSource(userId, today)
+    const { time: expectedDepartureTime } = await this.schedule.getDepartureScheduleSource(userId, today)
 
     // mapsUrl toujours construit côté serveur — jamais depuis le client
     const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
@@ -171,6 +191,18 @@ export class PresenceService {
         await tx.connectionLog.create({
           data: { ...connectionLogData, isFirstConnectionOfDay: false },
         })
+        if (role && ACCUEIL_ONLY_ROLES.includes(role)) {
+          existing.latitude = null
+          existing.longitude = null
+          existing.accuracy = null
+          existing.address = null
+          existing.mapsUrl = null
+          existing.departureLatitude = null
+          existing.departureLongitude = null
+          existing.departureAccuracy = null
+          existing.departureAddress = null
+          existing.departureMapsUrl = null
+        }
         return existing
       }
 
@@ -188,6 +220,7 @@ export class PresenceService {
           date: today,
           status,
           expectedArrivalTime: expectedTime ?? '--:--',
+          expectedDepartureTime: expectedDepartureTime,
           officialArrivalTime: now,
           delayMinutes,
           latitude: dto.latitude,
@@ -198,6 +231,14 @@ export class PresenceService {
           sourceConnectionLogId: logEntry.id,
         },
       })
+
+      if (role && ACCUEIL_ONLY_ROLES.includes(role)) {
+        presence.latitude = null
+        presence.longitude = null
+        presence.accuracy = null
+        presence.address = null
+        presence.mapsUrl = null
+      }
 
       await tx.activityLog.create({
         data: {
@@ -285,7 +326,7 @@ export class PresenceService {
   // Fin de journée — utilisateur courant
   // ----------------------------------------------------------------
 
-  async processEndDay(userId: string, dto: EndDayDto, ipAddress: string) {
+  async processEndDay(userId: string, dto: EndDayDto, ipAddress: string, role?: Role) {
     const today = getToday()
     const now = new Date()
 
@@ -339,6 +380,19 @@ export class PresenceService {
           departureMapsUrl: mapsUrl,
         },
       })
+
+      if (role && ACCUEIL_ONLY_ROLES.includes(role)) {
+        updated.latitude = null
+        updated.longitude = null
+        updated.accuracy = null
+        updated.address = null
+        updated.mapsUrl = null
+        updated.departureLatitude = null
+        updated.departureLongitude = null
+        updated.departureAccuracy = null
+        updated.departureAddress = null
+        updated.departureMapsUrl = null
+      }
 
       await tx.activityLog.create({
         data: {
@@ -423,8 +477,8 @@ export class PresenceService {
   // Historique de connexions — utilisateur courant
   // ----------------------------------------------------------------
 
-  getMyConnections(userId: string, limit = 50) {
-    return this.prisma.connectionLog.findMany({
+  async getMyConnections(userId: string, limit = 50, role?: Role) {
+    const logs = await this.prisma.connectionLog.findMany({
       where: { userId },
       orderBy: { connectedAt: 'desc' },
       take: limit,
@@ -440,6 +494,15 @@ export class PresenceService {
         isFirstConnectionOfDay: true,
       },
     })
+
+    if (role && ACCUEIL_ONLY_ROLES.includes(role)) {
+      for (const log of logs) {
+        log.address = null
+        log.mapsUrl = null
+      }
+    }
+
+    return logs
   }
 
   // ----------------------------------------------------------------

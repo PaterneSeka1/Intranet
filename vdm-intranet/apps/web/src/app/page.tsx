@@ -48,7 +48,7 @@ export default function LandingPage() {
         {/* Sceau VDM */}
         <div className="seal">
           <div className="seal-mark">V</div>
-          <div className="seal-name">VEILLEUR DES MÉDIAS</div>
+          <div className="seal-name pt-10">VEILLEUR DES MÉDIAS</div>
           <div className="seal-rule" />
           <div className="seal-sub">Portail interne · Abidjan, Côte d&rsquo;Ivoire</div>
         </div>

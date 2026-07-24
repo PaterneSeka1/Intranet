@@ -41,7 +41,7 @@ export class PresenceController {
 
   @Get('today')
   getMyToday(@CurrentUser() user: AuthUser) {
-    return this.presenceService.getTodayPresence(user.id)
+    return this.presenceService.getTodayPresence(user.id, user.role)
   }
 
   @Get('today/all')
@@ -55,7 +55,7 @@ export class PresenceController {
     @Body() dto: FirstLoginDto,
     @Req() req: Request,
   ) {
-    return this.presenceService.processFirstLogin(user.id, dto, this.getIp(req))
+    return this.presenceService.processFirstLogin(user.id, dto, this.getIp(req), user.role)
   }
 
   @Post('login-log')
@@ -82,7 +82,7 @@ export class PresenceController {
     @Body() dto: EndDayDto,
     @Req() req: Request,
   ) {
-    return this.presenceService.processEndDay(user.id, dto, this.getIp(req))
+    return this.presenceService.processEndDay(user.id, dto, this.getIp(req), user.role)
   }
 
   // ----------------------------------------------------------------
@@ -132,7 +132,7 @@ export class PresenceController {
     @Query('limit') limit?: string,
   ) {
     const safeLimit = limit ? Math.min(200, Math.max(1, parseInt(limit, 10) || 50)) : 50
-    return this.presenceService.getMyConnections(user.id, safeLimit)
+    return this.presenceService.getMyConnections(user.id, safeLimit, user.role)
   }
 
   // ----------------------------------------------------------------

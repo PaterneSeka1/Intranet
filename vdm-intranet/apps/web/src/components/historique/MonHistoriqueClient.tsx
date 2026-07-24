@@ -93,15 +93,20 @@ const columns: Column<ConnectionLog>[] = [
 
 interface Props {
   logs: ConnectionLog[]
+  showGeolocation?: boolean
 }
 
-export function MonHistoriqueClient({ logs }: Props) {
+export function MonHistoriqueClient({ logs, showGeolocation = true }: Props) {
   const loginCount = logs.filter(l => l.type === 'LOGIN').length
+
+  const filteredColumns = showGeolocation
+    ? columns
+    : columns.filter(c => c.key !== 'address')
 
   return (
     <DataTable<ConnectionLog>
       data={logs}
-      columns={columns}
+      columns={filteredColumns}
       rowKey={l => l.id}
       defaultPageSize={25}
       searchable

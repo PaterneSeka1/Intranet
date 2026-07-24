@@ -38,6 +38,8 @@ export default async function AccueilPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
+  const showGeolocation = !['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(user.role)
+
   const [presenceData, allTabs] = await Promise.all([
     serverFetch<TodayPresenceResult>('/presence/today'),
     serverFetch<Tab[]>(user.businessUnit ? `/tabs?businessUnitId=${user.businessUnit.id}` : '/tabs'),
@@ -58,7 +60,7 @@ export default async function AccueilPage() {
             {STATUS_LABEL[status] ?? status}
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Heure attendue</div>
             <div className="text-sm font-semibold text-gray-800">
@@ -77,19 +79,21 @@ export default async function AccueilPage() {
               {presence?.delayMinutes ? `+${presence.delayMinutes} min` : '—'}
             </div>
           </div>
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Localisation</div>
-            <div className="text-sm font-semibold">
-              {presence?.mapsUrl ? (
-                <a href={presence.mapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#F28C38] underline underline-offset-2">
-                  Voir carte
-                </a>
-              ) : '—'}
+          {showGeolocation && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Localisation</div>
+              <div className="text-sm font-semibold">
+                {presence?.mapsUrl ? (
+                  <a href={presence.mapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#F28C38] underline underline-offset-2">
+                    Voir carte
+                  </a>
+                ) : '—'}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {presence?.address && (
+        {showGeolocation && presence?.address && (
           <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
             {presence.address}
           </div>
@@ -98,7 +102,7 @@ export default async function AccueilPage() {
         {/* Départ */}
         {presence && (
           <div className="mt-5 pt-4 border-t border-gray-100">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Départ attendu</div>
                 <div className="text-sm font-semibold text-gray-800">
@@ -115,19 +119,21 @@ export default async function AccueilPage() {
                   {presence.officialDepartureTime ? formatDepartureDelay(presence.departureDelayMinutes) : '—'}
                 </div>
               </div>
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Localisation</div>
-                <div className="text-sm font-semibold">
-                  {presence.departureMapsUrl ? (
-                    <a href={presence.departureMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#F28C38] underline underline-offset-2">
-                      Voir carte
-                    </a>
-                  ) : '—'}
+              {showGeolocation && (
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Localisation</div>
+                  <div className="text-sm font-semibold">
+                    {presence.departureMapsUrl ? (
+                      <a href={presence.departureMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#F28C38] underline underline-offset-2">
+                        Voir carte
+                      </a>
+                    ) : '—'}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {presence.departureAddress && (
+            {showGeolocation && presence.departureAddress && (
               <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
                 {presence.departureAddress}
               </div>

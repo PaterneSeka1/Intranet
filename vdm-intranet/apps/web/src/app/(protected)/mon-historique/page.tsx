@@ -27,6 +27,7 @@ export default async function MonHistoriquePage() {
   if (!user) redirect('/login')
 
   const logs = await getMyConnections()
+  const showGeolocation = !['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(user.role)
 
   return (
     <div className="p-6">
@@ -43,7 +44,7 @@ export default async function MonHistoriquePage() {
         </Link>
       </div>
 
-      <MonHistoriqueClient logs={logs} />
+      <MonHistoriqueClient logs={logs} showGeolocation={showGeolocation} />
     </div>
   )
 }
