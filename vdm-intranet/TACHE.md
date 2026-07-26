@@ -58,6 +58,24 @@ Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
 - `npm run build:api` : OK.
 - `npm run build:web` : OK.
 
+## Ajustement — Images personnalisées pour les icônes d'onglets — 2026-07-26
+
+- `[x]` Backend — Autoriser une icône image optimisée dans le champ `icon`.
+- `[x]` Frontend — Ajouter un bouton de sélection d'image dans la liste des icônes.
+- `[x]` Frontend — Redimensionner l'image avant sauvegarde et adapter son affichage dans les cartes.
+- `[x]` Validation — Lancer formatage et builds API/Web.
+
+### Audit icônes image — 2026-07-26
+
+- Les onglets acceptent désormais une icône image optimisée dans `icon`.
+- Le sélecteur d'icône propose un bouton `IMG` pour importer une image locale.
+- L'image est redimensionnée côté navigateur à 128px max et encodée en WebP si possible.
+- Les cartes et la prévisualisation affichent les images en `object-contain` pour préserver les proportions.
+- `npm run format` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK.
+- `git diff --check` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

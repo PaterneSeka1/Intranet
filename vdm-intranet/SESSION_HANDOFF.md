@@ -61,6 +61,10 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Les exports `activité`, `connexions` et `rapport général` sont refusés côté API pour `DAF`.
   - La bannière défilante affiche uniquement les annonces épinglées.
   - Le widget `Annonces` affiche les annonces actives non épinglées, avec fallback sur les épinglées.
+- **Icônes image pour onglets** :
+  - Le champ `icon` accepte une image optimisée.
+  - Le sélecteur d'icônes des onglets permet d'importer une image locale via le bouton `IMG`.
+  - L'image est redimensionnée côté navigateur à 128px max, encodée en WebP si possible, puis affichée en `object-contain`.
 
 ---
 
@@ -95,3 +99,4 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Vérifier que la page annonces est refusée à la DAF et accessible au CTO/PDG.
   - Vérifier que le bandeau défile uniquement avec les annonces épinglées.
   - Vérifier que le widget annonces affiche les annonces actives non épinglées.
+  - Créer/modifier un onglet avec une image locale comme icône et vérifier son affichage dans la grille.

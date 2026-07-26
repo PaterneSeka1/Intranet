@@ -35,6 +35,9 @@ const ICON_PRESETS = [
   '🔗',
 ]
 
+const IMAGE_ICON_SIZE = 128
+const MAX_ICON_FILE_SIZE = 2 * 1024 * 1024
+
 type FormData = {
   name: string
   url: string
@@ -56,12 +59,83 @@ const EMPTY_FORM: FormData = {
 const GLOBAL_TAB_MANAGERS = ['CTO_ADMIN', 'PDG']
 const BU_TAB_MANAGERS = ['DAF', 'RESPONSABLE_BU']
 
+function isImageIcon(value?: string | null) {
+  return !!value && (/^data:image\//.test(value) || /^https?:\/\//.test(value))
+}
+
+function resizeIconImage(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) {
+    return Promise.reject(new Error('Le fichier choisi doit être une image.'))
+  }
+  if (file.size > MAX_ICON_FILE_SIZE) {
+    return Promise.reject(new Error('Image trop lourde : limite 2 Mo.'))
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error("Impossible de lire l'image."))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error("Impossible de charger l'image."))
+      img.onload = () => {
+        const scale = Math.min(IMAGE_ICON_SIZE / img.width, IMAGE_ICON_SIZE / img.height, 1)
+        const width = Math.max(1, Math.round(img.width * scale))
+        const height = Math.max(1, Math.round(img.height * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error("Impossible de préparer l'image."))
+          return
+        }
+        ctx.drawImage(img, 0, 0, width, height)
+        const webp = canvas.toDataURL('image/webp', 0.9)
+        resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png'))
+      }
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function TabIcon({
+  value,
+  className = 'w-8 h-8',
+  imageClassName = 'rounded-lg',
+}: {
+  value?: string | null
+  className?: string
+  imageClassName?: string
+}) {
+  if (isImageIcon(value)) {
+    return (
+      <span
+        className={`${className} inline-flex shrink-0 items-center justify-center overflow-hidden`}
+      >
+        <img
+          src={value ?? ''}
+          alt=""
+          className={`w-full h-full object-contain ${imageClassName}`}
+        />
+      </span>
+    )
+  }
+
+  return (
+    <span className={`${className} inline-flex shrink-0 items-center justify-center text-2xl`}>
+      {value || '🔗'}
+    </span>
+  )
+}
+
 export function TabsManager({ initialTabs, userRole, userBuId, buList, canManageAll }: Props) {
   const [tabs, setTabs] = useState<Tab[]>(initialTabs)
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; tab?: Tab } | null>(null)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [iconProcessing, setIconProcessing] = useState(false)
   const [filterBu, setFilterBu] = useState<string>('')
   const [search, setSearch] = useState('')
 
@@ -131,6 +205,22 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
     }
   }
 
+  async function handleIconImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError('')
+    setIconProcessing(true)
+    try {
+      const icon = await resizeIconImage(file)
+      setForm((f) => ({ ...f, icon }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible d'utiliser cette image.")
+    } finally {
+      setIconProcessing(false)
+    }
+  }
+
   async function toggleActive(tab: Tab) {
     try {
       const updated = await tabsApi.update(tab.id, { isActive: !tab.isActive })
@@ -174,6 +264,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
       return false
     return true
   })
+  const iconIsDataImage = form.icon.startsWith('data:image/')
 
   return (
     <div className="space-y-6">
@@ -226,7 +317,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-2xl flex-shrink-0">{tab.icon ?? '🔗'}</span>
+                  <TabIcon value={tab.icon} className="w-8 h-8" />
                   <div className="min-w-0">
                     <div className="font-semibold text-gray-800 text-sm truncate">{tab.name}</div>
                     {tab.businessUnit ? (
@@ -398,16 +489,54 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                     {ico}
                   </button>
                 ))}
+                <label
+                  htmlFor="tab-icon-image"
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center border text-xs font-semibold cursor-pointer transition-colors ${
+                    isImageIcon(form.icon)
+                      ? 'bg-[#F28C38]/10 ring-1 ring-[#F28C38] border-[#F28C38]/30 text-[#F28C38]'
+                      : 'border-gray-200 text-gray-500 hover:bg-gray-100'
+                  }`}
+                  title="Choisir une image"
+                >
+                  {iconProcessing ? '…' : 'IMG'}
+                </label>
+                <input
+                  id="tab-icon-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleIconImageChange}
+                  className="sr-only"
+                />
+              </div>
+              <div className="mb-2 flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
+                  <TabIcon value={form.icon} className="w-8 h-8" />
+                </div>
+                <div className="text-[11px] text-gray-400 leading-snug">
+                  {isImageIcon(form.icon)
+                    ? 'Image redimensionnée automatiquement.'
+                    : 'Emoji, symbole ou image.'}
+                </div>
               </div>
               <input
                 id="tab-icon"
                 type="text"
-                value={form.icon}
+                value={iconIsDataImage ? 'Image sélectionnée' : form.icon}
                 onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
+                disabled={iconIsDataImage}
                 className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-                maxLength={4}
-                placeholder="Emoji"
+                maxLength={100000}
+                placeholder="Emoji ou URL image"
               />
+              {iconIsDataImage && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, icon: '🔗' }))}
+                  className="mt-1.5 text-[11px] font-semibold text-gray-400 hover:text-red-500"
+                >
+                  Retirer l'image
+                </button>
+              )}
             </div>
             <div>
               <label
@@ -443,10 +572,14 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || iconProcessing}
               className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
             >
-              {submitting ? 'Enregistrement…' : modal?.mode === 'create' ? 'Créer' : 'Enregistrer'}
+              {submitting || iconProcessing
+                ? 'Enregistrement…'
+                : modal?.mode === 'create'
+                  ? 'Créer'
+                  : 'Enregistrer'}
             </button>
           </div>
         </form>

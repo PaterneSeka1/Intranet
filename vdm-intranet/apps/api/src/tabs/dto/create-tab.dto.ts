@@ -16,7 +16,7 @@ export class CreateTabDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(10)
+  @MaxLength(100000)
   icon?: string
 
   @IsOptional()
