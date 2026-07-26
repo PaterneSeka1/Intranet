@@ -21,16 +21,17 @@ const MENUS: Record<Role, MenuItem[]> = {
   ],
   PDG: [
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Utilisateurs', href: '/utilisateurs', icon: '👥' },
     { label: 'Annonces', href: '/annonces', icon: '📢' },
-    { label: 'Mes onglets', href: '/onglets', icon: '📑' },
+    { label: 'Onglets', href: '/onglets', icon: '📑' },
     { label: 'Pilotage', href: '/pilotage', icon: '📊' },
     { label: 'Présences', href: '/presences', icon: '📅' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
   ],
   DAF: [
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
-    { label: 'Annonces', href: '/annonces', icon: '📢' },
-    { label: 'Pilotage', href: '/pilotage', icon: '📊' },
+    { label: 'Onglets DAF', href: '/onglets', icon: '📑' },
+    { label: 'Pilotage & rapports', href: '/pilotage#rapports', icon: '📊' },
     { label: 'Présences', href: '/presences', icon: '📅' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
   ],
@@ -101,7 +102,8 @@ export function Sidebar({
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/')
+          const hrefPath = item.href.split('#')[0]
+          const active = pathname === hrefPath || pathname.startsWith(hrefPath + '/')
           return (
             <Link
               key={item.href}

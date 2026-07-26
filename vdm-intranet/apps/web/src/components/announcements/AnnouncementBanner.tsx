@@ -34,7 +34,7 @@ export function AnnouncementBanner({ announcements }: Props) {
     setDismissedIds(loadDismissed())
   }, [])
 
-  const visible = announcements.filter((a) => !dismissedIds.has(a.id))
+  const visible = announcements.filter((a) => a.isPinned && !dismissedIds.has(a.id))
 
   useEffect(() => {
     const el = trackRef.current
@@ -60,9 +60,7 @@ export function AnnouncementBanner({ announcements }: Props) {
 
   if (visible.length === 0) return null
 
-  const text = visible
-    .map((a) => `${a.isPinned ? '📌 ' : ''}${a.title} — ${a.body}`)
-    .join('   ·   ')
+  const text = visible.map((a) => `📌 ${a.title} — ${a.body}`).join('   ·   ')
 
   return (
     <div className="relative bg-[#F28C38] text-white text-xs font-medium overflow-hidden h-8 flex items-center shrink-0">

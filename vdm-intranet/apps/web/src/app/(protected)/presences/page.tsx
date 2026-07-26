@@ -72,7 +72,9 @@ export default async function PresencesPage({ searchParams }: Props) {
     fetchMandates(token, cookieName, date),
   ])
 
-  const canMandate = ['CTO_ADMIN', 'RESPONSABLE_BU', 'RESPONSABLE_POLE'].includes(user.role)
+  const canMandate = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE'].includes(
+    user.role
+  )
 
   return (
     <PresencesPageClient

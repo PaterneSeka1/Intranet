@@ -6,7 +6,7 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto'
 
 type Requester = { id: string; role: Role }
 
-const MANAGE_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG, Role.DAF]
+const MANAGE_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
 
 const ANNOUNCEMENT_SELECT = {
   id: true,

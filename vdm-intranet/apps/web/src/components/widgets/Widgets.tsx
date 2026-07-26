@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useState } from 'react'
+import type { Announcement } from '@/lib/announcements'
 
 type WeatherData = {
   temperature: number
@@ -49,13 +50,21 @@ const MONTHS_SHORT = [
   'DÉC',
 ]
 
-const WIDGET_KEYS = ['clock', 'calendar', 'weather'] as const
+const WIDGET_KEYS = ['announcements', 'clock', 'calendar', 'weather'] as const
 type WidgetKey = (typeof WIDGET_KEYS)[number]
 
 const WIDGET_LABELS: Record<WidgetKey, string> = {
+  announcements: 'Annonces',
   clock: 'Horloge',
   calendar: 'Calendrier',
   weather: 'Météo',
+}
+
+const DEFAULT_WIDGET_VISIBILITY: Record<WidgetKey, boolean> = {
+  announcements: true,
+  clock: true,
+  calendar: true,
+  weather: true,
 }
 
 const CARD = 'backdrop-blur-md bg-white/80 border border-gray-100/60 shadow-2xl rounded-2xl'
@@ -81,6 +90,61 @@ function setCachedWeather(data: WeatherData) {
   } catch {
     /* noop */
   }
+}
+
+function formatAnnouncementDate(value: string): string {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+}
+
+function AnnouncementWidget({ announcements }: { announcements: Announcement[] }) {
+  const regular = announcements.filter((a) => !a.isPinned).slice(0, 3)
+  const items = regular.length ? regular : announcements.filter((a) => a.isPinned).slice(0, 3)
+
+  return (
+    <div className={`${CARD} w-80 p-4 pointer-events-auto`}>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div>
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            Annonces
+          </div>
+          <div className="text-sm font-semibold text-gray-900">
+            {regular.length ? 'Dernières informations' : 'Annonces épinglées'}
+          </div>
+        </div>
+        <a href="/accueil" className="text-[11px] font-semibold text-[#F28C38] hover:underline">
+          Accueil
+        </a>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="text-xs text-gray-400 py-2">Aucune annonce active.</div>
+      ) : (
+        <div className="space-y-2.5">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="border-t border-gray-100 pt-2.5 first:border-t-0 first:pt-0"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                {item.isPinned && (
+                  <span className="text-[10px] font-bold text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full">
+                    Épinglée
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-400">
+                  {formatAnnouncementDate(item.publishedAt)}
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-gray-800 line-clamp-1">{item.title}</div>
+              <div className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">{item.body}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Isolated clock — only this component re-renders every second
@@ -113,19 +177,15 @@ function ClockWidget() {
   )
 }
 
-export function Widgets() {
+export function Widgets({ announcements = [] }: { announcements?: Announcement[] }) {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherError, setWeatherError] = useState(false)
-  const [visible, setVisible] = useState<Record<WidgetKey, boolean>>({
-    clock: true,
-    calendar: true,
-    weather: true,
-  })
+  const [visible, setVisible] = useState<Record<WidgetKey, boolean>>(DEFAULT_WIDGET_VISIBILITY)
 
   useLayoutEffect(() => {
     try {
       const stored = localStorage.getItem('vdm_widgets')
-      if (stored) setVisible(JSON.parse(stored))
+      if (stored) setVisible({ ...DEFAULT_WIDGET_VISIBILITY, ...JSON.parse(stored) })
     } catch {
       /* noop */
     }
@@ -181,7 +241,7 @@ export function Widgets() {
   const { label: weatherLabel, icon: weatherIcon } = weather
     ? wmoLabel(weather.weatherCode)
     : { label: '', icon: '' }
-  const anyVisible = Object.values(visible).some(Boolean)
+  const timeWidgetsVisible = visible.clock || visible.calendar || visible.weather
 
   return (
     <div className="fixed bottom-6 right-6 z-40 hidden lg:flex flex-col items-end gap-2 pointer-events-none">
@@ -202,8 +262,10 @@ export function Widgets() {
         ))}
       </div>
 
+      {visible.announcements && <AnnouncementWidget announcements={announcements} />}
+
       {/* ── Cartes widgets ── */}
-      {anyVisible && (
+      {timeWidgetsVisible && (
         <div className="flex gap-3 items-end pointer-events-auto">
           {/* Horloge — composant isolé pour limiter les re-renders */}
           {visible.clock && <ClockWidget />}

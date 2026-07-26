@@ -13,7 +13,7 @@ type ScheduleGroup = {
 }
 
 const CAN_VIEW = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE']
-const CAN_MANAGE = ['CTO_ADMIN']
+const CAN_MANAGE = ['CTO_ADMIN', 'PDG']
 
 export default async function UtilisateursPage() {
   const user = await getCurrentUser()
@@ -35,6 +35,7 @@ export default async function UtilisateursPage() {
         poleList={poleList ?? []}
         scheduleGroups={scheduleGroups ?? []}
         canManage={CAN_MANAGE.includes(user.role)}
+        currentUserRole={user.role}
       />
     </div>
   )

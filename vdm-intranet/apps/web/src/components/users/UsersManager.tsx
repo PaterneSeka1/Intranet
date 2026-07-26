@@ -23,6 +23,7 @@ interface Props {
   poleList: Pole[]
   scheduleGroups: ScheduleGroup[]
   canManage: boolean
+  currentUserRole: Role
 }
 
 type FormData = {
@@ -82,15 +83,16 @@ const ROLE_BADGE: Record<Role, string> = {
 const ROLE_HINTS: Record<Role, string> = {
   CTO_ADMIN: 'Accès total — administration de la plateforme',
   PDG: 'Direction générale — tableaux de bord & présences',
-  DAF: 'Direction administrative — tableaux de bord & présences',
+  DAF: 'Direction administrative — gestion du périmètre DAF',
   RESPONSABLE_BU: "Gestion d'une Business Unit et de ses membres",
   RESPONSABLE_POLE: "Supervision d'un pôle au sein d'une BU",
-  CONSULTANT: 'Accueil uniquement — aucun accès aux modules',
-  STAGIAIRE: 'Accueil uniquement — aucun accès aux modules',
-  PRESTATAIRE: 'Accueil uniquement — aucun accès aux modules',
+  CONSULTANT: 'Employé rattachable à une BU — sans droits de gestion',
+  STAGIAIRE: 'Employé rattachable à une BU — sans droits de gestion',
+  PRESTATAIRE: 'Employé rattachable à une BU — sans droits de gestion',
 }
 
-const NO_BU_ROLES: Role[] = ['CTO_ADMIN', 'PDG', 'DAF']
+const NO_BU_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
+const PROTECTED_ADMIN_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
 
 const ALL_ROLES: Role[] = [
   'CTO_ADMIN',
@@ -125,7 +127,14 @@ function getInitials(firstName: string, lastName: string, username: string): str
   return username.slice(0, 2).toUpperCase()
 }
 
-export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, canManage }: Props) {
+export function UsersManager({
+  initialUsers,
+  buList,
+  poleList,
+  scheduleGroups,
+  canManage,
+  currentUserRole,
+}: Props) {
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [editing, setEditing] = useState<User | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -137,6 +146,21 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
     setForm((prev) => ({ ...prev, ...patch }))
   }
 
+  const manageableRoles =
+    currentUserRole === 'PDG'
+      ? ALL_ROLES.filter((role) => !PROTECTED_ADMIN_ROLES.includes(role))
+      : ALL_ROLES
+
+  function canUseRole(role: Role) {
+    return currentUserRole === 'CTO_ADMIN' || !PROTECTED_ADMIN_ROLES.includes(role)
+  }
+
+  function canEditUser(user: User) {
+    if (!canManage) return false
+    if (currentUserRole === 'CTO_ADMIN') return true
+    return currentUserRole === 'PDG' && !PROTECTED_ADMIN_ROLES.includes(user.role)
+  }
+
   function openCreate() {
     setEditing(null)
     setForm(EMPTY_FORM)
@@ -145,6 +169,10 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
   }
 
   function openEdit(u: User) {
+    if (!canEditUser(u)) {
+      toast.error('Seul le CTO peut modifier un compte CTO ou PDG.')
+      return
+    }
     setEditing(u)
     setForm({
       username: u.username,
@@ -166,6 +194,15 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!canManage) return
+    if (editing && !canEditUser(editing)) {
+      setError('Seul le CTO peut modifier un compte CTO ou PDG.')
+      return
+    }
+    if (!canUseRole(form.role)) {
+      setError('Seul le CTO peut attribuer le rôle CTO ou PDG.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -209,6 +246,10 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
   }
 
   async function toggleActive(u: User) {
+    if (!canEditUser(u)) {
+      toast.error('Seul le CTO peut activer ou désactiver un compte CTO ou PDG.')
+      return
+    }
     try {
       const path = u.isActive ? `/users/${u.id}/deactivate` : `/users/${u.id}/activate`
       const updated = await apiReq<User>(path, { method: 'PATCH' })
@@ -318,28 +359,29 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         }
         actions={
           canManage
-            ? (u) => (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openEdit(u)
-                    }}
-                    className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
-                  >
-                    Modifier
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleActive(u)
-                    }}
-                    className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}
-                  >
-                    {u.isActive ? 'Désactiver' : 'Activer'}
-                  </button>
-                </>
-              )
+            ? (u) =>
+                canEditUser(u) ? (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEdit(u)
+                      }}
+                      className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleActive(u)
+                      }}
+                      className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}
+                    >
+                      {u.isActive ? 'Désactiver' : 'Activer'}
+                    </button>
+                  </>
+                ) : null
             : undefined
         }
       />
@@ -465,13 +507,18 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
               </label>
               <select
                 value={form.role}
-                onChange={(e) =>
-                  f({ role: e.target.value as Role, businessUnitId: '', poleId: '' })
-                }
+                onChange={(e) => {
+                  const role = e.target.value as Role
+                  if (NO_BU_ROLES.includes(role)) {
+                    f({ role, businessUnitId: '', poleId: '' })
+                  } else {
+                    f({ role })
+                  }
+                }}
                 required
                 className={SELECT}
               >
-                {ALL_ROLES.map((r) => (
+                {manageableRoles.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABELS[r]}
                   </option>

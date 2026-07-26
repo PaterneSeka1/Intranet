@@ -95,8 +95,8 @@ type ReportConfig = {
 const REPORTS: ReportConfig[] = [
   {
     key: 'presence',
-    label: 'Présences',
-    description: "Statuts, horaires d'arrivée et localisations de tous les employés.",
+    label: 'Présences / absences',
+    description: 'Statuts de présence, retards et absences des employés.',
     icon: '📅',
     filename: 'presences.csv',
     hasDateRange: true,
@@ -272,6 +272,7 @@ export function PilotageClient({ role }: Props) {
     Retard: b.late,
     Absent: b.absent,
   }))
+  const availableReports = role === 'DAF' ? REPORTS.filter((r) => r.key === 'presence') : REPORTS
 
   return (
     <div className="space-y-8">
@@ -349,9 +350,9 @@ export function PilotageClient({ role }: Props) {
         </div>
       )}
 
-      {/* ── Exports CSV (CTO_ADMIN, PDG, DAF uniquement) ── */}
+      {/* ── Exports CSV, avec scope serveur selon le rôle ── */}
       {EXPORT_ROLES.includes(role) && (
-        <section>
+        <section id="rapports">
           <div className="mb-4">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
               Extraction de données
@@ -359,7 +360,7 @@ export function PilotageClient({ role }: Props) {
             <h3 className="text-sm font-semibold text-gray-800">Exports CSV</h3>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {REPORTS.map((report) => (
+            {availableReports.map((report) => (
               <div
                 key={report.key}
                 className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col gap-3.5"

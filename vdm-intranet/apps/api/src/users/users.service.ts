@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import * as bcrypt from 'bcrypt'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateUserDto } from './dto/create-user.dto'
@@ -33,6 +38,10 @@ type Requester = {
   poleId?: string | null
 }
 
+const GLOBAL_USER_MANAGERS: Role[] = [Role.CTO_ADMIN, Role.PDG]
+const PROTECTED_ADMIN_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
+const BU_SCOPED_USER_ROLES: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -62,7 +71,9 @@ export class UsersService {
     return user
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, requester: Requester) {
+    this.assertCanCreateRole(requester, dto.role)
+
     const passwordHash = await bcrypt.hash(dto.password, 12)
     const fullName = [dto.firstName, dto.lastName].filter(Boolean).join(' ')
     const { password, ...rest } = dto
@@ -79,7 +90,14 @@ export class UsersService {
     }
   }
 
-  async update(id: string, dto: UpdateUserDto) {
+  async update(id: string, dto: UpdateUserDto, requester: Requester) {
+    const current = await this.prisma.user.findUnique({
+      where: { id },
+      select: { role: true, firstName: true, lastName: true },
+    })
+    if (!current) throw new NotFoundException('Utilisateur introuvable.')
+    this.assertCanManageTarget(requester, current.role, dto.role)
+
     const data: Record<string, unknown> = { ...dto }
     delete data.currentPassword
 
@@ -90,10 +108,6 @@ export class UsersService {
     }
 
     if (dto.firstName !== undefined || dto.lastName !== undefined) {
-      const current = await this.prisma.user.findUnique({
-        where: { id },
-        select: { firstName: true, lastName: true },
-      })
       data.fullName = [dto.firstName ?? current?.firstName, dto.lastName ?? current?.lastName]
         .filter(Boolean)
         .join(' ')
@@ -166,7 +180,14 @@ export class UsersService {
     }
   }
 
-  async setActive(id: string, isActive: boolean) {
+  async setActive(id: string, isActive: boolean, requester: Requester) {
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: { role: true },
+    })
+    if (!target) throw new NotFoundException('Utilisateur introuvable.')
+    this.assertCanManageTarget(requester, target.role)
+
     try {
       return await this.prisma.user.update({
         where: { id },
@@ -182,10 +203,32 @@ export class UsersService {
 
   private scopeWhere(requester: Requester) {
     const { role, businessUnitId, poleId, id } = requester
-    if (([Role.CTO_ADMIN, Role.PDG, Role.DAF] as Role[]).includes(role)) return {}
-    if (role === Role.RESPONSABLE_BU && businessUnitId) return { businessUnitId }
+    if (GLOBAL_USER_MANAGERS.includes(role)) return {}
+    if (BU_SCOPED_USER_ROLES.includes(role) && businessUnitId) return { businessUnitId }
     if (role === Role.RESPONSABLE_POLE && poleId) return { poleId }
     return { id }
+  }
+
+  private assertCanCreateRole(requester: Requester, role: Role) {
+    if (!GLOBAL_USER_MANAGERS.includes(requester.role)) {
+      throw new ForbiddenException('Vous ne pouvez pas créer un utilisateur.')
+    }
+    if (requester.role === Role.PDG && PROTECTED_ADMIN_ROLES.includes(role)) {
+      throw new ForbiddenException('Seul le CTO peut créer un compte CTO ou PDG.')
+    }
+  }
+
+  private assertCanManageTarget(requester: Requester, targetRole: Role, nextRole?: Role) {
+    if (requester.role === Role.CTO_ADMIN) return
+    if (requester.role !== Role.PDG) {
+      throw new ForbiddenException('Vous ne pouvez pas modifier cet utilisateur.')
+    }
+    if (PROTECTED_ADMIN_ROLES.includes(targetRole)) {
+      throw new ForbiddenException('Seul le CTO peut modifier un compte CTO ou PDG.')
+    }
+    if (nextRole && PROTECTED_ADMIN_ROLES.includes(nextRole)) {
+      throw new ForbiddenException('Seul le CTO peut attribuer le rôle CTO ou PDG.')
+    }
   }
 }
 

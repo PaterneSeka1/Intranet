@@ -633,9 +633,9 @@ export class PresenceService {
     if (!mandate) throw new NotFoundException('Mandat introuvable')
 
     const canDelete =
-      requester.role === Role.CTO_ADMIN ||
+      ([Role.CTO_ADMIN, Role.PDG] as Role[]).includes(requester.role) ||
       mandate.createdById === requester.id ||
-      (requester.role === Role.RESPONSABLE_BU &&
+      (([Role.DAF, Role.RESPONSABLE_BU] as Role[]).includes(requester.role) &&
         mandate.user.businessUnitId === requester.businessUnitId) ||
       (requester.role === Role.RESPONSABLE_POLE && mandate.user.poleId === requester.poleId)
 
@@ -696,8 +696,11 @@ export class PresenceService {
   }
 
   private buildUserScope(requester: Requester): Record<string, unknown> {
-    if (([Role.CTO_ADMIN, Role.PDG, Role.DAF] as Role[]).includes(requester.role)) return {}
-    if (requester.role === Role.RESPONSABLE_BU && requester.businessUnitId) {
+    if (([Role.CTO_ADMIN, Role.PDG] as Role[]).includes(requester.role)) return {}
+    if (
+      ([Role.DAF, Role.RESPONSABLE_BU] as Role[]).includes(requester.role) &&
+      requester.businessUnitId
+    ) {
       return { businessUnitId: requester.businessUnitId }
     }
     if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {
@@ -710,8 +713,11 @@ export class PresenceService {
     requester: Requester,
     target: { businessUnitId?: string | null; poleId?: string | null }
   ): boolean {
-    if (requester.role === Role.CTO_ADMIN) return true
-    if (requester.role === Role.RESPONSABLE_BU && requester.businessUnitId) {
+    if (([Role.CTO_ADMIN, Role.PDG] as Role[]).includes(requester.role)) return true
+    if (
+      ([Role.DAF, Role.RESPONSABLE_BU] as Role[]).includes(requester.role) &&
+      requester.businessUnitId
+    ) {
       return target.businessUnitId === requester.businessUnitId
     }
     if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {

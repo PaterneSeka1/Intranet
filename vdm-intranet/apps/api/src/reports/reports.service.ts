@@ -17,7 +17,9 @@ const ALLOWED_ROLES: Role[] = [
   Role.RESPONSABLE_POLE,
 ]
 
-const GLOBAL_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG, Role.DAF]
+const GLOBAL_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
+const BU_SCOPED_ROLES: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
+type ReportAccess = 'presence' | 'extended'
 
 function getToday(): Date {
   const now = new Date()
@@ -28,17 +30,25 @@ function getToday(): Date {
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private assertAllowed(requester: Requester) {
+  private assertAllowed(requester: Requester, access: ReportAccess = 'extended') {
     if (!ALLOWED_ROLES.includes(requester.role)) {
       throw new ForbiddenException('Accès réservé aux responsables.')
     }
+    if (access === 'extended' && requester.role === Role.DAF) {
+      throw new ForbiddenException('La DAF est limitée aux rapports de présence et absence.')
+    }
   }
 
-  private buildUserWhere(requester: Requester): object {
+  private buildUserWhere(requester: Requester, access: ReportAccess = 'extended'): object {
     if (GLOBAL_ROLES.includes(requester.role)) return {}
-    if (requester.role === Role.RESPONSABLE_BU) return { businessUnitId: requester.businessUnitId }
-    if (requester.role === Role.RESPONSABLE_POLE) return { poleId: requester.poleId }
-    return {}
+    if (access === 'presence' && requester.role === Role.DAF) return {}
+    if (BU_SCOPED_ROLES.includes(requester.role) && requester.businessUnitId) {
+      return { businessUnitId: requester.businessUnitId }
+    }
+    if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {
+      return { poleId: requester.poleId }
+    }
+    return { id: requester.id }
   }
 
   private toCsv(headers: string[], rows: (string | number | null | undefined)[][]): string {
@@ -88,8 +98,8 @@ export class ReportsService {
   }
 
   async presenceCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
-    this.assertAllowed(requester)
-    const userWhere = this.buildUserWhere(requester)
+    this.assertAllowed(requester, 'presence')
+    const userWhere = this.buildUserWhere(requester, 'presence')
 
     const since90 = new Date()
     since90.setUTCDate(since90.getUTCDate() - 90)

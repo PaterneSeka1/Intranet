@@ -31,14 +31,14 @@ const TAB_SELECT = {
   createdBy: { select: { id: true, username: true, fullName: true } },
 } as const
 
-const FULL_ACCESS: Role[] = [Role.CTO_ADMIN, Role.PDG, Role.DAF]
+const FULL_ACCESS: Role[] = [Role.CTO_ADMIN, Role.PDG]
 const READ_OWN_BU: Role[] = [
   Role.RESPONSABLE_POLE,
   Role.CONSULTANT,
   Role.STAGIAIRE,
   Role.PRESTATAIRE,
 ]
-const MANAGE_OWN_BU: Role[] = [Role.RESPONSABLE_BU]
+const MANAGE_OWN_BU: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
 
 @Injectable()
 export class TabsService {

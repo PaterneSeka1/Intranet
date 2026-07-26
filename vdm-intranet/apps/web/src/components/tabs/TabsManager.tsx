@@ -53,6 +53,9 @@ const EMPTY_FORM: FormData = {
   businessUnitId: '',
 }
 
+const GLOBAL_TAB_MANAGERS = ['CTO_ADMIN', 'PDG']
+const BU_TAB_MANAGERS = ['DAF', 'RESPONSABLE_BU']
+
 export function TabsManager({ initialTabs, userRole, userBuId, buList, canManageAll }: Props) {
   const [tabs, setTabs] = useState<Tab[]>(initialTabs)
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; tab?: Tab } | null>(null)
@@ -63,10 +66,12 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
   const [search, setSearch] = useState('')
 
   const canManage = (tab: Tab) => {
-    if (['CTO_ADMIN', 'PDG', 'DAF'].includes(userRole)) return true
+    if (GLOBAL_TAB_MANAGERS.includes(userRole)) return true
     if (tab.businessUnitId === null) return false
-    return userRole === 'RESPONSABLE_BU' && tab.businessUnitId === userBuId
+    return BU_TAB_MANAGERS.includes(userRole) && tab.businessUnitId === userBuId
   }
+
+  const canCreateTabs = canManageAll || (BU_TAB_MANAGERS.includes(userRole) && !!userBuId)
 
   function openCreate() {
     setForm({ ...EMPTY_FORM, businessUnitId: canManageAll ? '' : (userBuId ?? '') })
@@ -198,10 +203,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             </select>
           )}
         </div>
-        {(userRole === 'CTO_ADMIN' ||
-          userRole === 'PDG' ||
-          userRole === 'DAF' ||
-          userRole === 'RESPONSABLE_BU') && (
+        {canCreateTabs && (
           <button
             onClick={openCreate}
             className="bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors flex items-center gap-2"

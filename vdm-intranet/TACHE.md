@@ -1,5 +1,63 @@
 # Liste des Tâches — Sécurité & Bugs
 
+## Nouvelle tâche — Gouvernance utilisateurs, admins et onglets — 2026-07-26
+
+Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
+
+> Cette tâche remplace l'hypothèse précédente où la DAF était traitée comme admin globale des onglets.
+
+- `[x]` Lire et analyser le nouveau fichier de contexte VDM
+- `[x]` Mettre à jour les fichiers de tâche avant toute modification de code
+- `[x]` Backend — Restreindre les admins globaux à `CTO_ADMIN` et `PDG`
+- `[x]` Backend — Donner au `CTO_ADMIN` un niveau supérieur : il peut modifier le `PDG`, le `PDG` ne peut pas modifier le CTO/super admin
+- `[x]` Backend — Traiter la DAF et les directeurs/responsables comme responsables de leur périmètre département/BU, pas comme admins globaux
+- `[x]` Backend — Autoriser les responsables de département/BU à créer et gérer les onglets de leur propre département/BU
+- `[x]` Frontend — Aligner les pages `utilisateurs` et `onglets` avec la nouvelle hiérarchie CTO/PDG/DAF/directeurs
+- `[x]` Validation — Lancer formatage et builds API/Web
+- `[x]` Audit final — Contrôler les permissions, mettre à jour `TACHE.md` et `SESSION_HANDOFF.md`
+
+### Audit gouvernance — 2026-07-26
+
+- `CTO_ADMIN` et `PDG` sont les seuls rôles globaux pour utilisateurs, onglets, pilotage, rapports, présence et annonces.
+- `CTO_ADMIN` peut gérer les comptes `CTO_ADMIN`/`PDG`; `PDG` ne peut ni modifier ces comptes, ni attribuer ces rôles.
+- `DAF` est retiré des accès globaux et devient gestionnaire de son périmètre BU/département pour utilisateurs, onglets, pilotage, rapports, présence et mandats.
+- Les responsables BU conservent la gestion de leurs onglets BU ; les responsables pôle restent scopés pôle pour présence/pilotage/rapports.
+- Frontend aligné : pages `utilisateurs`, `onglets`, `annonces`, `presences`, sidebar et managers.
+- Aucune migration ni seed requis : aucun changement de schéma Prisma.
+- `npm run format` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK.
+- `git diff --check` : OK.
+
+//SESSION GOUVERNANCE TERMINEE
+
+## Clarification — Rattachement BU/département sans responsabilité — 2026-07-26
+
+- `[x]` Confirmer que le rattachement `businessUnitId`/`poleId` ne donne pas automatiquement un droit de gestion.
+- `[x]` Frontend — Préserver la BU/le pôle quand un utilisateur change vers un rôle employé non-responsable.
+- `[x]` Frontend — Clarifier les libellés des rôles employés pour indiquer qu'ils peuvent être rattachés à une BU sans être responsables.
+- `[x]` Validation — Lancer formatage et build web.
+
+## Ajustement — Rapports DAF & widget annonces — 2026-07-26
+
+- `[x]` Rapports — Limiter la DAF responsable au rapport présences/absences, mais sur tout le personnel sans exception.
+- `[x]` Navigation — Ajouter une entrée claire pour les rapports DAF.
+- `[x]` Annonces — Limiter la bannière défilante aux annonces épinglées.
+- `[x]` Widget — Ajouter un widget annonces distinct pour les annonces actives non épinglées.
+- `[x]` Documentation — Mettre à jour `TACHE.md` et `SESSION_HANDOFF.md`.
+- `[x]` Validation — Lancer formatage et build web.
+
+### Audit rapports DAF & annonces — 2026-07-26
+
+- `DAF` peut exporter uniquement le rapport `Présences / absences`, pour tout le personnel sans exception.
+- Les exports `activité`, `connexions` et `rapport général` sont refusés côté API pour `DAF`.
+- Le menu DAF affiche `Pilotage & rapports`.
+- La bannière défilante affiche uniquement les annonces épinglées.
+- Le widget `Annonces` affiche les annonces actives non épinglées, avec fallback sur les épinglées.
+- `npm run format` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`
@@ -32,7 +90,7 @@
   - `[x]` Mettre à jour `MonProfilClient.tsx` pour restreindre la vue en cas de changement obligatoire
 - `[x]` Tâche 7 : Frontend Web — Autres correctifs
   - `[x]` Mettre à jour le statut HTTP 403 dans `api.ts`
-  - `[x]` Corriger l'incohérence DAF sur les onglets (`onglets/page.tsx` et `TabsManager.tsx`)
+  - `[x]` Corriger l'incohérence DAF sur les onglets (`onglets/page.tsx` et `TabsManager.tsx`) — hypothèse remplacée par la nouvelle gouvernance du 2026-07-26
   - `[x]` Remplacer `|| undefined` par `|| null` pour vider les champs dans `UsersManager.tsx` et `ParametresClient.tsx`
   - `[x]` Échapper `vdm_bg_image` dans `BgRestorer.tsx`
 - `[x]` Tâche 8 : Validation
@@ -63,8 +121,8 @@ Ce plan détaille les modifications à apporter au portail intranet pour corrige
 > **Migration de Base de Données requise :**
 > L'ajout des champs `mustChangePassword` (rotation de mot de passe forcée), `failedLoginAttempts` (sécurité contre brute-force), et `lockoutUntil` (verrouillage temporaire de compte) requiert une migration Prisma (`npx prisma migrate dev`).
 >
-> **Comportement DAF :**
-> Le rôle DAF sera autorisé à voir et à gérer globalement tous les onglets du portail au même titre que le rôle `PDG` et `CTO_ADMIN` pour s'aligner sur le comportement attendu par le backend.
+> **Correction de gouvernance :**
+> L'ancien comportement où la DAF était traitée comme admin globale est remplacé par la règle issue de `contexte_vdm_compact_avec_schema.md` : seuls `CTO_ADMIN` et `PDG` sont admins globaux. Le `CTO_ADMIN` reste supérieur au `PDG`. La DAF et les responsables/directeurs gèrent uniquement leur périmètre département/BU.
 >
 > **Complexité de Mot de Passe renforcée :**
 > Tout nouveau mot de passe (à la création de compte, au profil ou lors d'un reset) devra désormais respecter :
@@ -215,11 +273,11 @@ Ce plan détaille les modifications à apporter au portail intranet pour corrige
 
 #### [MODIFY] [page.tsx](<file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/app/(protected)/onglets/page.tsx>)
 
-- Ajouter `'DAF'` dans `CAN_VIEW` et dans `canManageAll` pour qu'il soit traité au même titre que le rôle `PDG` ou `CTO_ADMIN` conformément au backend.
+- Conserver `'DAF'` dans `CAN_VIEW`, mais retirer `DAF` de `canManageAll` : la DAF gère uniquement son périmètre BU/département.
 
 #### [MODIFY] [TabsManager.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/tabs/TabsManager.tsx)
 
-- Permettre au bouton de création d'onglet de s'afficher pour le rôle DAF (ajouter `userRole === 'DAF'` dans la condition).
+- Permettre au bouton de création d'onglet de s'afficher pour le rôle DAF uniquement si une BU/direction lui est assignée.
 
 #### [MODIFY] [UsersManager.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/users/UsersManager.tsx)
 
@@ -248,8 +306,10 @@ Ce plan détaille les modifications à apporter au portail intranet pour corrige
 
 - **Vérification d'atomicité :**
   - Simuler deux check-out simultanés pour vérifier que l'un d'eux lève correctement une `BadRequestException` sans écraser silencieusement le premier départ.
-- **Vérification DAF :**
-  - Se connecter avec un compte DAF et s'assurer que la page d'administration des onglets est accessible sans redirection vers `/acces-refuse`.
+- **Vérification gouvernance onglets :**
+  - Se connecter avec un compte CTO et vérifier la gestion globale des onglets.
+  - Se connecter avec un compte PDG et vérifier la gestion globale des onglets hors modification du CTO/super admin.
+  - Se connecter avec un compte DAF ou responsable/directeur et vérifier que la création/gestion d'onglets est limitée à son département/BU.
 - **Vérification Force Rotation (seed) :**
   - Se connecter avec n'importe quel compte seedé pour la première fois et vérifier qu'il est redirigé vers l'écran de profil pour changer son mot de passe, avec interdiction d'accéder aux autres pages.
 - **Vérification d'énumération :**

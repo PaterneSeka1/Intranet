@@ -5,7 +5,7 @@ import type { Announcement } from '@/lib/announcements'
 
 type Bu = { id: string; name: string; code: string }
 
-const CAN_MANAGE = ['CTO_ADMIN', 'PDG', 'DAF']
+const CAN_MANAGE = ['CTO_ADMIN', 'PDG']
 
 export default async function AnnoncesPage() {
   const user = await getCurrentUser()

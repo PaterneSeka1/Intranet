@@ -121,14 +121,26 @@ export class PresenceController {
 
   @Post('mandates')
   createMandate(@CurrentUser() user: AuthUser, @Body() dto: CreateMandateDto) {
-    const CAN_MANDATE: Role[] = [Role.CTO_ADMIN, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE]
+    const CAN_MANDATE: Role[] = [
+      Role.CTO_ADMIN,
+      Role.PDG,
+      Role.DAF,
+      Role.RESPONSABLE_BU,
+      Role.RESPONSABLE_POLE,
+    ]
     if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.createMandate(dto, user)
   }
 
   @Delete('mandates/:id')
   deleteMandate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    const CAN_MANDATE: Role[] = [Role.CTO_ADMIN, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE]
+    const CAN_MANDATE: Role[] = [
+      Role.CTO_ADMIN,
+      Role.PDG,
+      Role.DAF,
+      Role.RESPONSABLE_BU,
+      Role.RESPONSABLE_POLE,
+    ]
     if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.deleteMandate(id, user)
   }

@@ -88,7 +88,7 @@ export function MobileSidebarToggle({
 
         <AnnouncementBanner announcements={announcements} />
         <main className="flex-1 overflow-auto">{children}</main>
-        <Widgets />
+        <Widgets announcements={announcements} />
       </div>
     </div>
   )

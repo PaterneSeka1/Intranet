@@ -49,30 +49,30 @@ export class UsersController {
   }
 
   @Post()
-  @Roles(Role.CTO_ADMIN)
-  @ApiOperation({ summary: 'Créer un utilisateur (CTO_ADMIN)' })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto)
+  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @ApiOperation({ summary: 'Créer un utilisateur (CTO_ADMIN, PDG)' })
+  create(@CurrentUser() user: JwtUser, @Body() dto: CreateUserDto) {
+    return this.usersService.create(dto, user)
   }
 
   @Patch(':id')
-  @Roles(Role.CTO_ADMIN)
-  @ApiOperation({ summary: 'Modifier un utilisateur (CTO_ADMIN)' })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto)
+  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @ApiOperation({ summary: 'Modifier un utilisateur (CTO_ADMIN, PDG)' })
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: JwtUser) {
+    return this.usersService.update(id, dto, user)
   }
 
   @Patch(':id/activate')
-  @Roles(Role.CTO_ADMIN)
-  @ApiOperation({ summary: 'Activer un compte (CTO_ADMIN)' })
-  activate(@Param('id') id: string) {
-    return this.usersService.setActive(id, true)
+  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @ApiOperation({ summary: 'Activer un compte (CTO_ADMIN, PDG)' })
+  activate(@Param('id') id: string, @CurrentUser() user: JwtUser) {
+    return this.usersService.setActive(id, true, user)
   }
 
   @Patch(':id/deactivate')
-  @Roles(Role.CTO_ADMIN)
-  @ApiOperation({ summary: 'Désactiver un compte (CTO_ADMIN)' })
-  deactivate(@Param('id') id: string) {
-    return this.usersService.setActive(id, false)
+  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @ApiOperation({ summary: 'Désactiver un compte (CTO_ADMIN, PDG)' })
+  deactivate(@Param('id') id: string, @CurrentUser() user: JwtUser) {
+    return this.usersService.setActive(id, false, user)
   }
 }

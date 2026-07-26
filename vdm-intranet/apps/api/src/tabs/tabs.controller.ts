@@ -103,19 +103,19 @@ export class TabsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Créer un onglet (CTO_ADMIN, RESPONSABLE_BU)' })
+  @ApiOperation({ summary: 'Créer un onglet (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateTabDto) {
     return this.tabsService.create(user, dto)
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Modifier un onglet (CTO_ADMIN, RESPONSABLE_BU)' })
+  @ApiOperation({ summary: 'Modifier un onglet (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)' })
   update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateTabDto) {
     return this.tabsService.update(user, id, dto)
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Supprimer un onglet (CTO_ADMIN, RESPONSABLE_BU)' })
+  @ApiOperation({ summary: 'Supprimer un onglet (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)' })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tabsService.remove(user, id)
   }

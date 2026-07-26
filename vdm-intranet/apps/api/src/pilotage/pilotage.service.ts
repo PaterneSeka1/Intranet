@@ -17,7 +17,8 @@ const ALLOWED_ROLES: Role[] = [
   Role.RESPONSABLE_POLE,
 ]
 
-const GLOBAL_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG, Role.DAF]
+const GLOBAL_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
+const BU_SCOPED_ROLES: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
 
 function getToday(): Date {
   const now = new Date()
@@ -43,10 +44,12 @@ export class PilotageService {
   private buildUserWhere(requester: Requester): object {
     const base = { isActive: true }
     if (GLOBAL_ROLES.includes(requester.role)) return base
-    if (requester.role === Role.RESPONSABLE_BU)
+    if (BU_SCOPED_ROLES.includes(requester.role) && requester.businessUnitId)
       return { ...base, businessUnitId: requester.businessUnitId }
-    if (requester.role === Role.RESPONSABLE_POLE) return { ...base, poleId: requester.poleId }
-    return base
+    if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {
+      return { ...base, poleId: requester.poleId }
+    }
+    return { ...base, id: requester.id }
   }
 
   async getSummary(requester: Requester) {
