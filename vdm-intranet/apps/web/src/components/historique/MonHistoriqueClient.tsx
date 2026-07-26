@@ -30,18 +30,22 @@ const columns: Column<ConnectionLog>[] = [
     key: 'date',
     label: 'Date',
     sortable: true,
-    sortValue: l => l.date,
-    render: l => <span className="font-medium text-gray-700 whitespace-nowrap">{fmtDate(l.date)}</span>,
+    sortValue: (l) => l.date,
+    render: (l) => (
+      <span className="font-medium text-gray-700 whitespace-nowrap">{fmtDate(l.date)}</span>
+    ),
   },
   {
     key: 'type',
     label: 'Type',
     sortable: true,
-    sortValue: l => l.type,
-    render: l => (
-      <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap ${
-        l.type === 'LOGIN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-      }`}>
+    sortValue: (l) => l.type,
+    render: (l) => (
+      <span
+        className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap ${
+          l.type === 'LOGIN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+        }`}
+      >
         {l.type === 'LOGIN' ? 'Connexion' : 'Déconnexion'}
       </span>
     ),
@@ -50,8 +54,8 @@ const columns: Column<ConnectionLog>[] = [
     key: 'connectedAt',
     label: 'Heure',
     sortable: true,
-    sortValue: l => l.connectedAt,
-    render: l => (
+    sortValue: (l) => l.connectedAt,
+    render: (l) => (
       <span className="font-mono text-sm text-gray-600 whitespace-nowrap">
         {fmtTime(l.type === 'LOGOUT' ? (l.disconnectedAt ?? l.connectedAt) : l.connectedAt)}
       </span>
@@ -61,32 +65,39 @@ const columns: Column<ConnectionLog>[] = [
     key: 'isFirstConnectionOfDay',
     label: '1ère connexion',
     sortable: true,
-    sortValue: l => l.isFirstConnectionOfDay ? 0 : 1,
-    render: l => l.isFirstConnectionOfDay ? (
-      <span className="text-xs font-semibold text-[#F28C38]">Oui</span>
-    ) : (
-      <span className="text-xs text-gray-300">Non</span>
-    ),
+    sortValue: (l) => (l.isFirstConnectionOfDay ? 0 : 1),
+    render: (l) =>
+      l.isFirstConnectionOfDay ? (
+        <span className="text-xs font-semibold text-[#F28C38]">Oui</span>
+      ) : (
+        <span className="text-xs text-gray-300">Non</span>
+      ),
   },
   {
     key: 'address',
     label: 'Adresse GPS',
-    render: l => l.mapsUrl ? (
-      <a
-        href={l.mapsUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap"
-      >
-        📍 {l.address ? l.address.slice(0, 28) + (l.address.length > 28 ? '…' : '') : 'Voir carte'}
-      </a>
-    ) : <span className="text-gray-300 text-xs">—</span>,
+    render: (l) =>
+      l.mapsUrl ? (
+        <a
+          href={l.mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap"
+        >
+          📍{' '}
+          {l.address ? l.address.slice(0, 28) + (l.address.length > 28 ? '…' : '') : 'Voir carte'}
+        </a>
+      ) : (
+        <span className="text-gray-300 text-xs">—</span>
+      ),
   },
   {
     key: 'ipAddress',
     label: 'IP',
-    render: l => (
-      <span className="font-mono text-xs text-gray-400 whitespace-nowrap">{l.ipAddress ?? '—'}</span>
+    render: (l) => (
+      <span className="font-mono text-xs text-gray-400 whitespace-nowrap">
+        {l.ipAddress ?? '—'}
+      </span>
     ),
   },
 ]
@@ -97,17 +108,15 @@ interface Props {
 }
 
 export function MonHistoriqueClient({ logs, showGeolocation = true }: Props) {
-  const loginCount = logs.filter(l => l.type === 'LOGIN').length
+  const loginCount = logs.filter((l) => l.type === 'LOGIN').length
 
-  const filteredColumns = showGeolocation
-    ? columns
-    : columns.filter(c => c.key !== 'address')
+  const filteredColumns = showGeolocation ? columns : columns.filter((c) => c.key !== 'address')
 
   return (
     <DataTable<ConnectionLog>
       data={logs}
       columns={filteredColumns}
-      rowKey={l => l.id}
+      rowKey={(l) => l.id}
       defaultPageSize={25}
       searchable
       searchPlaceholder="Rechercher par date, type, IP…"

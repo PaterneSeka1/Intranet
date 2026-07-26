@@ -41,7 +41,12 @@ export async function downloadCsvBlob(key: string, from?: string, to?: string): 
   }
   if (!res.ok) {
     let msg = 'Erreur lors de la génération du rapport.'
-    try { const body = await res.json(); msg = body.message ?? msg } catch { /* ignore */ }
+    try {
+      const body = await res.json()
+      msg = body.message ?? msg
+    } catch {
+      /* ignore */
+    }
     throw new Error(msg)
   }
   return res.blob()

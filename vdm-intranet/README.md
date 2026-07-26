@@ -4,17 +4,17 @@ Portail intranet de **Veilleur des Médias** — gestion des présences, rôles,
 
 ## Stack technique
 
-| Couche      | Technologie                        |
-|-------------|------------------------------------|
-| Frontend    | Next.js 14 (App Router) + TypeScript |
-| UI          | Tailwind CSS + shadcn/ui           |
-| Backend     | NestJS + TypeScript                |
-| Base de données | PostgreSQL                     |
-| ORM         | Prisma                             |
-| Auth        | JWT + cookies sécurisés            |
-| Graphiques  | Recharts                           |
-| Exports     | CSV + PDF                          |
-| Déploiement | VPS OVH + Nginx + PM2              |
+| Couche          | Technologie                          |
+| --------------- | ------------------------------------ |
+| Frontend        | Next.js 14 (App Router) + TypeScript |
+| UI              | Tailwind CSS + shadcn/ui             |
+| Backend         | NestJS + TypeScript                  |
+| Base de données | PostgreSQL                           |
+| ORM             | Prisma                               |
+| Auth            | JWT + cookies sécurisés              |
+| Graphiques      | Recharts                             |
+| Exports         | CSV + PDF                            |
+| Déploiement     | VPS OVH + Nginx + PM2                |
 
 ## Structure
 
@@ -89,24 +89,27 @@ npm run db:reset      # Réinitialiser la base et re-seeder
 
 ## Comptes de test (seed)
 
-| Username         | Mot de passe | Rôle              |
-|------------------|-------------|-------------------|
-| CTO              | 1234        | CTO_ADMIN         |
-| PDG              | 1234        | PDG               |
-| DAF              | 1234        | DAF               |
-| RBU_INFO         | 1234        | RESPONSABLE_BU    |
-| RBU_EREP         | 1234        | RESPONSABLE_BU    |
-| RBU_SCI          | 1234        | RESPONSABLE_BU    |
-| RBU_ANALYSES     | 1234        | RESPONSABLE_BU    |
-| POLE_PRESSE_JOUR | 1234        | RESPONSABLE_POLE  |
-| POLE_NUIT        | 1234        | RESPONSABLE_POLE  |
-| POLE_TVRADIO     | 1234        | RESPONSABLE_POLE  |
-| CONS_PJ_1        | 1234        | CONSULTANT        |
-| CONS_NUIT_1      | 1234        | CONSULTANT        |
-| CONS_TVR_1       | 1234        | CONSULTANT        |
-| STAG_EREP_1      | 1234        | STAGIAIRE         |
-| STAG_TECH_1      | 1234        | STAGIAIRE         |
-| GLENN_BOLDCODE   | 1234        | PRESTATAIRE       |
+Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` dans `.env`.
+À la première connexion, ils doivent obligatoirement remplacer ce mot de passe.
+
+| Username         | Mot de passe     | Rôle             |
+| ---------------- | ---------------- | ---------------- |
+| CTO              | `$SEED_PASSWORD` | CTO_ADMIN        |
+| PDG              | `$SEED_PASSWORD` | PDG              |
+| DAF              | `$SEED_PASSWORD` | DAF              |
+| RBU_INFO         | `$SEED_PASSWORD` | RESPONSABLE_BU   |
+| RBU_EREP         | `$SEED_PASSWORD` | RESPONSABLE_BU   |
+| RBU_SCI          | `$SEED_PASSWORD` | RESPONSABLE_BU   |
+| RBU_ANALYSES     | `$SEED_PASSWORD` | RESPONSABLE_BU   |
+| POLE_PRESSE_JOUR | `$SEED_PASSWORD` | RESPONSABLE_POLE |
+| POLE_NUIT        | `$SEED_PASSWORD` | RESPONSABLE_POLE |
+| POLE_TVRADIO     | `$SEED_PASSWORD` | RESPONSABLE_POLE |
+| CONS_PJ_1        | `$SEED_PASSWORD` | CONSULTANT       |
+| CONS_NUIT_1      | `$SEED_PASSWORD` | CONSULTANT       |
+| CONS_TVR_1       | `$SEED_PASSWORD` | CONSULTANT       |
+| STAG_EREP_1      | `$SEED_PASSWORD` | STAGIAIRE        |
+| STAG_TECH_1      | `$SEED_PASSWORD` | STAGIAIRE        |
+| GLENN_BOLDCODE   | `$SEED_PASSWORD` | PRESTATAIRE      |
 
 ## Business Units
 

@@ -13,8 +13,8 @@ type State = 'idle' | 'requesting' | 'sending' | 'error'
 
 const GEO_ERRORS: Record<number, string> = {
   1: "Vous avez refusé l'accès à la localisation. Veuillez autoriser la localisation dans les paramètres de votre navigateur, puis réessayez.",
-  2: "Impossible de déterminer votre position. Vérifiez que le GPS est activé.",
-  3: "La demande de localisation a expiré. Réessayez.",
+  2: 'Impossible de déterminer votre position. Vérifiez que le GPS est activé.',
+  3: 'La demande de localisation a expiré. Réessayez.',
 }
 
 export function GeoLocationScreen({ onSuccess }: Props) {
@@ -44,16 +44,17 @@ export function GeoLocationScreen({ onSuccess }: Props) {
           await presenceApi.firstLogin(payload)
           onSuccess()
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement de la présence.'
+          const msg =
+            err instanceof Error ? err.message : "Erreur lors de l'enregistrement de la présence."
           setState('error')
           setError(msg)
         }
       },
       (posError) => {
         setState('error')
-        setError(GEO_ERRORS[posError.code] ?? "Erreur de localisation inconnue.")
+        setError(GEO_ERRORS[posError.code] ?? 'Erreur de localisation inconnue.')
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   }
 
@@ -64,15 +65,27 @@ export function GeoLocationScreen({ onSuccess }: Props) {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[400px] p-8 text-center">
         {/* Icon */}
         <div className="w-16 h-16 rounded-2xl bg-[rgba(242,140,56,0.1)] flex items-center justify-center mx-auto mb-5">
-          <svg className="w-8 h-8 text-[#F28C38]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          <svg
+            className="w-8 h-8 text-[#F28C38]"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            />
           </svg>
         </div>
 
-        <h1 className="text-lg font-bold text-gray-900 mb-2">
-          Localisation obligatoire
-        </h1>
+        <h1 className="text-lg font-bold text-gray-900 mb-2">Localisation obligatoire</h1>
         <p className="text-sm text-gray-500 mb-1">
           C&apos;est votre première connexion de la journée.
         </p>
@@ -83,7 +96,8 @@ export function GeoLocationScreen({ onSuccess }: Props) {
         {/* État requesting */}
         {state === 'requesting' && (
           <div className="bg-blue-50 rounded-xl p-4 mb-4 text-sm text-blue-700">
-            Demande de localisation en cours… autorisez l&apos;accès dans la fenêtre de votre navigateur.
+            Demande de localisation en cours… autorisez l&apos;accès dans la fenêtre de votre
+            navigateur.
           </div>
         )}
 
@@ -118,7 +132,10 @@ export function GeoLocationScreen({ onSuccess }: Props) {
         </p>
 
         <button
-          onClick={async () => { await api.auth.logout().catch(() => {}); router.push('/login') }}
+          onClick={async () => {
+            await api.auth.logout().catch(() => {})
+            router.push('/login')
+          }}
           className="mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors underline underline-offset-2"
         >
           Se déconnecter

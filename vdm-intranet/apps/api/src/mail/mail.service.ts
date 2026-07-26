@@ -24,8 +24,9 @@ export class MailService {
 
   async sendPasswordReset(to: string, firstName: string, resetUrl: string): Promise<void> {
     const subject = 'Réinitialisation de votre mot de passe — VDM Intranet'
+    const safeFirstName = escapeHtml(firstName)
     const html = `
-      <p>Bonjour ${firstName},</p>
+      <p>Bonjour ${safeFirstName},</p>
       <p>Vous avez demandé la réinitialisation de votre mot de passe sur l'intranet Veilleur des Médias.</p>
       <p><a href="${resetUrl}">Cliquer ici pour choisir un nouveau mot de passe</a></p>
       <p>Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
@@ -37,10 +38,19 @@ export class MailService {
     }
 
     await this.transporter.sendMail({
-      from: this.config.get<string>('SMTP_FROM') ?? '"VDM Intranet" <no-reply@veilleurdesmedias.com>',
+      from: this.config.get<string>('SMTP_FROM') ?? '"VDM Intranet" <[EMAIL_ADDRESS]>',
       to,
       subject,
       html,
     })
   }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }

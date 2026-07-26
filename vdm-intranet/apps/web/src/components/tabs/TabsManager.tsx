@@ -16,7 +16,24 @@ interface Props {
   canManageAll: boolean
 }
 
-const ICON_PRESETS = ['📰', '🔔', '▶️', '✖️', '📘', '💼', '📁', '✉️', '📋', '📝', '📊', '🐙', '▲', '☁️', '📗', '🔗']
+const ICON_PRESETS = [
+  '📰',
+  '🔔',
+  '▶️',
+  '✖️',
+  '📘',
+  '💼',
+  '📁',
+  '✉️',
+  '📋',
+  '📝',
+  '📊',
+  '🐙',
+  '▲',
+  '☁️',
+  '📗',
+  '🔗',
+]
 
 type FormData = {
   name: string
@@ -27,7 +44,14 @@ type FormData = {
   businessUnitId: string // '' = global tab
 }
 
-const EMPTY_FORM: FormData = { name: '', url: '', description: '', icon: '🔗', color: '#F28C38', businessUnitId: '' }
+const EMPTY_FORM: FormData = {
+  name: '',
+  url: '',
+  description: '',
+  icon: '🔗',
+  color: '#F28C38',
+  businessUnitId: '',
+}
 
 export function TabsManager({ initialTabs, userRole, userBuId, buList, canManageAll }: Props) {
   const [tabs, setTabs] = useState<Tab[]>(initialTabs)
@@ -76,10 +100,10 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
           icon: form.icon || undefined,
           color: form.color || undefined,
           // '' means global: omit businessUnitId so API treats it as null
-          businessUnitId: canManageAll ? (form.businessUnitId || undefined) : undefined,
+          businessUnitId: canManageAll ? form.businessUnitId || undefined : undefined,
         }
         const created = await tabsApi.create(payload)
-        setTabs(prev => [...prev, created])
+        setTabs((prev) => [...prev, created])
         setModal(null)
         toast.success('Onglet créé avec succès.')
       } else if (modal?.mode === 'edit' && modal.tab) {
@@ -91,7 +115,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
           color: form.color || undefined,
         }
         const updated = await tabsApi.update(modal.tab.id, payload)
-        setTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)))
+        setTabs((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
         setModal(null)
         toast.success('Onglet mis à jour.')
       }
@@ -105,8 +129,10 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
   async function toggleActive(tab: Tab) {
     try {
       const updated = await tabsApi.update(tab.id, { isActive: !tab.isActive })
-      setTabs(prev => prev.map(t => (t.id === updated.id ? updated : t)))
-      toast.info(updated.isActive ? `Onglet « ${tab.name} » activé.` : `Onglet « ${tab.name} » désactivé.`)
+      setTabs((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
+      toast.info(
+        updated.isActive ? `Onglet « ${tab.name} » activé.` : `Onglet « ${tab.name} » désactivé.`
+      )
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.')
     }
@@ -114,7 +140,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
 
   async function handleDelete(tab: Tab) {
     const ok = await confirm({
-      title: 'Supprimer l\'onglet',
+      title: "Supprimer l'onglet",
       message: `Supprimer l'onglet « ${tab.name} » ? Cette action est irréversible.`,
       confirmLabel: 'Supprimer',
       destructive: true,
@@ -122,20 +148,25 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
     if (!ok) return
     try {
       await tabsApi.remove(tab.id)
-      setTabs(prev => prev.filter(t => t.id !== tab.id))
+      setTabs((prev) => prev.filter((t) => t.id !== tab.id))
       toast.success(`Onglet « ${tab.name} » supprimé.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression.')
     }
   }
 
-  const filtered = tabs.filter(t => {
+  const filtered = tabs.filter((t) => {
     if (filterBu === '__global__') {
       if (t.businessUnitId !== null) return false
     } else if (filterBu) {
       if (t.businessUnitId !== filterBu) return false
     }
-    if (search && !t.name.toLowerCase().includes(search.toLowerCase()) && !t.url.toLowerCase().includes(search.toLowerCase())) return false
+    if (
+      search &&
+      !t.name.toLowerCase().includes(search.toLowerCase()) &&
+      !t.url.toLowerCase().includes(search.toLowerCase())
+    )
+      return false
     return true
   })
 
@@ -148,24 +179,29 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             type="text"
             placeholder="Rechercher un onglet…"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300 w-56"
           />
           {canManageAll && (
             <select
               value={filterBu}
-              onChange={e => setFilterBu(e.target.value)}
+              onChange={(e) => setFilterBu(e.target.value)}
               className="px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] text-gray-700"
             >
               <option value="">Toutes les BU</option>
               <option value="__global__">Onglets globaux</option>
-              {buList.map(bu => (
-                <option key={bu.id} value={bu.id}>{bu.name}</option>
+              {buList.map((bu) => (
+                <option key={bu.id} value={bu.id}>
+                  {bu.name}
+                </option>
               ))}
             </select>
           )}
         </div>
-        {(userRole === 'CTO_ADMIN' || userRole === 'PDG' || userRole === 'RESPONSABLE_BU') && (
+        {(userRole === 'CTO_ADMIN' ||
+          userRole === 'PDG' ||
+          userRole === 'DAF' ||
+          userRole === 'RESPONSABLE_BU') && (
           <button
             onClick={openCreate}
             className="bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors flex items-center gap-2"
@@ -180,7 +216,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
         <div className="text-center py-16 text-gray-400 text-sm">Aucun onglet trouvé</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(tab => (
+          {filtered.map((tab) => (
             <div
               key={tab.id}
               style={tab.color ? { borderBottom: `3px solid ${tab.color}` } : undefined}
@@ -192,19 +228,39 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                   <div className="min-w-0">
                     <div className="font-semibold text-gray-800 text-sm truncate">{tab.name}</div>
                     {tab.businessUnit ? (
-                      <div className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block mt-0.5">{tab.businessUnit.code}</div>
+                      <div className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block mt-0.5">
+                        {tab.businessUnit.code}
+                      </div>
                     ) : (
-                      <div className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full inline-block mt-0.5">Global</div>
+                      <div className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full inline-block mt-0.5">
+                        Global
+                      </div>
                     )}
                   </div>
                 </div>
                 {canManage(tab) && (
                   <div className="flex gap-1 flex-shrink-0">
-                    <button onClick={() => toggleActive(tab)} className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-700 transition-colors text-xs" title={tab.isActive ? 'Désactiver' : 'Activer'}>
+                    <button
+                      onClick={() => toggleActive(tab)}
+                      className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-700 transition-colors text-xs"
+                      title={tab.isActive ? 'Désactiver' : 'Activer'}
+                    >
                       {tab.isActive ? '●' : '○'}
                     </button>
-                    <button onClick={() => openEdit(tab)} className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-[#F28C38] transition-colors text-xs" title="Modifier">✎</button>
-                    <button onClick={() => handleDelete(tab)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors text-xs" title="Supprimer">✕</button>
+                    <button
+                      onClick={() => openEdit(tab)}
+                      className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-[#F28C38] transition-colors text-xs"
+                      title="Modifier"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => handleDelete(tab)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors text-xs"
+                      title="Supprimer"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
               </div>
@@ -231,129 +287,167 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
         open={!!modal}
         onClose={() => setModal(null)}
         title={modal?.mode === 'create' ? 'Nouvel onglet' : `Modifier — ${modal?.tab?.name ?? ''}`}
-        subtitle={modal?.mode === 'create' ? 'Ajouter un onglet à la bibliothèque' : 'Mettre à jour les informations de cet onglet'}
+        subtitle={
+          modal?.mode === 'create'
+            ? 'Ajouter un onglet à la bibliothèque'
+            : 'Mettre à jour les informations de cet onglet'
+        }
         size="lg"
       >
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {canManageAll && modal?.mode === 'create' && (
-                <div>
-                  <label htmlFor="tab-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Audience</label>
-                  <select
-                    id="tab-bu"
-                    value={form.businessUnitId}
-                    onChange={e => setForm(f => ({ ...f, businessUnitId: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {canManageAll && modal?.mode === 'create' && (
+            <div>
+              <label
+                htmlFor="tab-bu"
+                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+              >
+                Audience
+              </label>
+              <select
+                id="tab-bu"
+                value={form.businessUnitId}
+                onChange={(e) => setForm((f) => ({ ...f, businessUnitId: e.target.value }))}
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
+              >
+                <option value="">Tous les utilisateurs (Global)</option>
+                {buList.map((bu) => (
+                  <option key={bu.id} value={bu.id}>
+                    {bu.name}
+                  </option>
+                ))}
+              </select>
+              {form.businessUnitId === '' && (
+                <p className="text-[11px] text-[#F28C38] mt-1.5">
+                  Cet onglet sera visible par tous les utilisateurs sans exception.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="tab-name"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Nom
+            </label>
+            <input
+              id="tab-name"
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
+              placeholder="Ex : Google News"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="tab-url"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              URL
+            </label>
+            <input
+              id="tab-url"
+              type="url"
+              value={form.url}
+              onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
+              placeholder="https://…"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="tab-desc"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Description <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+            </label>
+            <input
+              id="tab-desc"
+              type="text"
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
+              placeholder="Courte description"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="tab-icon"
+                className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide"
+              >
+                Icône
+              </label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {ICON_PRESETS.map((ico) => (
+                  <button
+                    key={ico}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, icon: ico }))}
+                    className={`text-xl w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${form.icon === ico ? 'bg-[#F28C38]/10 ring-1 ring-[#F28C38]' : 'hover:bg-gray-100'}`}
                   >
-                    <option value="">Tous les utilisateurs (Global)</option>
-                    {buList.map(bu => (
-                      <option key={bu.id} value={bu.id}>{bu.name}</option>
-                    ))}
-                  </select>
-                  {form.businessUnitId === '' && (
-                    <p className="text-[11px] text-[#F28C38] mt-1.5">Cet onglet sera visible par tous les utilisateurs sans exception.</p>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="tab-name" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Nom</label>
-                <input
-                  id="tab-name"
-                  type="text"
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
-                  placeholder="Ex : Google News"
-                  required
-                />
+                    {ico}
+                  </button>
+                ))}
               </div>
+              <input
+                id="tab-icon"
+                type="text"
+                value={form.icon}
+                onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
+                maxLength={4}
+                placeholder="Emoji"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="tab-color"
+                className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide"
+              >
+                Couleur
+              </label>
+              <input
+                id="tab-color"
+                type="color"
+                value={form.color}
+                onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                className="w-full h-10 border border-gray-200 rounded-xl cursor-pointer p-1"
+              />
+              <div className="text-xs text-gray-400 mt-1 text-center">{form.color}</div>
+            </div>
+          </div>
 
-              <div>
-                <label htmlFor="tab-url" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">URL</label>
-                <input
-                  id="tab-url"
-                  type="url"
-                  value={form.url}
-                  onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
-                  placeholder="https://…"
-                  required
-                />
-              </div>
+          {error && (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
+              {error}
+            </div>
+          )}
 
-              <div>
-                <label htmlFor="tab-desc" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Description <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
-                </label>
-                <input
-                  id="tab-desc"
-                  type="text"
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
-                  placeholder="Courte description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="tab-icon" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Icône</label>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {ICON_PRESETS.map(ico => (
-                      <button
-                        key={ico}
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, icon: ico }))}
-                        className={`text-xl w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${form.icon === ico ? 'bg-[#F28C38]/10 ring-1 ring-[#F28C38]' : 'hover:bg-gray-100'}`}
-                      >
-                        {ico}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    id="tab-icon"
-                    type="text"
-                    value={form.icon}
-                    onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-                    maxLength={4}
-                    placeholder="Emoji"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="tab-color" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Couleur</label>
-                  <input
-                    id="tab-color"
-                    type="color"
-                    value={form.color}
-                    onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                    className="w-full h-10 border border-gray-200 rounded-xl cursor-pointer p-1"
-                  />
-                  <div className="text-xs text-gray-400 mt-1 text-center">{form.color}</div>
-                </div>
-              </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">{error}</div>
-              )}
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setModal(null)}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'Enregistrement…' : (modal?.mode === 'create' ? 'Créer' : 'Enregistrer')}
-                </button>
-              </div>
-            </form>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+            >
+              {submitting ? 'Enregistrement…' : modal?.mode === 'create' ? 'Créer' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   )

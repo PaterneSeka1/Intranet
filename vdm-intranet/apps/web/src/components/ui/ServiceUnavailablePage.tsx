@@ -6,7 +6,16 @@ const RETRY_SECS = 15
 
 function ServerIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F28C38" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="32"
+      height="32"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#F28C38"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
       <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
       <line x1="6" y1="6" x2="6.01" y2="6" />
@@ -17,7 +26,16 @@ function ServerIcon() {
 
 function WifiOffIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F28C38" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="32"
+      height="32"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#F28C38"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="1" y1="1" x2="23" y2="23" />
       <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
       <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
@@ -36,7 +54,10 @@ export function ServiceUnavailablePage() {
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
-    const onOnline = () => { setIsOnline(true); window.location.reload() }
+    const onOnline = () => {
+      setIsOnline(true)
+      window.location.reload()
+    }
     const onOffline = () => setIsOnline(false)
     window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
@@ -47,13 +68,16 @@ export function ServiceUnavailablePage() {
   }, [])
 
   useEffect(() => {
-    const t = setInterval(() => setDotCount(d => (d + 1) % 4), 500)
+    const t = setInterval(() => setDotCount((d) => (d + 1) % 4), 500)
     return () => clearInterval(t)
   }, [])
 
   useEffect(() => {
-    if (countdown <= 0) { window.location.reload(); return }
-    const t = setTimeout(() => setCountdown(c => c - 1), 1000)
+    if (countdown <= 0) {
+      window.location.reload()
+      return
+    }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000)
     return () => clearTimeout(t)
   }, [countdown])
 
@@ -71,7 +95,8 @@ export function ServiceUnavailablePage() {
         {/* Card */}
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
           {/* Top accent bar */}
-          <div className="h-1.5 bg-gradient-to-r from-[#F28C38] via-[#e07d29] to-[#F28C38] bg-[length:200%_100%]"
+          <div
+            className="h-1.5 bg-gradient-to-r from-[#F28C38] via-[#e07d29] to-[#F28C38] bg-[length:200%_100%]"
             style={{ animation: 'shimmer 2s linear infinite' }}
           />
 
@@ -81,7 +106,10 @@ export function ServiceUnavailablePage() {
               {offline && (
                 <>
                   <span className="absolute inset-0 rounded-full bg-orange-200 opacity-40 animate-ping" />
-                  <span className="absolute inset-3 rounded-full bg-orange-100 opacity-30 animate-ping" style={{ animationDelay: '0.4s' }} />
+                  <span
+                    className="absolute inset-3 rounded-full bg-orange-100 opacity-30 animate-ping"
+                    style={{ animationDelay: '0.4s' }}
+                  />
                 </>
               )}
               <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center shadow-sm border border-orange-100">
@@ -91,10 +119,14 @@ export function ServiceUnavailablePage() {
 
             {/* Status pill */}
             <div className="flex justify-center mb-4">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                offline ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-600'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${offline ? 'bg-red-400' : 'bg-amber-400 animate-pulse'}`} />
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                  offline ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-600'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${offline ? 'bg-red-400' : 'bg-amber-400 animate-pulse'}`}
+                />
                 {offline ? 'Hors ligne' : 'Serveur inaccessible'}
               </span>
             </div>
@@ -137,7 +169,16 @@ export function ServiceUnavailablePage() {
               onClick={retry}
               className="w-full bg-[#F28C38] hover:bg-[#e07d29] active:bg-[#c96e20] text-white font-semibold py-3 rounded-xl text-sm transition-colors mb-3 flex items-center justify-center gap-2"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="23 4 23 10 17 10" />
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
@@ -163,9 +204,7 @@ export function ServiceUnavailablePage() {
         </div>
 
         {/* Below card hint */}
-        <p className="text-center text-[10px] text-gray-300 mt-4">
-          Abidjan, Côte d&apos;Ivoire
-        </p>
+        <p className="text-center text-[10px] text-gray-300 mt-4">Abidjan, Côte d&apos;Ivoire</p>
       </div>
 
       <style>{`

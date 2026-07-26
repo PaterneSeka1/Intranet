@@ -50,38 +50,22 @@ export class PresenceController {
   }
 
   @Post('first-login')
-  firstLogin(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: FirstLoginDto,
-    @Req() req: Request,
-  ) {
+  firstLogin(@CurrentUser() user: AuthUser, @Body() dto: FirstLoginDto, @Req() req: Request) {
     return this.presenceService.processFirstLogin(user.id, dto, this.getIp(req), user.role)
   }
 
   @Post('login-log')
-  loginLog(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: LoginLogDto,
-    @Req() req: Request,
-  ) {
+  loginLog(@CurrentUser() user: AuthUser, @Body() dto: LoginLogDto, @Req() req: Request) {
     return this.presenceService.recordLoginLog(user.id, dto, this.getIp(req))
   }
 
   @Post('logout-log')
-  logoutLog(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: LoginLogDto,
-    @Req() req: Request,
-  ) {
+  logoutLog(@CurrentUser() user: AuthUser, @Body() dto: LoginLogDto, @Req() req: Request) {
     return this.presenceService.recordLogoutLog(user.id, dto, this.getIp(req))
   }
 
   @Post('end-day')
-  endDay(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: EndDayDto,
-    @Req() req: Request,
-  ) {
+  endDay(@CurrentUser() user: AuthUser, @Body() dto: EndDayDto, @Req() req: Request) {
     return this.presenceService.processEndDay(user.id, dto, this.getIp(req), user.role)
   }
 
@@ -95,10 +79,7 @@ export class PresenceController {
   }
 
   @Post('schedule-groups')
-  createScheduleGroup(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: CreateScheduleGroupDto,
-  ) {
+  createScheduleGroup(@CurrentUser() user: AuthUser, @Body() dto: CreateScheduleGroupDto) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.presenceService.createScheduleGroup(dto, user.id)
   }
@@ -107,17 +88,14 @@ export class PresenceController {
   updateScheduleGroup(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() dto: UpdateScheduleGroupDto,
+    @Body() dto: UpdateScheduleGroupDto
   ) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.presenceService.updateScheduleGroup(id, dto, user.id)
   }
 
   @Delete('schedule-groups/:id')
-  deleteScheduleGroup(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  deleteScheduleGroup(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.presenceService.deleteScheduleGroup(id, user.id)
   }
@@ -127,10 +105,7 @@ export class PresenceController {
   // ----------------------------------------------------------------
 
   @Get('my-connections')
-  getMyConnections(
-    @CurrentUser() user: AuthUser,
-    @Query('limit') limit?: string,
-  ) {
+  getMyConnections(@CurrentUser() user: AuthUser, @Query('limit') limit?: string) {
     const safeLimit = limit ? Math.min(200, Math.max(1, parseInt(limit, 10) || 50)) : 50
     return this.presenceService.getMyConnections(user.id, safeLimit, user.role)
   }
@@ -145,20 +120,14 @@ export class PresenceController {
   }
 
   @Post('mandates')
-  createMandate(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: CreateMandateDto,
-  ) {
+  createMandate(@CurrentUser() user: AuthUser, @Body() dto: CreateMandateDto) {
     const CAN_MANDATE: Role[] = [Role.CTO_ADMIN, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE]
     if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.createMandate(dto, user)
   }
 
   @Delete('mandates/:id')
-  deleteMandate(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  deleteMandate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const CAN_MANDATE: Role[] = [Role.CTO_ADMIN, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE]
     if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.deleteMandate(id, user)
@@ -167,10 +136,6 @@ export class PresenceController {
   // ----------------------------------------------------------------
 
   private getIp(req: Request): string {
-    const forwarded = req.headers['x-forwarded-for']
-    if (forwarded) {
-      return (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0]).trim()
-    }
     return req.ip ?? ''
   }
 }

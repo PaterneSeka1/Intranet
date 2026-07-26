@@ -8,7 +8,7 @@ export interface ToastItem {
 }
 
 // We use window CustomEvents so the bus survives HMR module re-evaluation.
-const ADD_EVENT    = '__vdm_toast_add'
+const ADD_EVENT = '__vdm_toast_add'
 const REMOVE_EVENT = '__vdm_toast_remove'
 
 function uid() {
@@ -28,10 +28,14 @@ export function dismissToast(id: string) {
 
 export function subscribeToasts(
   onAdd: (item: ToastItem) => void,
-  onRemove: (id: string) => void,
+  onRemove: (id: string) => void
 ): () => void {
-  function handleAdd(e: Event) { onAdd((e as CustomEvent<ToastItem>).detail) }
-  function handleRemove(e: Event) { onRemove((e as CustomEvent<string>).detail) }
+  function handleAdd(e: Event) {
+    onAdd((e as CustomEvent<ToastItem>).detail)
+  }
+  function handleRemove(e: Event) {
+    onRemove((e as CustomEvent<string>).detail)
+  }
   window.addEventListener(ADD_EVENT, handleAdd)
   window.addEventListener(REMOVE_EVENT, handleRemove)
   return () => {
@@ -42,7 +46,7 @@ export function subscribeToasts(
 
 export const toast = {
   success: (message: string, duration?: number) => add('success', message, duration),
-  error:   (message: string, duration?: number) => add('error',   message, duration ?? 5000),
-  info:    (message: string, duration?: number) => add('info',    message, duration),
+  error: (message: string, duration?: number) => add('error', message, duration ?? 5000),
+  info: (message: string, duration?: number) => add('info', message, duration),
   warning: (message: string, duration?: number) => add('warning', message, duration),
 }

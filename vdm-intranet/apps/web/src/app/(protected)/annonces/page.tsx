@@ -19,10 +19,7 @@ export default async function AnnoncesPage() {
 
   return (
     <div className="p-6">
-      <AnnouncementsManager
-        initialAnnouncements={announcements ?? []}
-        buList={bus ?? []}
-      />
+      <AnnouncementsManager initialAnnouncements={announcements ?? []} buList={bus ?? []} />
     </div>
   )
 }

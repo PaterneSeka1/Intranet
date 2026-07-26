@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-type OS      = 'macos' | 'windows' | 'other'
-type Phase   = 'idle' | 'ask' | 'downloading' | 'done'
+type OS = 'macos' | 'windows' | 'other'
+type Phase = 'idle' | 'ask' | 'downloading' | 'done'
 
 const STORAGE_KEY = 'vdm_autostart_done'
 
@@ -87,7 +87,7 @@ function windowsScript(appUrl: string): string {
     '  /v "VDM Intranet" /t REG_SZ ^',
     '  /d "\\"%CHROME%\\" --app=\\"%VDM_URL%\\" --start-fullscreen" /f >nul',
     '',
-    'echo ✓ VDM Intranet s\'ouvrira automatiquement au prochain démarrage.',
+    "echo ✓ VDM Intranet s'ouvrira automatiquement au prochain démarrage.",
     'echo.',
     'pause',
   ]
@@ -97,9 +97,10 @@ function windowsScript(appUrl: string): string {
 /* ── Déclenche le téléchargement d'un fichier texte ────────────── */
 function downloadScript(content: string, filename: string) {
   const blob = new Blob([content], { type: 'text/plain' })
-  const url  = URL.createObjectURL(blob)
-  const a    = Object.assign(document.createElement('a'), {
-    href: url, download: filename,
+  const url = URL.createObjectURL(blob)
+  const a = Object.assign(document.createElement('a'), {
+    href: url,
+    download: filename,
   })
   document.body.appendChild(a)
   a.click()
@@ -109,8 +110,8 @@ function downloadScript(content: string, filename: string) {
 
 /* ── Composant principal ─────────────────────────────────────────── */
 export function PwaAutoStart() {
-  const [phase,   setPhase]   = useState<Phase>('idle')
-  const [os,      setOs]      = useState<OS>('other')
+  const [phase, setPhase] = useState<Phase>('idle')
+  const [os, setOs] = useState<OS>('other')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export function PwaAutoStart() {
   }, [])
 
   function handleYes() {
-    const appUrl  = window.location.origin
+    const appUrl = window.location.origin
     setPhase('downloading')
 
     if (os === 'macos') {
@@ -148,13 +149,12 @@ export function PwaAutoStart() {
 
   if (!mounted || phase === 'idle') return null
 
-  const instructionFile = os === 'macos'
-    ? 'vdm-demarrage-auto.command'
-    : 'vdm-demarrage-auto.bat'
+  const instructionFile = os === 'macos' ? 'vdm-demarrage-auto.command' : 'vdm-demarrage-auto.bat'
 
-  const instructionNote = os === 'macos'
-    ? 'Si macOS bloque l\'ouverture : clic droit → Ouvrir → Ouvrir'
-    : 'Double-cliquez sur le fichier dans vos Téléchargements'
+  const instructionNote =
+    os === 'macos'
+      ? "Si macOS bloque l'ouverture : clic droit → Ouvrir → Ouvrir"
+      : 'Double-cliquez sur le fichier dans vos Téléchargements'
 
   return createPortal(
     <>
@@ -162,15 +162,14 @@ export function PwaAutoStart() {
       <div className="as-overlay">
         <div className="as-backdrop" />
         <div className="as-card">
-
           {/* ── Demande initiale ── */}
           {phase === 'ask' && (
             <>
               <div className="as-check">✓</div>
               <h2 className="as-title">Application installée !</h2>
               <p className="as-desc">
-                Voulez-vous que <strong>VDM Intranet</strong> s&rsquo;ouvre
-                automatiquement à chaque démarrage de l&rsquo;ordinateur ?
+                Voulez-vous que <strong>VDM Intranet</strong> s&rsquo;ouvre automatiquement à chaque
+                démarrage de l&rsquo;ordinateur ?
               </p>
               <div className="as-actions">
                 <button className="as-btn-yes" onClick={handleYes}>
@@ -197,21 +196,15 @@ export function PwaAutoStart() {
               <div className="as-check">↓</div>
               <h2 className="as-title">Une dernière étape</h2>
               <p className="as-desc">
-                Le fichier <code className="as-code">{instructionFile}</code> a
-                été téléchargé. Double-cliquez dessus pour activer le démarrage
-                automatique.
+                Le fichier <code className="as-code">{instructionFile}</code> a été téléchargé.
+                Double-cliquez dessus pour activer le démarrage automatique.
               </p>
-              {os === 'macos' && (
-                <div className="as-note">
-                  {instructionNote}
-                </div>
-              )}
+              {os === 'macos' && <div className="as-note">{instructionNote}</div>}
               <button className="as-btn-yes" onClick={() => setPhase('idle')}>
                 Compris
               </button>
             </>
           )}
-
         </div>
       </div>
     </>,

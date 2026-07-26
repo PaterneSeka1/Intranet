@@ -16,7 +16,6 @@ export default function LandingPage() {
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <main className="scene">
-
         {/* Lumière derrière la porte */}
         <div className="back-glow" />
 
@@ -54,8 +53,9 @@ export default function LandingPage() {
         </div>
 
         {/* Lien de passage direct */}
-        <Link href="/login" className="skip-btn">Accéder directement →</Link>
-
+        <Link href="/login" className="skip-btn">
+          Accéder directement →
+        </Link>
       </main>
     </>
   )

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
 import * as bcrypt from 'bcrypt'
@@ -7,7 +12,11 @@ import { PrismaService } from '../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
-const GENERIC_FORGOT_MESSAGE = 'Si un compte existe avec cet identifiant, un email de réinitialisation a été envoyé.'
+const GENERIC_FORGOT_MESSAGE =
+  'Si un compte existe avec cet identifiant, un email de réinitialisation a été envoyé.'
+const LOGIN_LOCKOUT_THRESHOLD = 5
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000
+const DUMMY_PASSWORD_HASH = '$2b$12$HXZCb0hKybfZviyWhzG7OuCBpE5Q1sPotwOIqU6koYWqrMZ/Da5uG'
 
 const USER_SELECT = {
   id: true,
@@ -18,6 +27,7 @@ const USER_SELECT = {
   email: true,
   role: true,
   isActive: true,
+  mustChangePassword: true,
   lastLoginAt: true,
   createdAt: true,
   businessUnit: { select: { id: true, name: true, code: true } },
@@ -31,24 +41,33 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly mailService: MailService,
+    private readonly mailService: MailService
   ) {}
 
   async login(username: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { username } })
+    const now = new Date()
+
+    if (user?.lockoutUntil && user.lockoutUntil > now) {
+      throw new UnauthorizedException(
+        'Compte temporairement verrouillé. Réessayez dans quelques minutes.'
+      )
+    }
+
+    const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH)
     if (!user) throw new UnauthorizedException('Identifiants invalides')
+    if (!valid) {
+      await this.registerFailedLogin(user)
+      throw new UnauthorizedException('Identifiants invalides')
+    }
     if (!user.isActive) throw new UnauthorizedException('Compte désactivé')
 
-    const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) throw new UnauthorizedException('Identifiants invalides')
-
-    const now = new Date()
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
 
     const [safe, todayPresence] = await Promise.all([
       this.prisma.user.update({
         where: { id: user.id },
-        data: { lastLoginAt: now },
+        data: { lastLoginAt: now, failedLoginAttempts: 0, lockoutUntil: null },
         select: USER_SELECT,
       }),
       this.prisma.presence.findUnique({
@@ -77,11 +96,17 @@ export class AuthService {
       const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS)
 
       await this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } })
-      await this.prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } })
+      await this.prisma.passwordResetToken.create({
+        data: { userId: user.id, tokenHash, expiresAt },
+      })
 
       const frontendUrl = this.config.get<string>('NEXT_PUBLIC_APP_URL') ?? 'http://localhost:3000'
       const resetUrl = `${frontendUrl}/reinitialiser-mot-de-passe?token=${rawToken}`
-      await this.mailService.sendPasswordReset(user.email, user.firstName ?? user.username, resetUrl)
+      await this.mailService.sendPasswordReset(
+        user.email,
+        user.firstName ?? user.username,
+        resetUrl
+      )
     }
 
     return { message: GENERIC_FORGOT_MESSAGE }
@@ -97,7 +122,15 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 12)
     await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: record.userId }, data: { passwordHash } }),
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: {
+          passwordHash,
+          mustChangePassword: false,
+          failedLoginAttempts: 0,
+          lockoutUntil: null,
+        },
+      }),
       this.prisma.passwordResetToken.deleteMany({ where: { userId: record.userId } }),
     ])
 
@@ -114,12 +147,32 @@ export class AuthService {
     return this.config.get<string>('COOKIE_NAME') ?? 'vdm_token'
   }
 
+  private async registerFailedLogin(user: { id: string; failedLoginAttempts: number }) {
+    const failedLoginAttempts = user.failedLoginAttempts + 1
+    if (failedLoginAttempts >= LOGIN_LOCKOUT_THRESHOLD) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockoutUntil: new Date(Date.now() + LOGIN_LOCKOUT_MS),
+        },
+      })
+      return
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts },
+    })
+  }
+
   cookieOptions(isLogout = false) {
     const expiresIn = this.config.get<string>('JWT_EXPIRES_IN') ?? '8h'
     const secureFlagEnv = this.config.get<string>('COOKIE_SECURE')
-    const secure = secureFlagEnv !== undefined
-      ? secureFlagEnv === 'true'
-      : this.config.get('NODE_ENV') === 'production'
+    const secure =
+      secureFlagEnv !== undefined
+        ? secureFlagEnv === 'true'
+        : this.config.get('NODE_ENV') === 'production'
     const domain = this.config.get<string>('COOKIE_DOMAIN') || undefined
     return {
       httpOnly: true,

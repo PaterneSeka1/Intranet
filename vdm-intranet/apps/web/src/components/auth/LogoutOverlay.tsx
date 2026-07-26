@@ -16,7 +16,9 @@ export function LogoutOverlay({ onCancel }: Props) {
   const [phase, setPhase] = useState<Phase>('confirm')
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   async function handleConfirm() {
     setPhase('closing')
@@ -37,11 +39,21 @@ export function LogoutOverlay({ onCancel }: Props) {
     return createPortal(
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-        onClick={e => { if (e.target === e.currentTarget) onCancel() }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onCancel()
+        }}
       >
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-2xl w-full max-w-xs mx-4 text-center animate-modal-in">
           <div className="w-12 h-12 rounded-xl bg-[#F28C38]/10 border border-[#F28C38]/20 flex items-center justify-center mx-auto mb-5">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#F28C38" strokeWidth="1.6" strokeLinecap="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="#F28C38"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            >
               <path d="M13 3h4v14h-4M9 14l4-4-4-4M13 10H5" />
             </svg>
           </div>
@@ -64,13 +76,17 @@ export function LogoutOverlay({ onCancel }: Props) {
             </button>
           </div>
         </div>
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
           @keyframes modal-in {
             from { opacity:0; transform:scale(.94) translateY(8px); }
             to   { opacity:1; transform:scale(1) translateY(0); }
           }
           .animate-modal-in { animation: modal-in .2s ease both; }
-        `}} />
+        `,
+          }}
+        />
       </div>,
       document.body
     )
@@ -81,7 +97,6 @@ export function LogoutOverlay({ onCancel }: Props) {
     <>
       <style dangerouslySetInnerHTML={{ __html: DOOR_CSS }} />
       <div className="lo-scene">
-
         {/* Lumière résiduelle derrière */}
         <div className="lo-glow" />
 
@@ -114,7 +129,6 @@ export function LogoutOverlay({ onCancel }: Props) {
           <div className="lo-rule" />
           <div className="lo-farewell">À bientôt</div>
         </div>
-
       </div>
     </>,
     document.body

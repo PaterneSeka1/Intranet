@@ -7,17 +7,44 @@ import { subscribeToasts, dismissToast, type ToastItem, type ToastType } from '@
 // Config par type
 // ---------------------------------------------------------------------------
 
-const CONFIG: Record<ToastType, {
-  bar: string
-  icon: string
-  iconBg: string
-  iconColor: string
-  title: string
-}> = {
-  success: { bar: 'bg-green-500',  icon: '✓', iconBg: 'bg-green-100', iconColor: 'text-green-600', title: 'Succès' },
-  error:   { bar: 'bg-red-500',    icon: '✕', iconBg: 'bg-red-100',   iconColor: 'text-red-600',   title: 'Erreur' },
-  info:    { bar: 'bg-blue-500',   icon: 'ℹ', iconBg: 'bg-blue-100',  iconColor: 'text-blue-600',  title: 'Information' },
-  warning: { bar: 'bg-amber-500',  icon: '⚠', iconBg: 'bg-amber-100', iconColor: 'text-amber-600', title: 'Attention' },
+const CONFIG: Record<
+  ToastType,
+  {
+    bar: string
+    icon: string
+    iconBg: string
+    iconColor: string
+    title: string
+  }
+> = {
+  success: {
+    bar: 'bg-green-500',
+    icon: '✓',
+    iconBg: 'bg-green-100',
+    iconColor: 'text-green-600',
+    title: 'Succès',
+  },
+  error: {
+    bar: 'bg-red-500',
+    icon: '✕',
+    iconBg: 'bg-red-100',
+    iconColor: 'text-red-600',
+    title: 'Erreur',
+  },
+  info: {
+    bar: 'bg-blue-500',
+    icon: 'ℹ',
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-600',
+    title: 'Information',
+  },
+  warning: {
+    bar: 'bg-amber-500',
+    icon: '⚠',
+    iconBg: 'bg-amber-100',
+    iconColor: 'text-amber-600',
+    title: 'Attention',
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -28,7 +55,7 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
   const [visible, setVisible] = useState(false)
   const [progress, setProgress] = useState(100)
   const startRef = useRef<number>(0)
-  const rafRef   = useRef<number>(0)
+  const rafRef = useRef<number>(0)
   const cfg = CONFIG[item.type]
 
   function startExit() {
@@ -74,13 +101,17 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
       <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cfg.bar}`} />
 
       {/* Icon */}
-      <div className={`shrink-0 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${cfg.iconBg} ${cfg.iconColor}`}>
+      <div
+        className={`shrink-0 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${cfg.iconBg} ${cfg.iconColor}`}
+      >
         {cfg.icon}
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">{cfg.title}</p>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+          {cfg.title}
+        </p>
         <p className="text-sm text-gray-800 leading-snug break-words">{item.message}</p>
       </div>
 
@@ -95,10 +126,7 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
 
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-100">
-        <div
-          className={`h-full ${cfg.bar} transition-none`}
-          style={{ width: `${progress}%` }}
-        />
+        <div className={`h-full ${cfg.bar} transition-none`} style={{ width: `${progress}%` }} />
       </div>
     </div>
   )
@@ -113,8 +141,8 @@ export function Toaster() {
 
   useEffect(() => {
     return subscribeToasts(
-      item => setToasts(prev => [...prev.slice(-4), item]),
-      id   => setToasts(prev => prev.filter(t => t.id !== id)),
+      (item) => setToasts((prev) => [...prev.slice(-4), item]),
+      (id) => setToasts((prev) => prev.filter((t) => t.id !== id))
     )
   }, [])
 
@@ -125,12 +153,8 @@ export function Toaster() {
       aria-live="polite"
       className="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"
     >
-      {toasts.map(t => (
-        <ToastCard
-          key={t.id}
-          item={t}
-          onDone={() => dismissToast(t.id)}
-        />
+      {toasts.map((t) => (
+        <ToastCard key={t.id} item={t} onDone={() => dismissToast(t.id)} />
       ))}
     </div>
   )

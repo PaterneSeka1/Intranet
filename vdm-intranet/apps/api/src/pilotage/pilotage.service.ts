@@ -10,8 +10,11 @@ type Requester = {
 }
 
 const ALLOWED_ROLES: Role[] = [
-  Role.CTO_ADMIN, Role.PDG, Role.DAF,
-  Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE,
+  Role.CTO_ADMIN,
+  Role.PDG,
+  Role.DAF,
+  Role.RESPONSABLE_BU,
+  Role.RESPONSABLE_POLE,
 ]
 
 const GLOBAL_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG, Role.DAF]
@@ -40,7 +43,8 @@ export class PilotageService {
   private buildUserWhere(requester: Requester): object {
     const base = { isActive: true }
     if (GLOBAL_ROLES.includes(requester.role)) return base
-    if (requester.role === Role.RESPONSABLE_BU) return { ...base, businessUnitId: requester.businessUnitId }
+    if (requester.role === Role.RESPONSABLE_BU)
+      return { ...base, businessUnitId: requester.businessUnitId }
     if (requester.role === Role.RESPONSABLE_POLE) return { ...base, poleId: requester.poleId }
     return base
   }
@@ -63,8 +67,8 @@ export class PilotageService {
       this.prisma.dailyMandate.count({ where: { date: today, user: userWhere } }),
     ])
 
-    const present = presences.filter(p => p.status === PresenceStatus.PRESENT).length
-    const late = presences.filter(p => p.status === PresenceStatus.LATE).length
+    const present = presences.filter((p) => p.status === PresenceStatus.PRESENT).length
+    const late = presences.filter((p) => p.status === PresenceStatus.LATE).length
     const absent = totalActive - present - late
 
     return {
@@ -86,7 +90,11 @@ export class PilotageService {
 
     const users = await this.prisma.user.findMany({
       where: userWhere,
-      select: { id: true, businessUnitId: true, businessUnit: { select: { id: true, name: true, code: true } } },
+      select: {
+        id: true,
+        businessUnitId: true,
+        businessUnit: { select: { id: true, name: true, code: true } },
+      },
     })
 
     const presences = await this.prisma.presence.findMany({
@@ -94,15 +102,34 @@ export class PilotageService {
       select: { userId: true, status: true },
     })
 
-    const presenceMap = new Map(presences.map(p => [p.userId, p.status]))
+    const presenceMap = new Map(presences.map((p) => [p.userId, p.status]))
 
-    const buMap = new Map<string, { buId: string; buName: string; buCode: string; total: number; present: number; late: number; absent: number }>()
+    const buMap = new Map<
+      string,
+      {
+        buId: string
+        buName: string
+        buCode: string
+        total: number
+        present: number
+        late: number
+        absent: number
+      }
+    >()
 
     for (const user of users) {
       if (!user.businessUnitId || !user.businessUnit) continue
       const key = user.businessUnitId
       if (!buMap.has(key)) {
-        buMap.set(key, { buId: key, buName: user.businessUnit.name, buCode: user.businessUnit.code, total: 0, present: 0, late: 0, absent: 0 })
+        buMap.set(key, {
+          buId: key,
+          buName: user.businessUnit.name,
+          buCode: user.businessUnit.code,
+          total: 0,
+          present: 0,
+          late: 0,
+          absent: 0,
+        })
       }
       const row = buMap.get(key)!
       row.total++
@@ -166,7 +193,7 @@ export class PilotageService {
       take: 8,
     })
 
-    return grouped.map(row => ({ action: row.action, count: row._count.id }))
+    return grouped.map((row) => ({ action: row.action, count: row._count.id }))
   }
 
   async getActivityLog(
@@ -174,7 +201,7 @@ export class PilotageService {
     page: number,
     limit: number,
     search?: string,
-    action?: string,
+    action?: string
   ) {
     this.assertAllowed(requester)
 

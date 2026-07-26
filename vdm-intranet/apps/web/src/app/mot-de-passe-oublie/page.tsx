@@ -3,7 +3,7 @@ import { ForgotPasswordClient } from '@/components/auth/ForgotPasswordClient'
 
 export default async function ForgotPasswordPage() {
   const settings = await fetchSettings()
-  const s = Object.fromEntries(settings.map(x => [x.key, x.value]))
+  const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
 
   return (
     <ForgotPasswordClient

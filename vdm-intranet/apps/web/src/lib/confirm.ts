@@ -10,11 +10,11 @@ export interface ConfirmOptions {
 // The window event is used to notify the portal — window is immune to HMR module re-evaluation.
 let _resolve: ((value: boolean) => void) | null = null
 
-const OPEN_EVENT  = '__vdm_confirm_open'
+const OPEN_EVENT = '__vdm_confirm_open'
 const CLOSE_EVENT = '__vdm_confirm_close'
 
 export function confirm(options: ConfirmOptions): Promise<boolean> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     _resolve?.(false)
     _resolve = resolve
     if (typeof window !== 'undefined') {
@@ -33,7 +33,7 @@ export function resolveConfirm(value: boolean) {
 
 export function subscribeConfirm(
   onOpen: (opts: ConfirmOptions) => void,
-  onClose: () => void,
+  onClose: () => void
 ): () => void {
   function handleOpen(e: Event) {
     onOpen((e as CustomEvent<ConfirmOptions>).detail)

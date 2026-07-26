@@ -56,6 +56,5 @@ export const tabsApi = {
     req<Tab>('/tabs', { method: 'POST', body: JSON.stringify(payload) }),
   update: (id: string, payload: UpdateTabPayload): Promise<Tab> =>
     req<Tab>(`/tabs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  remove: (id: string): Promise<void> =>
-    req<void>(`/tabs/${id}`, { method: 'DELETE' }),
+  remove: (id: string): Promise<void> => req<void>(`/tabs/${id}`, { method: 'DELETE' }),
 }

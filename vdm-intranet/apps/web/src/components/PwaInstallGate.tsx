@@ -66,20 +66,32 @@ export function PwaInstallGate() {
       <div className="pwa-gate">
         <div className="pwa-backdrop" onClick={handleDismiss} />
         <div className="pwa-card">
-
           <div className="pwa-icon">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect width="48" height="48" rx="11" fill="#F28C38"/>
-              <text x="24" y="35" textAnchor="middle"
+            <svg
+              viewBox="0 0 48 48"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <rect width="48" height="48" rx="11" fill="#F28C38" />
+              <text
+                x="24"
+                y="35"
+                textAnchor="middle"
                 fontFamily="system-ui,-apple-system,sans-serif"
-                fontSize="28" fontWeight="800" fill="white">V</text>
+                fontSize="28"
+                fontWeight="800"
+                fill="white"
+              >
+                V
+              </text>
             </svg>
           </div>
 
           <h2 className="pwa-title">Installer VDM Intranet</h2>
           <p className="pwa-desc">
-            Accédez au portail directement depuis votre bureau —
-            sans navigateur, comme une application native.
+            Accédez au portail directement depuis votre bureau — sans navigateur, comme une
+            application native.
           </p>
 
           <ul className="pwa-benefits">
@@ -97,18 +109,13 @@ export function PwaInstallGate() {
             </li>
           </ul>
 
-          <button
-            className="pwa-btn-install"
-            onClick={handleInstall}
-            disabled={installing}
-          >
-            {installing ? 'Installation…' : 'Installer l\'application'}
+          <button className="pwa-btn-install" onClick={handleInstall} disabled={installing}>
+            {installing ? 'Installation…' : "Installer l'application"}
           </button>
 
           <button className="pwa-btn-skip" onClick={handleDismiss}>
             Continuer dans le navigateur
           </button>
-
         </div>
       </div>
     </>,

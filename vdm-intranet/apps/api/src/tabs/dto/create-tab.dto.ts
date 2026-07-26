@@ -1,7 +1,9 @@
 import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator'
 
 export class CreateTabDto {
-  @IsString() @IsNotEmpty() @MaxLength(100)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
   name!: string
 
   @IsUrl({ require_tld: false })

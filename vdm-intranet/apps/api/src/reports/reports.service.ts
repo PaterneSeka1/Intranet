@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
 import { LogAction, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 
@@ -10,8 +10,11 @@ type Requester = {
 }
 
 const ALLOWED_ROLES: Role[] = [
-  Role.CTO_ADMIN, Role.PDG, Role.DAF,
-  Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE,
+  Role.CTO_ADMIN,
+  Role.PDG,
+  Role.DAF,
+  Role.RESPONSABLE_BU,
+  Role.RESPONSABLE_POLE,
 ]
 
 const GLOBAL_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG, Role.DAF]
@@ -43,7 +46,7 @@ export class ReportsService {
       const s = String(v ?? '')
       return `"${s.replace(/"/g, '""')}"`
     }
-    const lines = [headers.map(esc).join(';'), ...rows.map(r => r.map(esc).join(';'))]
+    const lines = [headers.map(esc).join(';'), ...rows.map((r) => r.map(esc).join(';'))]
     return '﻿' + lines.join('\r\n')
   }
 
@@ -59,6 +62,31 @@ export class ReportsService {
     return `${this.fmtDate(dt)} ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`
   }
 
+  private parseReportDate(
+    value: string | undefined,
+    label: string,
+    endOfDay = false
+  ): Date | undefined {
+    if (!value) return undefined
+    const timestamp = Date.parse(value)
+    if (Number.isNaN(timestamp)) {
+      throw new BadRequestException(`${label} invalide.`)
+    }
+    const date = new Date(timestamp)
+    if (endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      date.setUTCHours(23, 59, 59, 999)
+    }
+    return date
+  }
+
+  private assertDateRange(dateFrom?: Date, dateTo?: Date) {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      throw new BadRequestException(
+        'La date de début doit être antérieure ou égale à la date de fin.'
+      )
+    }
+  }
+
   async presenceCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
     this.assertAllowed(requester)
     const userWhere = this.buildUserWhere(requester)
@@ -67,9 +95,13 @@ export class ReportsService {
     since90.setUTCDate(since90.getUTCDate() - 90)
     since90.setUTCHours(0, 0, 0, 0)
 
+    const parsedFrom = this.parseReportDate(dateFrom, 'Date de début')
+    const parsedTo = this.parseReportDate(dateTo, 'Date de fin')
+    this.assertDateRange(parsedFrom, parsedTo)
+
     const dateFilter: Record<string, Date> = {
-      gte: dateFrom ? new Date(dateFrom) : since90,
-      lte: dateTo ? new Date(dateTo) : getToday(),
+      gte: parsedFrom ?? since90,
+      lte: parsedTo ?? getToday(),
     }
 
     const rows = await this.prisma.presence.findMany({
@@ -80,7 +112,9 @@ export class ReportsService {
       include: {
         user: {
           select: {
-            username: true, fullName: true, role: true,
+            username: true,
+            fullName: true,
+            role: true,
             businessUnit: { select: { name: true } },
             pole: { select: { name: true } },
           },
@@ -92,11 +126,28 @@ export class ReportsService {
 
     await this.logExport(requester.id, LogAction.PRESENCE_REPORT_EXPORTED)
 
-    const STATUS: Record<string, string> = { PRESENT: 'Présent', LATE: 'En retard', ABSENT: 'Absent' }
+    const STATUS: Record<string, string> = {
+      PRESENT: 'Présent',
+      LATE: 'En retard',
+      ABSENT: 'Absent',
+    }
 
     return this.toCsv(
-      ['Date', 'Utilisateur', 'Nom complet', 'Rôle', 'BU', 'Pôle', 'Statut', 'Heure attendue', 'Arrivée officielle', 'Écart (min)', 'Adresse GPS', 'Source'],
-      rows.map(r => [
+      [
+        'Date',
+        'Utilisateur',
+        'Nom complet',
+        'Rôle',
+        'BU',
+        'Pôle',
+        'Statut',
+        'Heure attendue',
+        'Arrivée officielle',
+        'Écart (min)',
+        'Adresse GPS',
+        'Source',
+      ],
+      rows.map((r) => [
         this.fmtDate(r.date),
         r.user.username,
         r.user.fullName ?? '',
@@ -109,7 +160,7 @@ export class ReportsService {
         r.delayMinutes ?? '',
         r.address ?? '',
         r.sourceConnectionLogId ? 'Connexion' : 'Manuel',
-      ]),
+      ])
     )
   }
 
@@ -117,9 +168,13 @@ export class ReportsService {
     this.assertAllowed(requester)
     const userWhere = this.buildUserWhere(requester)
 
+    const parsedFrom = this.parseReportDate(dateFrom, 'Date de début')
+    const parsedTo = this.parseReportDate(dateTo, 'Date de fin', true)
+    this.assertDateRange(parsedFrom, parsedTo)
+
     const dateFilter: Record<string, Date> = {}
-    if (dateFrom) dateFilter.gte = new Date(dateFrom)
-    if (dateTo) dateFilter.lte = new Date(`${dateTo}T23:59:59.999Z`)
+    if (parsedFrom) dateFilter.gte = parsedFrom
+    if (parsedTo) dateFilter.lte = parsedTo
 
     const rows = await this.prisma.activityLog.findMany({
       where: {
@@ -129,7 +184,9 @@ export class ReportsService {
       include: {
         user: {
           select: {
-            username: true, fullName: true, role: true,
+            username: true,
+            fullName: true,
+            role: true,
             businessUnit: { select: { name: true } },
           },
         },
@@ -141,8 +198,19 @@ export class ReportsService {
     await this.logExport(requester.id, LogAction.ACTIVITY_REPORT_EXPORTED)
 
     return this.toCsv(
-      ['Date/Heure', 'Utilisateur', 'Nom complet', 'Rôle', 'BU', 'Action', 'Entité', 'ID Entité', 'IP', 'User-Agent'],
-      rows.map(r => [
+      [
+        'Date/Heure',
+        'Utilisateur',
+        'Nom complet',
+        'Rôle',
+        'BU',
+        'Action',
+        'Entité',
+        'ID Entité',
+        'IP',
+        'User-Agent',
+      ],
+      rows.map((r) => [
         this.fmtDateTime(r.occurredAt),
         r.user.username,
         r.user.fullName ?? '',
@@ -153,7 +221,7 @@ export class ReportsService {
         r.entityId ?? '',
         r.ipAddress ?? '',
         r.userAgent ?? '',
-      ]),
+      ])
     )
   }
 
@@ -165,9 +233,13 @@ export class ReportsService {
     since90conn.setUTCDate(since90conn.getUTCDate() - 90)
     since90conn.setUTCHours(0, 0, 0, 0)
 
+    const parsedFrom = this.parseReportDate(dateFrom, 'Date de début')
+    const parsedTo = this.parseReportDate(dateTo, 'Date de fin')
+    this.assertDateRange(parsedFrom, parsedTo)
+
     const dateFilter: Record<string, Date> = {
-      gte: dateFrom ? new Date(dateFrom) : since90conn,
-      lte: dateTo ? new Date(dateTo) : getToday(),
+      gte: parsedFrom ?? since90conn,
+      lte: parsedTo ?? getToday(),
     }
 
     const rows = await this.prisma.connectionLog.findMany({
@@ -178,7 +250,9 @@ export class ReportsService {
       include: {
         user: {
           select: {
-            username: true, fullName: true, role: true,
+            username: true,
+            fullName: true,
+            role: true,
             businessUnit: { select: { name: true } },
           },
         },
@@ -190,8 +264,20 @@ export class ReportsService {
     await this.logExport(requester.id, LogAction.CONNECTION_REPORT_EXPORTED)
 
     return this.toCsv(
-      ['Date', 'Heure connexion', 'Heure déconnexion', 'Utilisateur', 'Nom complet', 'Rôle', 'BU', 'Type', '1ère connexion', 'IP', 'Adresse GPS'],
-      rows.map(r => [
+      [
+        'Date',
+        'Heure connexion',
+        'Heure déconnexion',
+        'Utilisateur',
+        'Nom complet',
+        'Rôle',
+        'BU',
+        'Type',
+        '1ère connexion',
+        'IP',
+        'Adresse GPS',
+      ],
+      rows.map((r) => [
         this.fmtDate(r.date),
         this.fmtDateTime(r.connectedAt),
         this.fmtDateTime(r.disconnectedAt),
@@ -203,7 +289,7 @@ export class ReportsService {
         r.isFirstConnectionOfDay ? 'Oui' : 'Non',
         r.ipAddress ?? '',
         r.address ?? '',
-      ]),
+      ])
     )
   }
 
@@ -217,7 +303,9 @@ export class ReportsService {
       this.prisma.user.findMany({
         where: { ...userWhere, isActive: true },
         select: {
-          username: true, fullName: true, role: true,
+          username: true,
+          fullName: true,
+          role: true,
           businessUnit: { select: { name: true } },
           pole: { select: { name: true } },
           scheduleGroup: { select: { name: true, expectedArrivalTime: true } },
@@ -236,17 +324,18 @@ export class ReportsService {
 
     await this.logExport(requester.id, LogAction.GENERAL_REPORT_EXPORTED)
 
-    const STATUS: Record<string, string> = { PRESENT: 'Présent', LATE: 'En retard', ABSENT: 'Absent' }
-    const presMap = new Map(presences.map(p => [p.user.username, p]))
+    const STATUS: Record<string, string> = {
+      PRESENT: 'Présent',
+      LATE: 'En retard',
+      ABSENT: 'Absent',
+    }
+    const presMap = new Map(presences.map((p) => [p.user.username, p]))
 
-    let csv = this.toCsv(
-      ['RAPPORT GÉNÉRAL VDM INTRANET', `Généré le ${this.fmtDate(today)}`],
-      [],
-    )
+    let csv = this.toCsv(['RAPPORT GÉNÉRAL VDM INTRANET', `Généré le ${this.fmtDate(today)}`], [])
 
     csv += '\r\n\r\n'
 
-    const userRows = users.map(u => {
+    const userRows = users.map((u) => {
       const pres = presMap.get(u.username)
       return [
         u.username,
@@ -263,8 +352,19 @@ export class ReportsService {
     })
 
     csv += this.toCsv(
-      ['Utilisateur', 'Nom complet', 'Rôle', 'BU', 'Pôle', 'Heure attendue', 'Présence', 'Arrivée', 'Écart (min)', 'Dernière connexion'],
-      userRows,
+      [
+        'Utilisateur',
+        'Nom complet',
+        'Rôle',
+        'BU',
+        'Pôle',
+        'Heure attendue',
+        'Présence',
+        'Arrivée',
+        'Écart (min)',
+        'Dernière connexion',
+      ],
+      userRows
     )
 
     csv += `\r\n\r\n"Connexions aujourd'hui";"${connections}"\r\n`
@@ -274,7 +374,12 @@ export class ReportsService {
 
   private async logExport(userId: string, action: LogAction) {
     await this.prisma.activityLog.create({
-      data: { userId, action, entity: 'Report', details: { exportedAt: new Date().toISOString() } as object },
+      data: {
+        userId,
+        action,
+        entity: 'Report',
+        details: { exportedAt: new Date().toISOString() } as object,
+      },
     })
   }
 }

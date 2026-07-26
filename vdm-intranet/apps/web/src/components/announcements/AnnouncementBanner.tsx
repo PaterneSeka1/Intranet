@@ -16,7 +16,9 @@ function loadDismissed(): Set<string> {
 function saveDismissed(ids: Set<string>) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify([...ids]))
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 interface Props {
@@ -32,7 +34,7 @@ export function AnnouncementBanner({ announcements }: Props) {
     setDismissedIds(loadDismissed())
   }, [])
 
-  const visible = announcements.filter(a => !dismissedIds.has(a.id))
+  const visible = announcements.filter((a) => !dismissedIds.has(a.id))
 
   useEffect(() => {
     const el = trackRef.current
@@ -51,7 +53,7 @@ export function AnnouncementBanner({ announcements }: Props) {
 
   function dismiss() {
     const next = new Set(dismissedIds)
-    visible.forEach(a => next.add(a.id))
+    visible.forEach((a) => next.add(a.id))
     saveDismissed(next)
     setDismissedIds(next)
   }
@@ -59,7 +61,7 @@ export function AnnouncementBanner({ announcements }: Props) {
   if (visible.length === 0) return null
 
   const text = visible
-    .map(a => `${a.isPinned ? '📌 ' : ''}${a.title} — ${a.body}`)
+    .map((a) => `${a.isPinned ? '📌 ' : ''}${a.title} — ${a.body}`)
     .join('   ·   ')
 
   return (

@@ -29,6 +29,7 @@ export interface User {
   email?: string | null
   role: Role
   isActive: boolean
+  mustChangePassword?: boolean
   lastLoginAt?: string | null
   createdAt?: string
   businessUnit?: BU | null

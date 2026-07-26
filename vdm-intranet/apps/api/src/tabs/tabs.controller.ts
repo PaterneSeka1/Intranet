@@ -54,7 +54,7 @@ export class TabsController {
   updateBu(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() dto: UpdateBusinessUnitDto,
+    @Body() dto: UpdateBusinessUnitDto
   ) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.tabsService.updateBusinessUnit(id, dto)
@@ -77,21 +77,14 @@ export class TabsController {
 
   @Post('poles')
   @ApiOperation({ summary: 'Créer un pôle (CTO_ADMIN)' })
-  createPole(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: CreatePoleDto,
-  ) {
+  createPole(@CurrentUser() user: AuthUser, @Body() dto: CreatePoleDto) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.tabsService.createPole(dto)
   }
 
   @Patch('poles/:id')
   @ApiOperation({ summary: 'Modifier un pôle (CTO_ADMIN)' })
-  updatePole(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-    @Body() dto: UpdatePoleDto,
-  ) {
+  updatePole(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdatePoleDto) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.tabsService.updatePole(id, dto)
   }

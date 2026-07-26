@@ -27,15 +27,24 @@ function Shell({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--vdm-login-bg)' }}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'var(--vdm-login-bg)' }}
+    >
       <BgImageLayer />
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
         <div className="text-center mb-8">
           {logo ? (
-            <img src={logo} alt="" className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-md shadow-orange-100" />
+            <img
+              src={logo}
+              alt=""
+              className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-md shadow-orange-100"
+            />
           ) : (
             <div className="w-14 h-14 rounded-2xl bg-[#F28C38] flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-100">
-              <span className="text-white text-2xl font-bold">{appName[0]?.toUpperCase() ?? 'V'}</span>
+              <span className="text-white text-2xl font-bold">
+                {appName[0]?.toUpperCase() ?? 'V'}
+              </span>
             </div>
           )}
           <h1 className="text-lg font-bold text-gray-900">{appName}</h1>
@@ -106,7 +115,10 @@ export function ResetPasswordClient({
     <Shell appName={initialAppName} appSubtitle={initialAppSubtitle} logo={initialLogo}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="rp-password" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+          <label
+            htmlFor="rp-password"
+            className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+          >
             Nouveau mot de passe
           </label>
           <PasswordInput
@@ -122,7 +134,10 @@ export function ResetPasswordClient({
         </div>
 
         <div>
-          <label htmlFor="rp-confirm" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+          <label
+            htmlFor="rp-confirm"
+            className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+          >
             Confirmer le mot de passe
           </label>
           <PasswordInput

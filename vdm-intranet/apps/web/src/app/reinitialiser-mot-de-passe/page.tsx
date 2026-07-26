@@ -7,7 +7,7 @@ interface Props {
 
 export default async function ResetPasswordPage({ searchParams }: Props) {
   const settings = await fetchSettings()
-  const s = Object.fromEntries(settings.map(x => [x.key, x.value]))
+  const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
 
   return (
     <ResetPasswordClient

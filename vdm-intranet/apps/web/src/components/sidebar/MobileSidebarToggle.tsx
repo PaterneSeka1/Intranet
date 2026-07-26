@@ -18,7 +18,14 @@ interface Props {
   logo?: string
 }
 
-export function MobileSidebarToggle({ user, announcements, children, appName = 'VDM Intranet', appSubtitle = 'Veilleur des Médias', logo }: Props) {
+export function MobileSidebarToggle({
+  user,
+  announcements,
+  children,
+  appName = 'VDM Intranet',
+  appSubtitle = 'Veilleur des Médias',
+  logo,
+}: Props) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -41,7 +48,13 @@ export function MobileSidebarToggle({ user, announcements, children, appName = '
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        <Sidebar user={user} onClose={() => setMobileOpen(false)} appName={appName} appSubtitle={appSubtitle} logo={logo} />
+        <Sidebar
+          user={user}
+          onClose={() => setMobileOpen(false)}
+          appName={appName}
+          appSubtitle={appSubtitle}
+          logo={logo}
+        />
       </div>
 
       {/* Contenu principal */}
@@ -64,7 +77,9 @@ export function MobileSidebarToggle({ user, announcements, children, appName = '
               <img src={logo} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
             ) : (
               <div className="w-7 h-7 rounded-lg bg-[#F28C38] flex items-center justify-center shrink-0">
-                <span className="text-white text-xs font-bold">{appName[0]?.toUpperCase() ?? 'V'}</span>
+                <span className="text-white text-xs font-bold">
+                  {appName[0]?.toUpperCase() ?? 'V'}
+                </span>
               </div>
             )}
             <span className="font-bold text-gray-800 text-sm">{appName}</span>

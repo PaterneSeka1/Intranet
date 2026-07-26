@@ -17,7 +17,13 @@ interface Props {
 function fmtDateLabel(iso: string): string {
   const [y, m, d] = iso.split('-')
   const dt = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)))
-  return dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+  return dt.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
 }
 
 function todayIso(): string {
@@ -41,9 +47,9 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
   const today = todayIso()
   const isToday = date === today
 
-  const present = rows.filter(r => r.status === 'PRESENT').length
-  const late = rows.filter(r => r.status === 'LATE').length
-  const absent = rows.filter(r => r.status === 'ABSENT').length
+  const present = rows.filter((r) => r.status === 'PRESENT').length
+  const late = rows.filter((r) => r.status === 'LATE').length
+  const absent = rows.filter((r) => r.status === 'ABSENT').length
 
   function navigate(newDate: string) {
     router.push(`/presences?date=${newDate}`)
@@ -70,7 +76,7 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
             type="date"
             value={date}
             max={today}
-            onChange={e => navigate(e.target.value)}
+            onChange={(e) => navigate(e.target.value)}
             className="px-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
           />
           <button
@@ -117,7 +123,12 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
       {/* Tableau présences */}
       <div className="mb-8">
         <h2 className="text-sm font-bold text-gray-700 mb-3">Tableau de présences</h2>
-        <PresenceTable rows={rows} canMandate={canMandate} currentUserId={currentUserId} date={date} />
+        <PresenceTable
+          rows={rows}
+          canMandate={canMandate}
+          currentUserId={currentUserId}
+          date={date}
+        />
       </div>
 
       {/* Mandats */}
@@ -125,13 +136,15 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-700">Mandats exceptionnels</h2>
-            <span className="text-xs text-gray-400">{mandates.length} mandat{mandates.length > 1 ? 's' : ''} ce jour</span>
+            <span className="text-xs text-gray-400">
+              {mandates.length} mandat{mandates.length > 1 ? 's' : ''} ce jour
+            </span>
           </div>
           <MandatesManager
             initialMandates={mandates}
             canMandate={canMandate}
             currentUserId={currentUserId}
-            users={rows.map(r => r.user)}
+            users={rows.map((r) => r.user)}
           />
         </div>
       )}

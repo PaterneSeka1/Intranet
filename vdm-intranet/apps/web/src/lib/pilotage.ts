@@ -72,9 +72,16 @@ async function req<T>(path: string): Promise<T> {
 export const pilotageApi = {
   summary: (): Promise<Summary> => req<Summary>('/pilotage/summary'),
   presenceByBu: (): Promise<PresenceByBu[]> => req<PresenceByBu[]>('/pilotage/presence-by-bu'),
-  connectionsChart: (days = 14): Promise<ConnectionPoint[]> => req<ConnectionPoint[]>(`/pilotage/connections-chart?days=${days}`),
-  activityChart: (days = 30): Promise<ActionPoint[]> => req<ActionPoint[]>(`/pilotage/activity-chart?days=${days}`),
-  activityLog: (params: { page?: number; limit?: number; search?: string; action?: string }): Promise<ActivityLogPage> => {
+  connectionsChart: (days = 14): Promise<ConnectionPoint[]> =>
+    req<ConnectionPoint[]>(`/pilotage/connections-chart?days=${days}`),
+  activityChart: (days = 30): Promise<ActionPoint[]> =>
+    req<ActionPoint[]>(`/pilotage/activity-chart?days=${days}`),
+  activityLog: (params: {
+    page?: number
+    limit?: number
+    search?: string
+    action?: string
+  }): Promise<ActivityLogPage> => {
     const qs = new URLSearchParams()
     if (params.page) qs.set('page', String(params.page))
     if (params.limit) qs.set('limit', String(params.limit))
@@ -83,4 +90,3 @@ export const pilotageApi = {
     return req<ActivityLogPage>(`/pilotage/activity-log?${qs.toString()}`)
   },
 }
-

@@ -30,13 +30,14 @@ export class AnnouncementsService {
   findAll(requester: Requester | undefined, activeOnly = false) {
     const canSeeAll = requester && MANAGE_ROLES.includes(requester.role)
     const now = new Date()
-    const where = activeOnly || !canSeeAll
-      ? {
-          isActive: true,
-          publishedAt: { lte: now },
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        }
-      : {}
+    const where =
+      activeOnly || !canSeeAll
+        ? {
+            isActive: true,
+            publishedAt: { lte: now },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          }
+        : {}
 
     return this.prisma.announcement.findMany({
       where,
@@ -65,7 +66,9 @@ export class AnnouncementsService {
       select: ANNOUNCEMENT_SELECT,
     })
 
-    await this.log(requester.id, LogAction.ANNOUNCEMENT_CREATED, announcement.id, { title: dto.title })
+    await this.log(requester.id, LogAction.ANNOUNCEMENT_CREATED, announcement.id, {
+      title: dto.title,
+    })
     return announcement
   }
 
@@ -95,7 +98,8 @@ export class AnnouncementsService {
       await this.log(requester.id, LogAction.ANNOUNCEMENT_UPDATED, id, dto as object)
       return updated
     } catch (err: unknown) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Annonce introuvable.')
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException('Annonce introuvable.')
       throw err
     }
   }
@@ -111,7 +115,8 @@ export class AnnouncementsService {
     try {
       await this.prisma.announcement.delete({ where: { id } })
     } catch (err: unknown) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Annonce introuvable.')
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException('Annonce introuvable.')
       throw err
     }
     await this.log(requester.id, LogAction.ANNOUNCEMENT_DELETED, id, { title: existing.title })

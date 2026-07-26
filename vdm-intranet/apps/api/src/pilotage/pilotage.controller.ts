@@ -25,7 +25,7 @@ export class PilotageController {
   }
 
   @Get('presence-by-bu')
-  @ApiOperation({ summary: 'Présences par BU (aujourd\'hui)' })
+  @ApiOperation({ summary: "Présences par BU (aujourd'hui)" })
   getPresenceByBu(@CurrentUser() user: AuthUser) {
     return this.pilotageService.getPresenceByBu(user)
   }
@@ -43,23 +43,23 @@ export class PilotageController {
   }
 
   @Get('activity-log')
-  @ApiOperation({ summary: 'Journal d\'activité paginé' })
+  @ApiOperation({ summary: "Journal d'activité paginé" })
   getActivityLog(
     @CurrentUser() user: AuthUser,
     @Query('page') page = '1',
     @Query('limit') limit = '25',
     @Query('search') search?: string,
-    @Query('action') action?: string,
+    @Query('action') action?: string
   ) {
     if (action && !Object.values(LogAction).includes(action as LogAction)) {
-      throw new BadRequestException('Valeur d\'action invalide.')
+      throw new BadRequestException("Valeur d'action invalide.")
     }
     return this.pilotageService.getActivityLog(
       user,
       Math.max(1, parseInt(page, 10) || 1),
       Math.min(100, Math.max(1, parseInt(limit, 10) || 25)),
       search,
-      action,
+      action
     )
   }
 }

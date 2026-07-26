@@ -1,26 +1,49 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator'
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Role } from '@prisma/client'
+import {
+  PASSWORD_COMPLEXITY_MESSAGE,
+  PASSWORD_COMPLEXITY_REGEX,
+} from '../../common/validators/password-complexity'
 
 export class CreateUserDto {
   @ApiProperty({ example: 'JEAN_DUPONT' })
-  @IsString() @IsNotEmpty() @MaxLength(50)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
   username!: string
 
   @ApiProperty({ example: 'MotDePasse8+' })
-  @IsString() @MinLength(8) @MaxLength(200)
+  @IsString()
+  @MinLength(8)
+  @MaxLength(200)
+  @Matches(PASSWORD_COMPLEXITY_REGEX, { message: PASSWORD_COMPLEXITY_MESSAGE })
   password!: string
 
   @ApiPropertyOptional({ example: 'Jean' })
-  @IsString() @IsOptional() @MaxLength(100)
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
   firstName?: string
 
   @ApiPropertyOptional({ example: 'DUPONT' })
-  @IsString() @IsOptional() @MaxLength(100)
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
   lastName?: string
 
   @ApiPropertyOptional({ example: 'jean@vdm.ci' })
-  @IsEmail() @IsOptional()
+  @IsEmail()
+  @IsOptional()
   email?: string
 
   @ApiProperty({ enum: Role })
@@ -28,26 +51,34 @@ export class CreateUserDto {
   role!: Role
 
   @ApiPropertyOptional()
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   businessUnitId?: string
 
   @ApiPropertyOptional()
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   poleId?: string
 
   @ApiPropertyOptional()
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   managerId?: string
 
   @ApiPropertyOptional()
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   scheduleGroupId?: string
 
   @ApiPropertyOptional({ example: '08:00' })
-  @IsString() @IsOptional() @Matches(/^\d{2}:\d{2}$/, { message: 'Format HH:mm requis' })
+  @IsString()
+  @IsOptional()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Format HH:mm requis' })
   individualExpectedArrivalTime?: string
 
   @ApiPropertyOptional({ example: '17:00' })
-  @IsString() @IsOptional() @Matches(/^\d{2}:\d{2}$/, { message: 'Format HH:mm requis' })
+  @IsString()
+  @IsOptional()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Format HH:mm requis' })
   individualExpectedDepartureTime?: string
 }

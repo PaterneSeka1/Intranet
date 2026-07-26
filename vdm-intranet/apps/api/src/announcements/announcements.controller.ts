@@ -24,7 +24,11 @@ export class AnnouncementsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto, @CurrentUser() user: JwtUser) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAnnouncementDto,
+    @CurrentUser() user: JwtUser
+  ) {
     return this.announcementsService.update(id, dto, user)
   }
 

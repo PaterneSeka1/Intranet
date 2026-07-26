@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/lib/toast'
 import { ROLE_LABELS, type User } from '@/types/user'
@@ -22,7 +22,11 @@ async function patchMe(data: Record<string, string>): Promise<User> {
   return res.json()
 }
 
-const INPUT = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-shadow'
+const INPUT =
+  'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-shadow'
+const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._-]).{8,}$/
+const PASSWORD_COMPLEXITY_MESSAGE =
+  'Le nouveau mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractère spécial.'
 
 interface Props {
   user: User
@@ -30,7 +34,9 @@ interface Props {
 
 export function MonProfilClient({ user }: Props) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'info' | 'password'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'password'>(
+    user.mustChangePassword ? 'password' : 'info'
+  )
 
   // Info form
   const [firstName, setFirstName] = useState(user.firstName ?? '')
@@ -44,8 +50,13 @@ export function MonProfilClient({ user }: Props) {
   const [confirmPwd, setConfirmPwd] = useState('')
   const [pwdSaving, setPwdSaving] = useState(false)
 
-  const initials = ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase()
-    || user.username[0].toUpperCase()
+  const initials =
+    ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase() ||
+    user.username[0].toUpperCase()
+
+  useEffect(() => {
+    if (user.mustChangePassword) setActiveTab('password')
+  }, [user.mustChangePassword])
 
   async function handleInfoSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -71,6 +82,10 @@ export function MonProfilClient({ user }: Props) {
       toast.error('Le nouveau mot de passe doit contenir au moins 8 caractères.')
       return
     }
+    if (!PASSWORD_COMPLEXITY_REGEX.test(newPwd)) {
+      toast.error(PASSWORD_COMPLEXITY_MESSAGE)
+      return
+    }
     if (newPwd !== confirmPwd) {
       toast.error('Les mots de passe ne correspondent pas.')
       return
@@ -82,6 +97,7 @@ export function MonProfilClient({ user }: Props) {
       setNewPwd('')
       setConfirmPwd('')
       toast.success('Mot de passe modifié avec succès.')
+      router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors du changement de mot de passe.')
     } finally {
@@ -98,7 +114,9 @@ export function MonProfilClient({ user }: Props) {
             <span className="text-[#F28C38] font-bold text-2xl">{initials}</span>
           </div>
           <div>
-            <div className="font-bold text-gray-900 text-base">{user.fullName ?? user.username}</div>
+            <div className="font-bold text-gray-900 text-base">
+              {user.fullName ?? user.username}
+            </div>
             <div className="text-sm text-[#F28C38] font-medium">{ROLE_LABELS[user.role]}</div>
             <div className="text-xs text-gray-400 mt-0.5 font-mono">{user.username}</div>
           </div>
@@ -108,68 +126,118 @@ export function MonProfilClient({ user }: Props) {
           {[
             { label: 'Business Unit', value: user.businessUnit?.name },
             { label: 'Pôle', value: user.pole?.name },
-            { label: 'Dernière connexion', value: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : undefined },
-            { label: 'Compte créé le', value: user.createdAt ? new Date(user.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : undefined },
-          ].map(({ label, value }) => value ? (
-            <div key={label} className="bg-gray-50 rounded-xl px-3.5 py-2.5">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">{label}</div>
-              <div className="text-sm text-gray-700 font-medium">{value}</div>
-            </div>
-          ) : null)}
+            {
+              label: 'Dernière connexion',
+              value: user.lastLoginAt
+                ? new Date(user.lastLoginAt).toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : undefined,
+            },
+            {
+              label: 'Compte créé le',
+              value: user.createdAt
+                ? new Date(user.createdAt).toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                : undefined,
+            },
+          ].map(({ label, value }) =>
+            value ? (
+              <div key={label} className="bg-gray-50 rounded-xl px-3.5 py-2.5">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
+                  {label}
+                </div>
+                <div className="text-sm text-gray-700 font-medium">{value}</div>
+              </div>
+            ) : null
+          )}
         </div>
       </div>
 
+      {user.mustChangePassword && (
+        <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-sm text-red-700">
+          Pour des raisons de sécurité, vous devez modifier votre mot de passe temporaire pour
+          pouvoir continuer à utiliser l'application.
+        </div>
+      )}
+
       {/* Onglets */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {(['info', 'password'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setActiveTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t === 'info' ? 'Informations' : 'Mot de passe'}
-          </button>
-        ))}
+        {(user.mustChangePassword ? (['password'] as const) : (['info', 'password'] as const)).map(
+          (t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === t
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t === 'info' ? 'Informations' : 'Mot de passe'}
+            </button>
+          )
+        )}
       </div>
 
       {/* Tab Informations */}
-      {activeTab === 'info' && (
+      {!user.mustChangePassword && activeTab === 'info' && (
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h2 className="text-sm font-bold text-gray-900 mb-4">Modifier mes informations</h2>
           <form onSubmit={handleInfoSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="profil-firstname" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Prénom</label>
+                <label
+                  htmlFor="profil-firstname"
+                  className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide"
+                >
+                  Prénom
+                </label>
                 <input
                   id="profil-firstname"
                   type="text"
                   value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
+                  onChange={(e) => setFirstName(e.target.value)}
                   className={INPUT}
                   placeholder="Prénom"
                 />
               </div>
               <div>
-                <label htmlFor="profil-lastname" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nom</label>
+                <label
+                  htmlFor="profil-lastname"
+                  className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide"
+                >
+                  Nom
+                </label>
                 <input
                   id="profil-lastname"
                   type="text"
                   value={lastName}
-                  onChange={e => setLastName(e.target.value)}
+                  onChange={(e) => setLastName(e.target.value)}
                   className={INPUT}
                   placeholder="Nom de famille"
                 />
               </div>
             </div>
             <div>
-              <label htmlFor="profil-email" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Adresse e-mail</label>
+              <label
+                htmlFor="profil-email"
+                className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide"
+              >
+                Adresse e-mail
+              </label>
               <input
                 id="profil-email"
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 className={INPUT}
                 placeholder="exemple@veilleurdesmedias.com"
               />
@@ -191,14 +259,21 @@ export function MonProfilClient({ user }: Props) {
       {activeTab === 'password' && (
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h2 className="text-sm font-bold text-gray-900 mb-1">Changer mon mot de passe</h2>
-          <p className="text-xs text-gray-400 mb-4">Minimum 8 caractères. Votre session restera active après le changement.</p>
+          <p className="text-xs text-gray-400 mb-4">
+            Minimum 8 caractères. Votre session restera active après le changement.
+          </p>
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
-              <label htmlFor="current-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Mot de passe actuel</label>
+              <label
+                htmlFor="current-pwd"
+                className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide"
+              >
+                Mot de passe actuel
+              </label>
               <PasswordInput
                 id="current-pwd"
                 value={currentPwd}
-                onChange={e => setCurrentPwd(e.target.value)}
+                onChange={(e) => setCurrentPwd(e.target.value)}
                 required
                 autoComplete="current-password"
                 className={INPUT}
@@ -206,11 +281,16 @@ export function MonProfilClient({ user }: Props) {
               />
             </div>
             <div>
-              <label htmlFor="new-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nouveau mot de passe</label>
+              <label
+                htmlFor="new-pwd"
+                className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide"
+              >
+                Nouveau mot de passe
+              </label>
               <PasswordInput
                 id="new-pwd"
                 value={newPwd}
-                onChange={e => setNewPwd(e.target.value)}
+                onChange={(e) => setNewPwd(e.target.value)}
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -219,11 +299,16 @@ export function MonProfilClient({ user }: Props) {
               />
             </div>
             <div>
-              <label htmlFor="confirm-pwd" className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Confirmer le mot de passe</label>
+              <label
+                htmlFor="confirm-pwd"
+                className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide"
+              >
+                Confirmer le mot de passe
+              </label>
               <PasswordInput
                 id="confirm-pwd"
                 value={confirmPwd}
-                onChange={e => setConfirmPwd(e.target.value)}
+                onChange={(e) => setConfirmPwd(e.target.value)}
                 required
                 minLength={8}
                 autoComplete="new-password"

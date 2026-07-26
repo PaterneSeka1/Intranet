@@ -33,7 +33,10 @@ export function Modal({
   useEffect(() => {
     if (!open) return
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { e.preventDefault(); onClose() }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -44,7 +47,9 @@ export function Modal({
     if (!open) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    return () => {
+      document.body.style.overflow = prev
+    }
   }, [open])
 
   if (!open) return null
@@ -61,7 +66,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         className={`
           vdm-panel-in
           bg-white w-full ${SIZES[size]}
@@ -71,20 +76,18 @@ export function Modal({
         `}
       >
         {/* Top accent stripe */}
-        <div className="h-1 shrink-0 rounded-t-3xl sm:rounded-t-2xl" style={{ background: accent }} />
+        <div
+          className="h-1 shrink-0 rounded-t-3xl sm:rounded-t-2xl"
+          style={{ background: accent }}
+        />
 
         {/* Header */}
         <div className="flex items-start justify-between px-6 pt-5 pb-4 shrink-0">
           <div className="flex-1 min-w-0">
-            <h2
-              id="modal-title"
-              className="font-bold text-gray-900 text-[15px] leading-snug"
-            >
+            <h2 id="modal-title" className="font-bold text-gray-900 text-[15px] leading-snug">
               {title}
             </h2>
-            {subtitle && (
-              <p className="text-sm text-gray-400 mt-0.5 leading-snug">{subtitle}</p>
-            )}
+            {subtitle && <p className="text-sm text-gray-400 mt-0.5 leading-snug">{subtitle}</p>}
           </div>
           <button
             type="button"
@@ -100,9 +103,7 @@ export function Modal({
         <div className="h-px bg-gray-100 shrink-0 mx-6" />
 
         {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 px-6 py-5">
-          {children}
-        </div>
+        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
       </div>
     </div>
   )

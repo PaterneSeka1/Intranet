@@ -25,19 +25,19 @@ export class ReportsController {
     @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('from') from?: string,
-    @Query('to') to?: string,
+    @Query('to') to?: string
   ) {
     const csv = await this.reportsService.presenceCsv(user, from, to)
     this.sendCsv(res, csv, 'presences.csv')
   }
 
   @Get('activity')
-  @ApiOperation({ summary: 'Export CSV — Journal d\'activité' })
+  @ApiOperation({ summary: "Export CSV — Journal d'activité" })
   async activityCsv(
     @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('from') from?: string,
-    @Query('to') to?: string,
+    @Query('to') to?: string
   ) {
     const csv = await this.reportsService.activityCsv(user, from, to)
     this.sendCsv(res, csv, 'activite.csv')
@@ -49,7 +49,7 @@ export class ReportsController {
     @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Query('from') from?: string,
-    @Query('to') to?: string,
+    @Query('to') to?: string
   ) {
     const csv = await this.reportsService.connectionsCsv(user, from, to)
     this.sendCsv(res, csv, 'connexions.csv')

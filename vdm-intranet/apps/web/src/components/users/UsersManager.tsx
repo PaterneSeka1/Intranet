@@ -10,7 +10,12 @@ import { API_BASE as API } from '@/lib/api-base'
 
 type Bu = { id: string; name: string; code: string }
 type Pole = { id: string; name: string; code: string; businessUnitId: string }
-type ScheduleGroup = { id: string; name: string; expectedArrivalTime: string; expectedDepartureTime: string | null }
+type ScheduleGroup = {
+  id: string
+  name: string
+  expectedArrivalTime: string
+  expectedDepartureTime: string | null
+}
 
 interface Props {
   initialUsers: User[]
@@ -64,35 +69,42 @@ async function apiReq<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const ROLE_BADGE: Record<Role, string> = {
-  CTO_ADMIN:       'bg-red-100 text-red-700',
-  PDG:             'bg-orange-100 text-orange-700',
-  DAF:             'bg-yellow-100 text-yellow-700',
-  RESPONSABLE_BU:  'bg-blue-100 text-blue-700',
-  RESPONSABLE_POLE:'bg-indigo-100 text-indigo-700',
-  CONSULTANT:      'bg-gray-100 text-gray-600',
-  STAGIAIRE:       'bg-green-100 text-green-700',
-  PRESTATAIRE:     'bg-purple-100 text-purple-700',
+  CTO_ADMIN: 'bg-red-100 text-red-700',
+  PDG: 'bg-orange-100 text-orange-700',
+  DAF: 'bg-yellow-100 text-yellow-700',
+  RESPONSABLE_BU: 'bg-blue-100 text-blue-700',
+  RESPONSABLE_POLE: 'bg-indigo-100 text-indigo-700',
+  CONSULTANT: 'bg-gray-100 text-gray-600',
+  STAGIAIRE: 'bg-green-100 text-green-700',
+  PRESTATAIRE: 'bg-purple-100 text-purple-700',
 }
 
 const ROLE_HINTS: Record<Role, string> = {
-  CTO_ADMIN:        'Accès total — administration de la plateforme',
-  PDG:              'Direction générale — tableaux de bord & présences',
-  DAF:              'Direction administrative — tableaux de bord & présences',
-  RESPONSABLE_BU:   'Gestion d\'une Business Unit et de ses membres',
-  RESPONSABLE_POLE: 'Supervision d\'un pôle au sein d\'une BU',
-  CONSULTANT:       'Accueil uniquement — aucun accès aux modules',
-  STAGIAIRE:        'Accueil uniquement — aucun accès aux modules',
-  PRESTATAIRE:      'Accueil uniquement — aucun accès aux modules',
+  CTO_ADMIN: 'Accès total — administration de la plateforme',
+  PDG: 'Direction générale — tableaux de bord & présences',
+  DAF: 'Direction administrative — tableaux de bord & présences',
+  RESPONSABLE_BU: "Gestion d'une Business Unit et de ses membres",
+  RESPONSABLE_POLE: "Supervision d'un pôle au sein d'une BU",
+  CONSULTANT: 'Accueil uniquement — aucun accès aux modules',
+  STAGIAIRE: 'Accueil uniquement — aucun accès aux modules',
+  PRESTATAIRE: 'Accueil uniquement — aucun accès aux modules',
 }
 
 const NO_BU_ROLES: Role[] = ['CTO_ADMIN', 'PDG', 'DAF']
 
 const ALL_ROLES: Role[] = [
-  'CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE',
-  'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE',
+  'CTO_ADMIN',
+  'PDG',
+  'DAF',
+  'RESPONSABLE_BU',
+  'RESPONSABLE_POLE',
+  'CONSULTANT',
+  'STAGIAIRE',
+  'PRESTATAIRE',
 ]
 
-const INPUT  = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-shadow'
+const INPUT =
+  'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-shadow'
 const SELECT = `${INPUT} bg-white`
 
 function SectionHeader({ icon, title }: { icon: string; title: string }) {
@@ -121,7 +133,9 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  function f(patch: Partial<FormData>) { setForm(prev => ({ ...prev, ...patch })) }
+  function f(patch: Partial<FormData>) {
+    setForm((prev) => ({ ...prev, ...patch }))
+  }
 
   function openCreate() {
     setEditing(null)
@@ -160,9 +174,9 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         lastName: form.lastName || undefined,
         email: form.email || undefined,
         role: form.role,
-        businessUnitId: form.businessUnitId || undefined,
-        poleId: form.poleId || undefined,
-        managerId: form.managerId || undefined,
+        businessUnitId: form.businessUnitId || null,
+        poleId: form.poleId || null,
+        managerId: form.managerId || null,
         scheduleGroupId: form.scheduleGroupId || null,
         individualExpectedArrivalTime: form.individualExpectedArrivalTime || null,
         individualExpectedDepartureTime: form.individualExpectedDepartureTime || null,
@@ -170,14 +184,20 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       if (!editing) {
         payload.username = form.username
         payload.password = form.password
-        const created = await apiReq<User>('/users', { method: 'POST', body: JSON.stringify(payload) })
-        setUsers(prev => [created, ...prev])
+        const created = await apiReq<User>('/users', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+        setUsers((prev) => [created, ...prev])
         setShowForm(false)
         toast.success(`Compte « ${created.username} » créé avec succès.`)
       } else {
         if (form.password) payload.password = form.password
-        const updated = await apiReq<User>(`/users/${editing.id}`, { method: 'PATCH', body: JSON.stringify(payload) })
-        setUsers(prev => prev.map(u => u.id === editing.id ? updated : u))
+        const updated = await apiReq<User>(`/users/${editing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        })
+        setUsers((prev) => prev.map((u) => (u.id === editing.id ? updated : u)))
         setShowForm(false)
         toast.success('Utilisateur mis à jour.')
       }
@@ -192,15 +212,19 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
     try {
       const path = u.isActive ? `/users/${u.id}/deactivate` : `/users/${u.id}/activate`
       const updated = await apiReq<User>(path, { method: 'PATCH' })
-      setUsers(prev => prev.map(x => x.id === u.id ? updated : x))
-      toast.info(updated.isActive ? `${updated.username} activé.` : `${updated.username} désactivé.`)
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)))
+      toast.info(
+        updated.isActive ? `${updated.username} activé.` : `${updated.username} désactivé.`
+      )
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.')
     }
   }
 
   const noBuRole = NO_BU_ROLES.includes(form.role)
-  const filteredPoles = poleList.filter(p => !form.businessUnitId || p.businessUnitId === form.businessUnitId)
+  const filteredPoles = poleList.filter(
+    (p) => !form.businessUnitId || p.businessUnitId === form.businessUnitId
+  )
   const initials = getInitials(form.firstName, form.lastName, form.username || '?')
 
   const columns: Column<User>[] = [
@@ -208,8 +232,8 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       key: 'fullName',
       label: 'Nom',
       sortable: true,
-      sortValue: u => u.fullName ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
-      render: u => {
+      sortValue: (u) => u.fullName ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+      render: (u) => {
         const name = u.fullName ?? (`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || null)
         const ini = getInitials(u.firstName ?? '', u.lastName ?? '', u.username)
         return (
@@ -229,8 +253,10 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       key: 'role',
       label: 'Rôle',
       sortable: true,
-      render: u => (
-        <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${ROLE_BADGE[u.role]}`}>
+      render: (u) => (
+        <span
+          className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${ROLE_BADGE[u.role]}`}
+        >
           {ROLE_LABELS[u.role]}
         </span>
       ),
@@ -239,16 +265,18 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       key: 'bu',
       label: 'BU',
       sortable: true,
-      sortValue: u => u.businessUnit?.name ?? '',
-      render: u => <span className="text-gray-500 text-xs">{u.businessUnit?.name ?? '—'}</span>,
+      sortValue: (u) => u.businessUnit?.name ?? '',
+      render: (u) => <span className="text-gray-500 text-xs">{u.businessUnit?.name ?? '—'}</span>,
     },
     {
       key: 'isActive',
       label: 'Statut',
       sortable: true,
-      sortValue: u => (u.isActive ? 'Actif' : 'Inactif'),
-      render: u => (
-        <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+      sortValue: (u) => (u.isActive ? 'Actif' : 'Inactif'),
+      render: (u) => (
+        <span
+          className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}
+        >
           {u.isActive ? 'Actif' : 'Inactif'}
         </span>
       ),
@@ -260,7 +288,7 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
       <DataTable<User>
         data={users}
         columns={columns}
-        rowKey={u => u.id}
+        rowKey={(u) => u.id}
         defaultPageSize={25}
         storageKey="utilisateurs"
         searchable
@@ -275,22 +303,45 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         defaultSort={{ key: 'role', dir: 'asc' }}
         header={
           <>
-            <span className="text-sm text-gray-500">{users.length} compte{users.length > 1 ? 's' : ''}</span>
+            <span className="text-sm text-gray-500">
+              {users.length} compte{users.length > 1 ? 's' : ''}
+            </span>
             {canManage && (
-              <button onClick={openCreate} className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors">
+              <button
+                onClick={openCreate}
+                className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors"
+              >
                 + Nouveau
               </button>
             )}
           </>
         }
-        actions={canManage ? u => (
-          <>
-            <button onClick={e => { e.stopPropagation(); openEdit(u) }} className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors">Modifier</button>
-            <button onClick={e => { e.stopPropagation(); toggleActive(u) }} className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}>
-              {u.isActive ? 'Désactiver' : 'Activer'}
-            </button>
-          </>
-        ) : undefined}
+        actions={
+          canManage
+            ? (u) => (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openEdit(u)
+                    }}
+                    className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleActive(u)
+                    }}
+                    className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}
+                  >
+                    {u.isActive ? 'Désactiver' : 'Activer'}
+                  </button>
+                </>
+              )
+            : undefined
+        }
       />
 
       <Modal
@@ -301,7 +352,6 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-
           {/* Aperçu identité */}
           <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
             <div className="w-12 h-12 rounded-xl bg-[#F28C38] flex items-center justify-center shrink-0">
@@ -309,13 +359,21 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
             </div>
             <div className="min-w-0">
               <div className="font-semibold text-gray-900 text-sm">
-                {(form.firstName || form.lastName)
-                  ? `${form.firstName} ${form.lastName}`.trim()
-                  : <span className="text-gray-400 font-normal">Prénom Nom</span>}
+                {form.firstName || form.lastName ? (
+                  `${form.firstName} ${form.lastName}`.trim()
+                ) : (
+                  <span className="text-gray-400 font-normal">Prénom Nom</span>
+                )}
               </div>
               <div className="mt-0.5 flex items-center gap-2 flex-wrap">
-                {form.username && <span className="text-[10px] font-mono text-gray-400">{form.username}</span>}
-                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[form.role]}`}>{ROLE_LABELS[form.role]}</span>
+                {form.username && (
+                  <span className="text-[10px] font-mono text-gray-400">{form.username}</span>
+                )}
+                <span
+                  className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[form.role]}`}
+                >
+                  {ROLE_LABELS[form.role]}
+                </span>
               </div>
             </div>
           </div>
@@ -325,17 +383,41 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
             <SectionHeader icon="👤" title="Identité" />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Prénom</label>
-                <input type="text" value={form.firstName} onChange={e => f({ firstName: e.target.value })} className={INPUT} placeholder="Ex : Konan" />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Prénom
+                </label>
+                <input
+                  type="text"
+                  value={form.firstName}
+                  onChange={(e) => f({ firstName: e.target.value })}
+                  className={INPUT}
+                  placeholder="Ex : Konan"
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nom</label>
-                <input type="text" value={form.lastName} onChange={e => f({ lastName: e.target.value })} className={INPUT} placeholder="Ex : Yao" />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Nom
+                </label>
+                <input
+                  type="text"
+                  value={form.lastName}
+                  onChange={(e) => f({ lastName: e.target.value })}
+                  className={INPUT}
+                  placeholder="Ex : Yao"
+                />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Email</label>
-              <input type="email" value={form.email} onChange={e => f({ email: e.target.value })} className={INPUT} placeholder="prenom.nom@veilleurdesmedias.com" />
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                Email
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => f({ email: e.target.value })}
+                className={INPUT}
+                placeholder="prenom.nom@veilleurdesmedias.com"
+              />
             </div>
           </div>
 
@@ -344,11 +426,15 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
             <SectionHeader icon="🔑" title="Compte" />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Identifiant *</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Identifiant *
+                </label>
                 <input
-                  type="text" value={form.username}
-                  onChange={e => f({ username: e.target.value })}
-                  required disabled={!!editing}
+                  type="text"
+                  value={form.username}
+                  onChange={(e) => f({ username: e.target.value })}
+                  required
+                  disabled={!!editing}
                   className={`${INPUT} ${editing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`}
                   placeholder="Ex : KYao"
                 />
@@ -359,8 +445,9 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
                 </label>
                 <PasswordInput
                   value={form.password}
-                  onChange={e => f({ password: e.target.value })}
-                  required={!editing} minLength={8}
+                  onChange={(e) => f({ password: e.target.value })}
+                  required={!editing}
+                  minLength={8}
                   placeholder={editing ? 'Vide = inchangé' : '8 caractères minimum'}
                   className={INPUT}
                 />
@@ -373,9 +460,22 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
             <SectionHeader icon="🏢" title="Rôle & Organisation" />
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Rôle *</label>
-              <select value={form.role} onChange={e => f({ role: e.target.value as Role, businessUnitId: '', poleId: '' })} required className={SELECT}>
-                {ALL_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                Rôle *
+              </label>
+              <select
+                value={form.role}
+                onChange={(e) =>
+                  f({ role: e.target.value as Role, businessUnitId: '', poleId: '' })
+                }
+                required
+                className={SELECT}
+              >
+                {ALL_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
               </select>
               <p className="text-[11px] text-gray-400 mt-1">{ROLE_HINTS[form.role]}</p>
             </div>
@@ -387,39 +487,60 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Business Unit</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Business Unit
+                  </label>
                   <select
                     value={form.businessUnitId}
-                    onChange={e => f({ businessUnitId: e.target.value, poleId: '' })}
+                    onChange={(e) => f({ businessUnitId: e.target.value, poleId: '' })}
                     className={SELECT}
                   >
                     <option value="">— Aucune —</option>
-                    {buList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    {buList.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Pôle</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Pôle
+                  </label>
                   <select
                     value={form.poleId}
-                    onChange={e => f({ poleId: e.target.value })}
+                    onChange={(e) => f({ poleId: e.target.value })}
                     disabled={!form.businessUnitId}
                     className={`${SELECT} ${!form.businessUnitId ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <option value="">— Aucun —</option>
-                    {filteredPoles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {filteredPoles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Manager direct <span className="text-gray-300 normal-case font-normal">(optionnel)</span></label>
-              <select value={form.managerId} onChange={e => f({ managerId: e.target.value })} className={SELECT}>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                Manager direct{' '}
+                <span className="text-gray-300 normal-case font-normal">(optionnel)</span>
+              </label>
+              <select
+                value={form.managerId}
+                onChange={(e) => f({ managerId: e.target.value })}
+                className={SELECT}
+              >
                 <option value="">— Aucun —</option>
                 {users
-                  .filter(u => u.isActive && (!editing || u.id !== editing.id))
-                  .sort((a, b) => (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username))
-                  .map(u => (
+                  .filter((u) => u.isActive && (!editing || u.id !== editing.id))
+                  .sort((a, b) =>
+                    (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username)
+                  )
+                  .map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.fullName ?? u.username} — {ROLE_LABELS[u.role]}
                     </option>
@@ -433,30 +554,68 @@ export function UsersManager({ initialUsers, buList, poleList, scheduleGroups, c
             <SectionHeader icon="🕐" title="Horaires" />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Groupe horaire</label>
-                <select value={form.scheduleGroupId} onChange={e => f({ scheduleGroupId: e.target.value })} className={SELECT}>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Groupe horaire
+                </label>
+                <select
+                  value={form.scheduleGroupId}
+                  onChange={(e) => f({ scheduleGroupId: e.target.value })}
+                  className={SELECT}
+                >
                   <option value="">— Aucun —</option>
-                  {scheduleGroups.map(g => <option key={g.id} value={g.id}>{g.name} ({g.expectedArrivalTime})</option>)}
+                  {scheduleGroups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.expectedArrivalTime})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Arrivée individuelle <span className="text-gray-300 normal-case font-normal">(prioritaire)</span></label>
-                <input type="time" value={form.individualExpectedArrivalTime} onChange={e => f({ individualExpectedArrivalTime: e.target.value })} className={INPUT} />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Arrivée individuelle{' '}
+                  <span className="text-gray-300 normal-case font-normal">(prioritaire)</span>
+                </label>
+                <input
+                  type="time"
+                  value={form.individualExpectedArrivalTime}
+                  onChange={(e) => f({ individualExpectedArrivalTime: e.target.value })}
+                  className={INPUT}
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Départ individuel <span className="text-gray-300 normal-case font-normal">(prioritaire)</span></label>
-                <input type="time" value={form.individualExpectedDepartureTime} onChange={e => f({ individualExpectedDepartureTime: e.target.value })} className={INPUT} />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Départ individuel{' '}
+                  <span className="text-gray-300 normal-case font-normal">(prioritaire)</span>
+                </label>
+                <input
+                  type="time"
+                  value={form.individualExpectedDepartureTime}
+                  onChange={(e) => f({ individualExpectedDepartureTime: e.target.value })}
+                  className={INPUT}
+                />
               </div>
             </div>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">{error}</div>
+            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
+              {error}
+            </div>
           )}
 
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">Annuler</button>
-            <button type="submit" disabled={saving} className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+            >
               {saving ? 'Enregistrement…' : editing ? 'Mettre à jour' : 'Créer le compte'}
             </button>
           </div>

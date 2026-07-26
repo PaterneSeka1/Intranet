@@ -52,7 +52,13 @@ export interface PresenceRow {
     role: string
     businessUnit: { id: string; name: string; code: string } | null
     pole: { id: string; name: string; code: string } | null
-    scheduleGroup: { id: string; name: string; expectedArrivalTime: string; expectedDepartureTime: string | null; isNightShift: boolean } | null
+    scheduleGroup: {
+      id: string
+      name: string
+      expectedArrivalTime: string
+      expectedDepartureTime: string | null
+      isNightShift: boolean
+    } | null
     individualExpectedArrivalTime: string | null
     individualExpectedDepartureTime: string | null
   }
@@ -83,7 +89,13 @@ export interface DailyMandate {
   expectedArrivalTime: string
   reason: string | null
   createdById: string
-  user: { id: string; username: string; fullName: string | null; role: string; businessUnit: { name: string } | null }
+  user: {
+    id: string
+    username: string
+    fullName: string | null
+    role: string
+    businessUnit: { name: string } | null
+  }
   createdBy: { id: string; username: string; fullName: string | null }
 }
 
@@ -122,7 +134,9 @@ async function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
     try {
       const body = await res.json()
       msg = body.message ?? msg
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     throw new Error(msg)
   }
   return res.json() as Promise<T>
@@ -141,8 +155,12 @@ export const presenceApi = {
     presenceReq<Presence>('/end-day', { method: 'POST', body: JSON.stringify(data) }),
   scheduleGroups: () => presenceReq<ScheduleGroup[]>('/schedule-groups'),
   mandates: () => presenceReq<DailyMandate[]>('/mandates'),
-  createMandate: (data: { userId: string; date: string; expectedArrivalTime: string; reason?: string }) =>
-    presenceReq<DailyMandate>('/mandates', { method: 'POST', body: JSON.stringify(data) }),
+  createMandate: (data: {
+    userId: string
+    date: string
+    expectedArrivalTime: string
+    reason?: string
+  }) => presenceReq<DailyMandate>('/mandates', { method: 'POST', body: JSON.stringify(data) }),
   deleteMandate: (id: string) =>
     presenceReq<{ deleted: boolean }>(`/mandates/${id}`, { method: 'DELETE' }),
 }

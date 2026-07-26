@@ -56,6 +56,5 @@ export const announcementsApi = {
       body: JSON.stringify(payload),
     }),
 
-  remove: (id: string) =>
-    req<{ deleted: boolean }>(`/announcements/${id}`, { method: 'DELETE' }),
+  remove: (id: string) => req<{ deleted: boolean }>(`/announcements/${id}`, { method: 'DELETE' }),
 }

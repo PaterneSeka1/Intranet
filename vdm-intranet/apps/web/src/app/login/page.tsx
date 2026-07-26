@@ -3,7 +3,7 @@ import { LoginClient } from '@/components/auth/LoginClient'
 
 export default async function LoginPage() {
   const settings = await fetchSettings()
-  const s = Object.fromEntries(settings.map(x => [x.key, x.value]))
+  const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
 
   return (
     <LoginClient

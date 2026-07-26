@@ -43,7 +43,7 @@ export class UsersController {
 
   @Get(':id')
   @Roles(Role.CTO_ADMIN, Role.PDG, Role.DAF, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE)
-  @ApiOperation({ summary: 'Détail d\'un utilisateur (scopé selon rôle)' })
+  @ApiOperation({ summary: "Détail d'un utilisateur (scopé selon rôle)" })
   findOne(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     return this.usersService.findOne(id, user)
   }

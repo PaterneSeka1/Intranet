@@ -29,7 +29,11 @@ export async function serverFetch<T>(path: string, init?: RequestInit): Promise<
 
   try {
     const res = await fetch(`${API}/api${path}`, {
-      headers: { Cookie: `${COOKIE}=${token}`, 'Content-Type': 'application/json', ...init?.headers },
+      headers: {
+        Cookie: `${COOKIE}=${token}`,
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
       cache: 'no-store',
       ...init,
     })

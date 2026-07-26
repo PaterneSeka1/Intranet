@@ -2,7 +2,10 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
-import { MonHistoriqueClient, type ConnectionLog } from '@/components/historique/MonHistoriqueClient'
+import {
+  MonHistoriqueClient,
+  type ConnectionLog,
+} from '@/components/historique/MonHistoriqueClient'
 import { API_BASE } from '@/lib/api-base'
 
 async function getMyConnections(): Promise<ConnectionLog[]> {
@@ -11,10 +14,10 @@ async function getMyConnections(): Promise<ConnectionLog[]> {
     const cookieName = process.env.COOKIE_NAME ?? 'vdm_token'
     const token = cookieStore.get(cookieName)?.value
     if (!token) return []
-    const res = await fetch(
-      `${API_BASE}/api/presence/my-connections?limit=200`,
-      { headers: { Cookie: `${cookieName}=${token}` }, cache: 'no-store' },
-    )
+    const res = await fetch(`${API_BASE}/api/presence/my-connections?limit=200`, {
+      headers: { Cookie: `${cookieName}=${token}` },
+      cache: 'no-store',
+    })
     if (!res.ok) return []
     return res.json()
   } catch {

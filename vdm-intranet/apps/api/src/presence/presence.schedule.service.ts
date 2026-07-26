@@ -13,7 +13,7 @@ export interface ScheduleSource {
 export class PresenceScheduleService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
+    private readonly config: ConfigService
   ) {}
 
   async getScheduleSource(userId: string, date: Date): Promise<ScheduleSource> {
@@ -33,7 +33,11 @@ export class PresenceScheduleService {
     if (!user) return { time: null, source: 'none', isNightShift: false }
 
     if (user.mandates.length > 0) {
-      return { time: user.mandates[0].expectedArrivalTime, source: 'mandate', isNightShift: false }
+      return {
+        time: user.mandates[0].expectedArrivalTime,
+        source: 'mandate',
+        isNightShift: user.scheduleGroup?.isNightShift ?? false,
+      }
     }
 
     if (user.scheduleGroup) {
@@ -70,20 +74,21 @@ export class PresenceScheduleService {
     }
 
     if (user.individualExpectedDepartureTime) {
-      return { time: user.individualExpectedDepartureTime, source: 'individual', isNightShift: false }
+      return {
+        time: user.individualExpectedDepartureTime,
+        source: 'individual',
+        isNightShift: false,
+      }
     }
 
     return { time: null, source: 'none', isNightShift: false }
   }
 
-  private async getDailyMandate(userId: string, date: Date) {
-    return this.prisma.dailyMandate.findUnique({
-      where: { userId_date: { userId, date } },
-      include: { createdBy: { select: { id: true, username: true, fullName: true } } },
-    })
-  }
-
-  private calculateDelayMinutes(expectedTime: string, actualDateTime: Date, isNightShift = false): number {
+  private calculateDelayMinutes(
+    expectedTime: string,
+    actualDateTime: Date,
+    isNightShift = false
+  ): number {
     const [expHour, expMin] = expectedTime.split(':').map(Number)
     const actualHour = actualDateTime.getUTCHours()
     const actualMin = actualDateTime.getUTCMinutes()
@@ -101,7 +106,7 @@ export class PresenceScheduleService {
   calculatePresenceStatus(
     expectedTime: string,
     actualDateTime: Date,
-    isNightShift = false,
+    isNightShift = false
   ): { status: PresenceStatus; delayMinutes: number | null } {
     if (!expectedTime) return { status: 'PRESENT', delayMinutes: null }
 
@@ -115,7 +120,11 @@ export class PresenceScheduleService {
   }
 
   // Écart signé par rapport à l'heure de départ attendue : positif = parti plus tard, négatif = parti plus tôt.
-  calculateDepartureDelayMinutes(expectedTime: string, actualDateTime: Date, isNightShift = false): number {
+  calculateDepartureDelayMinutes(
+    expectedTime: string,
+    actualDateTime: Date,
+    isNightShift = false
+  ): number {
     return this.calculateDelayMinutes(expectedTime, actualDateTime, isNightShift)
   }
 }

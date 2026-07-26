@@ -25,7 +25,6 @@ export function LoginAnimation({ username, onComplete }: Props) {
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="la-scene">
-
         <div className="la-back-glow" />
 
         {/* Porte gauche */}
@@ -57,11 +56,8 @@ export function LoginAnimation({ username, onComplete }: Props) {
           <div className="la-mark">V</div>
           <div className="la-name">VEILLEUR DES MÉDIAS</div>
           <div className="la-rule" />
-          <h1 className="la-welcome">
-            {display ? `Bienvenue, ${display}.` : 'Bienvenue.'}
-          </h1>
+          <h1 className="la-welcome">{display ? `Bienvenue, ${display}.` : 'Bienvenue.'}</h1>
         </div>
-
       </div>
     </>,
     document.body

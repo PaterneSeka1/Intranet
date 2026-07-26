@@ -11,6 +11,7 @@ import { LoginAnimation } from '@/components/auth/LoginAnimation'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { fetchSettings } from '@/lib/settings'
+import { escapeCssString, opacitySettingToCss } from '@/lib/theme-settings'
 
 type Step = 'form' | 'geo' | 'animating'
 
@@ -34,15 +35,20 @@ export function LoginClient({
 
   useEffect(() => {
     let cancelled = false
-    fetchSettings().then(settings => {
-      if (cancelled) return
-      const m = Object.fromEntries(settings.map(s => [s.key, s.value]))
-      if (m['vdm_bg_image']) {
-        document.documentElement.style.setProperty('--vdm-bg-image', `url("${m['vdm_bg_image']}")`)
-        const opacity = m['vdm_bg_image_opacity'] ?? '0.3'
-        document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
-      }
-    }).catch(() => {})
+    fetchSettings()
+      .then((settings) => {
+        if (cancelled) return
+        const m = Object.fromEntries(settings.map((s) => [s.key, s.value]))
+        if (m['vdm_bg_image']) {
+          document.documentElement.style.setProperty(
+            '--vdm-bg-image',
+            `url("${escapeCssString(m['vdm_bg_image'])}")`
+          )
+          const opacity = opacitySettingToCss(m['vdm_bg_image_opacity'])
+          document.documentElement.style.setProperty('--vdm-bg-image-opacity', opacity)
+        }
+      })
+      .catch(() => {})
     return () => {
       cancelled = true
       document.documentElement.style.removeProperty('--vdm-bg-image')
@@ -54,7 +60,16 @@ export function LoginClient({
     setLoading(true)
     setError('')
     try {
-      const { requiresFirstLoginGeolocation } = await api.auth.login(username.trim(), password)
+      const { user, requiresFirstLoginGeolocation } = await api.auth.login(
+        username.trim(),
+        password
+      )
+
+      if (user.mustChangePassword) {
+        router.replace('/mon-profil')
+        router.refresh()
+        return
+      }
 
       if (requiresFirstLoginGeolocation) {
         setStep('geo')
@@ -66,7 +81,11 @@ export function LoginClient({
       }
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.status === 401 ? 'Identifiant ou mot de passe incorrect.' : 'Erreur serveur — réessayez.')
+        setError(
+          err.status === 401
+            ? 'Identifiant ou mot de passe incorrect.'
+            : 'Erreur serveur — réessayez.'
+        )
       } else {
         setError('Impossible de contacter le serveur.')
       }
@@ -93,15 +112,24 @@ export function LoginClient({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--vdm-login-bg)' }}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'var(--vdm-login-bg)' }}
+    >
       <BgImageLayer />
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
         <div className="text-center mb-8">
           {initialLogo ? (
-            <img src={initialLogo} alt="" className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-md shadow-orange-100" />
+            <img
+              src={initialLogo}
+              alt=""
+              className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-md shadow-orange-100"
+            />
           ) : (
             <div className="w-14 h-14 rounded-2xl bg-[#F28C38] flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-100">
-              <span className="text-white text-2xl font-bold">{initialAppName[0]?.toUpperCase() ?? 'V'}</span>
+              <span className="text-white text-2xl font-bold">
+                {initialAppName[0]?.toUpperCase() ?? 'V'}
+              </span>
             </div>
           )}
           <h1 className="text-lg font-bold text-gray-900">{initialAppName}</h1>
@@ -110,7 +138,10 @@ export function LoginClient({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="login-username" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+            <label
+              htmlFor="login-username"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
               Identifiant
             </label>
             <input
@@ -127,7 +158,10 @@ export function LoginClient({
           </div>
 
           <div>
-            <label htmlFor="login-password" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+            <label
+              htmlFor="login-password"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
               Mot de passe
             </label>
             <PasswordInput
@@ -156,7 +190,10 @@ export function LoginClient({
           </button>
 
           <div className="flex justify-end -mt-1">
-            <Link href="/mot-de-passe-oublie" className="text-xs text-gray-400 hover:text-[#F28C38] transition-colors">
+            <Link
+              href="/mot-de-passe-oublie"
+              className="text-xs text-gray-400 hover:text-[#F28C38] transition-colors"
+            >
               Mot de passe oublié ?
             </Link>
           </div>

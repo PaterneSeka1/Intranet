@@ -20,8 +20,34 @@ function wmoLabel(code: number): { label: string; icon: string } {
 }
 
 const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
-const MONTHS_SHORT = ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC']
+const MONTHS = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+]
+const MONTHS_SHORT = [
+  'JAN',
+  'FÉV',
+  'MAR',
+  'AVR',
+  'MAI',
+  'JUN',
+  'JUL',
+  'AOÛ',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DÉC',
+]
 
 const WIDGET_KEYS = ['clock', 'calendar', 'weather'] as const
 type WidgetKey = (typeof WIDGET_KEYS)[number]
@@ -52,7 +78,9 @@ function getCachedWeather(): WeatherData | null {
 function setCachedWeather(data: WeatherData) {
   try {
     localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 }
 
 // Isolated clock — only this component re-renders every second
@@ -89,34 +117,47 @@ export function Widgets() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherError, setWeatherError] = useState(false)
   const [visible, setVisible] = useState<Record<WidgetKey, boolean>>({
-    clock: true, calendar: true, weather: true,
+    clock: true,
+    calendar: true,
+    weather: true,
   })
 
   useLayoutEffect(() => {
     try {
       const stored = localStorage.getItem('vdm_widgets')
       if (stored) setVisible(JSON.parse(stored))
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
 
     const cached = getCachedWeather()
     if (cached) setWeather(cached)
   }, [])
 
   function toggleWidget(key: WidgetKey) {
-    setVisible(prev => {
+    setVisible((prev) => {
       const next = { ...prev, [key]: !prev[key] }
-      try { localStorage.setItem('vdm_widgets', JSON.stringify(next)) } catch { /* noop */ }
+      try {
+        localStorage.setItem('vdm_widgets', JSON.stringify(next))
+      } catch {
+        /* noop */
+      }
       return next
     })
   }
 
   useEffect(() => {
     const cached = getCachedWeather()
-    if (cached) { setWeather(cached); return }
+    if (cached) {
+      setWeather(cached)
+      return
+    }
 
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=5.345&longitude=-4.0&current_weather=true&timezone=Africa%2FAbidjan')
-      .then(r => r.json())
-      .then(data => {
+    fetch(
+      'https://api.open-meteo.com/v1/forecast?latitude=5.345&longitude=-4.0&current_weather=true&timezone=Africa%2FAbidjan'
+    )
+      .then((r) => r.json())
+      .then((data) => {
         const w: WeatherData = {
           temperature: Math.round(data.current_weather.temperature),
           weatherCode: data.current_weather.weathercode,
@@ -137,15 +178,16 @@ export function Widgets() {
   for (let d = 1; d <= daysInMonth; d++) calCells.push(d)
   while (calCells.length % 7 !== 0) calCells.push(null)
 
-  const { label: weatherLabel, icon: weatherIcon } = weather ? wmoLabel(weather.weatherCode) : { label: '', icon: '' }
+  const { label: weatherLabel, icon: weatherIcon } = weather
+    ? wmoLabel(weather.weatherCode)
+    : { label: '', icon: '' }
   const anyVisible = Object.values(visible).some(Boolean)
 
   return (
     <div className="fixed bottom-6 right-6 z-40 hidden lg:flex flex-col items-end gap-2 pointer-events-none">
-
       {/* ── Bascules ── */}
       <div className="flex gap-1.5 pointer-events-auto">
-        {WIDGET_KEYS.map(key => (
+        {WIDGET_KEYS.map((key) => (
           <button
             key={key}
             onClick={() => toggleWidget(key)}
@@ -163,7 +205,6 @@ export function Widgets() {
       {/* ── Cartes widgets ── */}
       {anyVisible && (
         <div className="flex gap-3 items-end pointer-events-auto">
-
           {/* Horloge — composant isolé pour limiter les re-renders */}
           {visible.clock && <ClockWidget />}
 
@@ -175,7 +216,9 @@ export function Widgets() {
               </div>
               <div className="grid grid-cols-7">
                 {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-                  <div key={i} className="text-[9px] font-bold text-gray-400 text-center py-0.5">{d}</div>
+                  <div key={i} className="text-[9px] font-bold text-gray-400 text-center py-0.5">
+                    {d}
+                  </div>
                 ))}
                 {calCells.map((day, i) => (
                   <div
@@ -198,7 +241,9 @@ export function Widgets() {
           {/* Météo Abidjan — mise en cache 10 min */}
           {visible.weather && (
             <div className={`${CARD} w-40 p-4 flex flex-col items-center gap-1`}>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abidjan</div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                Abidjan
+              </div>
               {weatherError ? (
                 <div className="text-xs text-gray-400 mt-2">Indisponible</div>
               ) : !weather ? (
@@ -206,7 +251,9 @@ export function Widgets() {
               ) : (
                 <>
                   <div className="text-4xl mt-1">{weatherIcon}</div>
-                  <div className="text-2xl font-bold text-gray-900 leading-tight">{weather.temperature} °C</div>
+                  <div className="text-2xl font-bold text-gray-900 leading-tight">
+                    {weather.temperature} °C
+                  </div>
                   <div className="text-xs text-gray-500">{weatherLabel}</div>
                   <div className="text-[10px] text-gray-400">Vent {weather.windspeed} km/h</div>
                 </>

@@ -1,24 +1,40 @@
-import { IsBoolean, IsDateString, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
+import {
+  IsBoolean,
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator'
 
 export class CreateAnnouncementDto {
-  @IsString() @IsNotEmpty() @MaxLength(200)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
   title!: string
 
-  @IsString() @IsNotEmpty() @MaxLength(5000)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
   body!: string
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   businessUnitId?: string
 
-  @IsBoolean() @IsOptional()
+  @IsBoolean()
+  @IsOptional()
   isPinned?: boolean
 
-  @IsBoolean() @IsOptional()
+  @IsBoolean()
+  @IsOptional()
   isActive?: boolean
 
-  @IsDateString() @IsOptional()
+  @IsDateString()
+  @IsOptional()
   publishedAt?: string
 
-  @IsDateString() @IsOptional()
+  @IsDateString()
+  @IsOptional()
   expiresAt?: string
 }

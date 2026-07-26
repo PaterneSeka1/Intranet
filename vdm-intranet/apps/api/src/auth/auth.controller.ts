@@ -19,7 +19,10 @@ export class AuthController {
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @ApiOperation({ summary: 'Connexion — retourne le cookie JWT' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const { token, user, requiresFirstLoginGeolocation } = await this.authService.login(dto.username, dto.password)
+    const { token, user, requiresFirstLoginGeolocation } = await this.authService.login(
+      dto.username,
+      dto.password
+    )
     res.cookie(this.authService.cookieName(), token, this.authService.cookieOptions())
     return { user, requiresFirstLoginGeolocation }
   }
@@ -50,7 +53,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  @ApiOperation({ summary: 'Profil de l\'utilisateur connecté' })
+  @ApiOperation({ summary: "Profil de l'utilisateur connecté" })
   async me(@CurrentUser() user: { id: string }) {
     return this.authService.getMe(user.id)
   }

@@ -1,24 +1,33 @@
 import { IsBoolean, IsDateString, IsOptional, IsString, MaxLength } from 'class-validator'
 
 export class UpdateAnnouncementDto {
-  @IsString() @IsOptional() @MaxLength(200)
+  @IsString()
+  @IsOptional()
+  @MaxLength(200)
   title?: string
 
-  @IsString() @IsOptional() @MaxLength(5000)
+  @IsString()
+  @IsOptional()
+  @MaxLength(5000)
   body?: string
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   businessUnitId?: string | null
 
-  @IsBoolean() @IsOptional()
+  @IsBoolean()
+  @IsOptional()
   isPinned?: boolean
 
-  @IsBoolean() @IsOptional()
+  @IsBoolean()
+  @IsOptional()
   isActive?: boolean
 
-  @IsDateString() @IsOptional()
+  @IsDateString()
+  @IsOptional()
   publishedAt?: string
 
-  @IsDateString() @IsOptional()
+  @IsDateString()
+  @IsOptional()
   expiresAt?: string | null
 }

@@ -55,11 +55,13 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'planned' | 'expired'>('all')
+  const [filterStatus, setFilterStatus] = useState<
+    'all' | 'active' | 'inactive' | 'planned' | 'expired'
+  >('all')
 
   const filteredItems = useMemo(() => {
     if (filterStatus === 'all') return items
-    return items.filter(a => {
+    return items.filter((a) => {
       if (filterStatus === 'inactive') return !a.isActive
       if (!a.isActive) return false
       const now = new Date()
@@ -114,12 +116,12 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
 
       if (editing) {
         const updated = await announcementsApi.update(editing.id, payload)
-        setItems(prev => prev.map(a => a.id === editing.id ? updated : a))
+        setItems((prev) => prev.map((a) => (a.id === editing.id ? updated : a)))
         closeForm()
         toast.success('Annonce mise à jour.')
       } else {
         const created = await announcementsApi.create(payload)
-        setItems(prev => [created, ...prev])
+        setItems((prev) => [created, ...prev])
         closeForm()
         toast.success('Annonce créée avec succès.')
       }
@@ -133,7 +135,7 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
   async function toggleActive(a: Announcement) {
     try {
       const updated = await announcementsApi.update(a.id, { isActive: !a.isActive })
-      setItems(prev => prev.map(x => x.id === a.id ? updated : x))
+      setItems((prev) => prev.map((x) => (x.id === a.id ? updated : x)))
       toast.info(updated.isActive ? 'Annonce activée.' : 'Annonce désactivée.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.')
@@ -142,7 +144,7 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
 
   async function handleDelete(a: Announcement) {
     const ok = await confirm({
-      title: 'Supprimer l\'annonce',
+      title: "Supprimer l'annonce",
       message: `Supprimer l'annonce « ${a.title} » ? Cette action est irréversible.`,
       confirmLabel: 'Supprimer',
       destructive: true,
@@ -150,7 +152,7 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
     if (!ok) return
     try {
       await announcementsApi.remove(a.id)
-      setItems(prev => prev.filter(x => x.id !== a.id))
+      setItems((prev) => prev.filter((x) => x.id !== a.id))
       toast.success('Annonce supprimée.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression.')
@@ -161,7 +163,7 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
   const safePage = Math.min(page, totalPages)
   const pageItems = useMemo(
     () => filteredItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [filteredItems, safePage],
+    [filteredItems, safePage]
   )
 
   function getStatus(a: Announcement): { label: string; cls: string } {
@@ -169,7 +171,8 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
     const now = new Date()
     const pub = new Date(a.publishedAt)
     if (pub > now) return { label: 'Planifié', cls: 'bg-blue-100 text-blue-700' }
-    if (a.expiresAt && new Date(a.expiresAt) < now) return { label: 'Expiré', cls: 'bg-red-100 text-red-600' }
+    if (a.expiresAt && new Date(a.expiresAt) < now)
+      return { label: 'Expiré', cls: 'bg-red-100 text-red-600' }
     return { label: 'Actif', cls: 'bg-green-100 text-green-700' }
   }
 
@@ -187,7 +190,10 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
         <div className="flex items-center gap-2">
           <select
             value={filterStatus}
-            onChange={e => { setFilterStatus(e.target.value as typeof filterStatus); setPage(1) }}
+            onChange={(e) => {
+              setFilterStatus(e.target.value as typeof filterStatus)
+              setPage(1)
+            }}
             className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white text-gray-600"
           >
             <option value="all">Tous les statuts</option>
@@ -208,11 +214,15 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
       <div className="space-y-3">
         {filteredItems.length === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
-            {filterStatus === "all" ? <>Aucune annonce pour l&apos;instant.</> : <>Aucune annonce pour ce filtre.</>}
+            {filterStatus === 'all' ? (
+              <>Aucune annonce pour l&apos;instant.</>
+            ) : (
+              <>Aucune annonce pour ce filtre.</>
+            )}
           </div>
         )}
 
-        {pageItems.map(a => {
+        {pageItems.map((a) => {
           const status = getStatus(a)
           return (
             <div
@@ -220,12 +230,16 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
               className={`bg-white rounded-2xl border p-5 flex gap-4 ${a.isPinned ? 'border-[#F28C38]/30' : 'border-gray-100'}`}
             >
               {a.isPinned && (
-                <div className="mt-0.5 text-[#F28C38] text-lg" title="Épinglée">📌</div>
+                <div className="mt-0.5 text-[#F28C38] text-lg" title="Épinglée">
+                  📌
+                </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-3 mb-1">
                   <div className="font-semibold text-gray-900 text-sm">{a.title}</div>
-                  <span className={`shrink-0 text-xs font-bold px-2.5 py-0.5 rounded-full ${status.cls}`}>
+                  <span
+                    className={`shrink-0 text-xs font-bold px-2.5 py-0.5 rounded-full ${status.cls}`}
+                  >
                     {status.label}
                   </span>
                 </div>
@@ -282,121 +296,150 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
       <Modal
         open={showForm}
         onClose={closeForm}
-        title={editing ? 'Modifier l\'annonce' : 'Nouvelle annonce'}
-        subtitle={editing ? `Éditer « ${editing.title} »` : 'Rédiger et programmer une nouvelle communication'}
+        title={editing ? "Modifier l'annonce" : 'Nouvelle annonce'}
+        subtitle={
+          editing
+            ? `Éditer « ${editing.title} »`
+            : 'Rédiger et programmer une nouvelle communication'
+        }
         size="xl"
       >
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="ann-title" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Titre *</label>
-                <input
-                  id="ann-title"
-                  type="text"
-                  value={form.title}
-                  onChange={e => setForm({ ...form, title: e.target.value })}
-                  required
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="ann-title"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Titre *
+            </label>
+            <input
+              id="ann-title"
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              required
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
+            />
+          </div>
 
-              <div>
-                <label htmlFor="ann-body" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Corps *</label>
-                <textarea
-                  id="ann-body"
-                  value={form.body}
-                  onChange={e => setForm({ ...form, body: e.target.value })}
-                  required
-                  rows={4}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] resize-none"
-                />
-              </div>
+          <div>
+            <label
+              htmlFor="ann-body"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Corps *
+            </label>
+            <textarea
+              id="ann-body"
+              value={form.body}
+              onChange={(e) => setForm({ ...form, body: e.target.value })}
+              required
+              rows={4}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] resize-none"
+            />
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="ann-published" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Publication</label>
-                  <input
-                    id="ann-published"
-                    type="date"
-                    value={form.publishedAt}
-                    onChange={e => setForm({ ...form, publishedAt: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="ann-expires" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Expiration <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
-                  </label>
-                  <input
-                    id="ann-expires"
-                    type="date"
-                    value={form.expiresAt}
-                    onChange={e => setForm({ ...form, expiresAt: e.target.value })}
-                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="ann-published"
+                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+              >
+                Publication
+              </label>
+              <input
+                id="ann-published"
+                type="date"
+                value={form.publishedAt}
+                onChange={(e) => setForm({ ...form, publishedAt: e.target.value })}
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="ann-expires"
+                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+              >
+                Expiration{' '}
+                <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+              </label>
+              <input
+                id="ann-expires"
+                type="date"
+                value={form.expiresAt}
+                onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
+              />
+            </div>
+          </div>
 
-              <div>
-                <label htmlFor="ann-bu" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  BU ciblée <span className="text-gray-400 normal-case font-normal">(toutes si vide)</span>
-                </label>
-                <select
-                  id="ann-bu"
-                  value={form.businessUnitId}
-                  onChange={e => setForm({ ...form, businessUnitId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white"
-                >
-                  <option value="">Toutes les BU</option>
-                  {buList.map(bu => (
-                    <option key={bu.id} value={bu.id}>{bu.name}</option>
-                  ))}
-                </select>
-              </div>
+          <div>
+            <label
+              htmlFor="ann-bu"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              BU ciblée{' '}
+              <span className="text-gray-400 normal-case font-normal">(toutes si vide)</span>
+            </label>
+            <select
+              id="ann-bu"
+              value={form.businessUnitId}
+              onChange={(e) => setForm({ ...form, businessUnitId: e.target.value })}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white"
+            >
+              <option value="">Toutes les BU</option>
+              {buList.map((bu) => (
+                <option key={bu.id} value={bu.id}>
+                  {bu.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.isPinned}
-                    onChange={e => setForm({ ...form, isPinned: e.target.checked })}
-                    className="rounded border-gray-300 text-[#F28C38] focus:ring-[#F28C38]"
-                  />
-                  <span className="text-sm text-gray-700">Épinglée</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.isActive}
-                    onChange={e => setForm({ ...form, isActive: e.target.checked })}
-                    className="rounded border-gray-300 text-[#F28C38] focus:ring-[#F28C38]"
-                  />
-                  <span className="text-sm text-gray-700">Active</span>
-                </label>
-              </div>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isPinned}
+                onChange={(e) => setForm({ ...form, isPinned: e.target.checked })}
+                className="rounded border-gray-300 text-[#F28C38] focus:ring-[#F28C38]"
+              />
+              <span className="text-sm text-gray-700">Épinglée</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                className="rounded border-gray-300 text-[#F28C38] focus:ring-[#F28C38]"
+              />
+              <span className="text-sm text-gray-700">Active</span>
+            </label>
+          </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
-                  {error}
-                </div>
-              )}
+          {error && (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
+              {error}
+            </div>
+          )}
 
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Enregistrement…' : editing ? 'Mettre à jour' : 'Créer'}
-                </button>
-              </div>
-            </form>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : editing ? 'Mettre à jour' : 'Créer'}
+            </button>
+          </div>
+        </form>
       </Modal>
     </>
   )

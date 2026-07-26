@@ -6,7 +6,7 @@ import { API_BASE as BASE } from './api-base'
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    message: string,
+    message: string
   ) {
     super(message)
     this.name = 'ApiError'
@@ -27,7 +27,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   } finally {
     clearTimeout(tid)
   }
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
     if (typeof window !== 'undefined') {
       window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`
     }
@@ -35,7 +35,12 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     let msg = 'Erreur serveur'
-    try { const body = await res.json(); msg = body.message ?? msg } catch { /* ignore */ }
+    try {
+      const body = await res.json()
+      msg = body.message ?? msg
+    } catch {
+      /* ignore */
+    }
     throw new ApiError(res.status, msg)
   }
   return res.json() as Promise<T>
@@ -49,13 +54,22 @@ export interface LoginResponse {
 export const api = {
   auth: {
     login: (username: string, password: string) =>
-      req<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+      req<LoginResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      }),
     logout: () => req<{ message: string }>('/auth/logout', { method: 'POST' }),
     me: () => req<User>('/auth/me'),
     forgotPassword: (identifier: string) =>
-      req<{ message: string }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ identifier }) }),
+      req<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ identifier }),
+      }),
     resetPassword: (token: string, newPassword: string) =>
-      req<{ message: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
+      req<{ message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword }),
+      }),
   },
   users: {
     list: () => req<User[]>('/users'),

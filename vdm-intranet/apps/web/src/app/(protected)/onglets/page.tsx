@@ -3,7 +3,7 @@ import { getCurrentUser, serverFetch } from '@/lib/auth'
 import { TabsManager } from '@/components/tabs/TabsManager'
 import type { Tab } from '@/lib/tabs'
 
-const CAN_VIEW = ['CTO_ADMIN', 'PDG', 'RESPONSABLE_BU']
+const CAN_VIEW = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU']
 
 export default async function OngletsPage() {
   const user = await getCurrentUser()
@@ -18,7 +18,7 @@ export default async function OngletsPage() {
   const tabs = tabsRaw ?? []
   const buList = (buListRaw ?? []).sort((a, b) => a.name.localeCompare(b.name))
 
-  const canManageAll = ['CTO_ADMIN', 'PDG'].includes(user.role)
+  const canManageAll = ['CTO_ADMIN', 'PDG', 'DAF'].includes(user.role)
 
   return (
     <div className="p-6">

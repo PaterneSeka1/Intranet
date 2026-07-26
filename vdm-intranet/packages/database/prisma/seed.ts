@@ -10,10 +10,23 @@ async function main() {
   if (!seedPassword) {
     throw new Error(
       'SEED_PASSWORD manquant. Définissez-le dans votre .env avant de lancer le seed.\n' +
-      'Exemple : SEED_PASSWORD="MotDePasse-Fort-2024!"',
+        'Exemple : SEED_PASSWORD="MotDePasse-Fort-2024!"'
     )
   }
   const pwd = await bcrypt.hash(seedPassword, 12)
+
+  console.log('  Nettoyage de la base de données...')
+  await prisma.activityLog.deleteMany()
+  await prisma.connectionLog.deleteMany()
+  await prisma.passwordResetToken.deleteMany()
+  await prisma.presence.deleteMany()
+  await prisma.dailyMandate.deleteMany()
+  await prisma.portalTab.deleteMany()
+  await prisma.announcement.deleteMany()
+  await prisma.user.deleteMany()
+  await prisma.scheduleGroup.deleteMany()
+  await prisma.pole.deleteMany()
+  await prisma.businessUnit.deleteMany()
 
   // ---- Business Units ----
   const buDefs = [
@@ -59,17 +72,45 @@ async function main() {
 
   // ---- Groupes horaires ----
   const groupDefs = [
-    { code: 'JOUR_0800', name: 'Jour — 08h00', expectedArrivalTime: '08:00', expectedDepartureTime: '17:00', isNightShift: false },
-    { code: 'JOUR_0830', name: 'Jour — 08h30', expectedArrivalTime: '08:30', expectedDepartureTime: '17:30', isNightShift: false },
-    { code: 'JOUR_0900', name: 'Jour — 09h00', expectedArrivalTime: '09:00', expectedDepartureTime: '18:00', isNightShift: false },
-    { code: 'NUIT_2000', name: 'Nuit — 20h00', expectedArrivalTime: '20:00', expectedDepartureTime: '05:00', isNightShift: true },
+    {
+      code: 'JOUR_0800',
+      name: 'Jour — 08h00',
+      expectedArrivalTime: '08:00',
+      expectedDepartureTime: '17:00',
+      isNightShift: false,
+    },
+    {
+      code: 'JOUR_0830',
+      name: 'Jour — 08h30',
+      expectedArrivalTime: '08:30',
+      expectedDepartureTime: '17:30',
+      isNightShift: false,
+    },
+    {
+      code: 'JOUR_0900',
+      name: 'Jour — 09h00',
+      expectedArrivalTime: '09:00',
+      expectedDepartureTime: '18:00',
+      isNightShift: false,
+    },
+    {
+      code: 'NUIT_2000',
+      name: 'Nuit — 20h00',
+      expectedArrivalTime: '20:00',
+      expectedDepartureTime: '05:00',
+      isNightShift: true,
+    },
   ]
 
   const groups: Record<string, string> = {}
   for (const g of groupDefs) {
     const r = await prisma.scheduleGroup.upsert({
       where: { code: g.code },
-      update: { name: g.name, expectedArrivalTime: g.expectedArrivalTime, expectedDepartureTime: g.expectedDepartureTime },
+      update: {
+        name: g.name,
+        expectedArrivalTime: g.expectedArrivalTime,
+        expectedDepartureTime: g.expectedDepartureTime,
+      },
       create: g,
     })
     groups[g.code] = r.id
@@ -90,35 +131,198 @@ async function main() {
 
   const userDefs: UserDef[] = [
     // Direction
-    { username: 'CTO', firstName: 'Franck-Emmanuel', lastName: 'OUFFOUET', role: 'CTO_ADMIN', buCode: 'DT', groupCode: 'JOUR_0830' },
-    { username: 'PDG', firstName: 'Fabrice', lastName: 'PIOFRET', role: 'PDG', buCode: 'DG', individualExpectedArrivalTime: '08:30' },
-    { username: 'DAF', firstName: 'Matirangue', lastName: 'SANOGO', role: 'DAF', buCode: 'DAF', groupCode: 'JOUR_0800' },
+    {
+      username: 'CTO',
+      firstName: 'Franck-Emmanuel',
+      lastName: 'OUFFOUET',
+      role: 'CTO_ADMIN',
+      buCode: 'DT',
+      groupCode: 'JOUR_0830',
+    },
+    {
+      username: 'PDG',
+      firstName: 'Fabrice',
+      lastName: 'PIOFRET',
+      role: 'PDG',
+      buCode: 'DG',
+      individualExpectedArrivalTime: '08:30',
+    },
+    {
+      username: 'DAF',
+      firstName: 'Matirangue',
+      lastName: 'SANOGO',
+      role: 'DAF',
+      buCode: 'DAF',
+      groupCode: 'JOUR_0800',
+    },
     // Responsables BU
-    { username: 'RBU_INFO', firstName: 'Stephen', lastName: 'KOUAKOU', role: 'RESPONSABLE_BU', buCode: 'INFO', groupCode: 'JOUR_0830' },
-    { username: 'RBU_EREP', firstName: 'Edmond', lastName: 'KONAN', role: 'RESPONSABLE_BU', buCode: 'EREP', groupCode: 'JOUR_0830' },
-    { username: 'RBU_SCI', firstName: 'Appolon', lastName: 'DOGO', role: 'RESPONSABLE_BU', buCode: 'SCI', groupCode: 'JOUR_0830' },
-    { username: 'RBU_ANALYSES', firstName: 'Joël', lastName: 'TCHETEHO', role: 'RESPONSABLE_BU', buCode: 'ANALYSES', groupCode: 'JOUR_0830' },
+    {
+      username: 'RBU_INFO',
+      firstName: 'Stephen',
+      lastName: 'KOUAKOU',
+      role: 'RESPONSABLE_BU',
+      buCode: 'INFO',
+      groupCode: 'JOUR_0830',
+    },
+    {
+      username: 'RBU_EREP',
+      firstName: 'Edmond',
+      lastName: 'KONAN',
+      role: 'RESPONSABLE_BU',
+      buCode: 'EREP',
+      groupCode: 'JOUR_0830',
+    },
+    {
+      username: 'RBU_SCI',
+      firstName: 'Appolon',
+      lastName: 'DOGO',
+      role: 'RESPONSABLE_BU',
+      buCode: 'SCI',
+      groupCode: 'JOUR_0830',
+    },
+    {
+      username: 'RBU_ANALYSES',
+      firstName: 'Joël',
+      lastName: 'TCHETEHO',
+      role: 'RESPONSABLE_BU',
+      buCode: 'ANALYSES',
+      groupCode: 'JOUR_0830',
+    },
     // Responsables Pôle
-    { username: 'POLE_PRESSE_JOUR', firstName: 'Jefferson', lastName: 'AGBO', role: 'RESPONSABLE_POLE', buCode: 'INFO', poleCode: 'POLE_PRESSE_JOUR', groupCode: 'JOUR_0830' },
-    { username: 'POLE_NUIT', firstName: 'Jean-Charles', lastName: 'ANOUGBA', role: 'RESPONSABLE_POLE', buCode: 'INFO', poleCode: 'POLE_NUIT', groupCode: 'NUIT_2000' },
-    { username: 'POLE_TVRADIO', firstName: 'Abel', lastName: "N'DRI", role: 'RESPONSABLE_POLE', buCode: 'INFO', poleCode: 'POLE_TVRADIO', groupCode: 'JOUR_0830' },
+    {
+      username: 'POLE_PRESSE_JOUR',
+      firstName: 'Jefferson',
+      lastName: 'AGBO',
+      role: 'RESPONSABLE_POLE',
+      buCode: 'INFO',
+      poleCode: 'POLE_PRESSE_JOUR',
+      groupCode: 'JOUR_0830',
+    },
+    {
+      username: 'POLE_NUIT',
+      firstName: 'Jean-Charles',
+      lastName: 'ANOUGBA',
+      role: 'RESPONSABLE_POLE',
+      buCode: 'INFO',
+      poleCode: 'POLE_NUIT',
+      groupCode: 'NUIT_2000',
+    },
+    {
+      username: 'POLE_TVRADIO',
+      firstName: 'Abel',
+      lastName: "N'DRI",
+      role: 'RESPONSABLE_POLE',
+      buCode: 'INFO',
+      poleCode: 'POLE_TVRADIO',
+      groupCode: 'JOUR_0830',
+    },
     // Consultants INFO
-    { username: 'CONS_PJ_1', firstName: 'Consultant', lastName: 'Presse Jour 1', role: 'CONSULTANT', buCode: 'INFO', poleCode: 'POLE_PRESSE_JOUR', groupCode: 'JOUR_0900' },
-    { username: 'CONS_NUIT_1', firstName: 'Consultant', lastName: 'Nuit 1', role: 'CONSULTANT', buCode: 'INFO', poleCode: 'POLE_NUIT', groupCode: 'NUIT_2000' },
-    { username: 'CONS_TVR_1', firstName: 'Consultant', lastName: 'TV Radio 1', role: 'CONSULTANT', buCode: 'INFO', poleCode: 'POLE_TVRADIO', groupCode: 'JOUR_0900' },
+    {
+      username: 'CONS_PJ_1',
+      firstName: 'Consultant',
+      lastName: 'Presse Jour 1',
+      role: 'CONSULTANT',
+      buCode: 'INFO',
+      poleCode: 'POLE_PRESSE_JOUR',
+      groupCode: 'JOUR_0900',
+    },
+    {
+      username: 'CONS_NUIT_1',
+      firstName: 'Consultant',
+      lastName: 'Nuit 1',
+      role: 'CONSULTANT',
+      buCode: 'INFO',
+      poleCode: 'POLE_NUIT',
+      groupCode: 'NUIT_2000',
+    },
+    {
+      username: 'CONS_TVR_1',
+      firstName: 'Consultant',
+      lastName: 'TV Radio 1',
+      role: 'CONSULTANT',
+      buCode: 'INFO',
+      poleCode: 'POLE_TVRADIO',
+      groupCode: 'JOUR_0900',
+    },
     // EREP
-    { username: 'ANGE_KAPET', firstName: 'Ange', lastName: 'KAPET', role: 'CONSULTANT', buCode: 'EREP', groupCode: 'JOUR_0900' },
-    { username: 'STAG_EREP_1', firstName: 'Stagiaire', lastName: 'E-Réputation 1', role: 'STAGIAIRE', buCode: 'EREP', groupCode: 'JOUR_0900' },
+    {
+      username: 'ANGE_KAPET',
+      firstName: 'Ange',
+      lastName: 'KAPET',
+      role: 'CONSULTANT',
+      buCode: 'EREP',
+      groupCode: 'JOUR_0900',
+    },
+    {
+      username: 'STAG_EREP_1',
+      firstName: 'Stagiaire',
+      lastName: 'E-Réputation 1',
+      role: 'STAGIAIRE',
+      buCode: 'EREP',
+      groupCode: 'JOUR_0900',
+    },
     // SCI
-    { username: 'LILIANE_KONAN', firstName: 'Liliane', lastName: 'KONAN', role: 'CONSULTANT', buCode: 'SCI', groupCode: 'JOUR_0900' },
-    { username: 'ANDREAS_BONI', firstName: 'Andréas', lastName: 'BONI', role: 'CONSULTANT', buCode: 'SCI', poleCode: 'POLE_QSC', groupCode: 'JOUR_0900' },
+    {
+      username: 'LILIANE_KONAN',
+      firstName: 'Liliane',
+      lastName: 'KONAN',
+      role: 'CONSULTANT',
+      buCode: 'SCI',
+      groupCode: 'JOUR_0900',
+    },
+    {
+      username: 'ANDREAS_BONI',
+      firstName: 'Andréas',
+      lastName: 'BONI',
+      role: 'CONSULTANT',
+      buCode: 'SCI',
+      poleCode: 'POLE_QSC',
+      groupCode: 'JOUR_0900',
+    },
     // Analyses
-    { username: 'ME_KOUAKOU', firstName: 'Marie-Emmanuelle', lastName: 'KOUAKOU', role: 'CONSULTANT', buCode: 'ANALYSES', groupCode: 'JOUR_0900' },
-    { username: 'JOSEPH_TANO', firstName: 'Joseph', lastName: 'TANO', role: 'CONSULTANT', buCode: 'ANALYSES', groupCode: 'JOUR_0900' },
-    { username: 'HENRI_AMAN', firstName: 'Henri-Emmanuel', lastName: 'AMAN', role: 'CONSULTANT', buCode: 'ANALYSES', groupCode: 'JOUR_0900' },
+    {
+      username: 'ME_KOUAKOU',
+      firstName: 'Marie-Emmanuelle',
+      lastName: 'KOUAKOU',
+      role: 'CONSULTANT',
+      buCode: 'ANALYSES',
+      groupCode: 'JOUR_0900',
+    },
+    {
+      username: 'JOSEPH_TANO',
+      firstName: 'Joseph',
+      lastName: 'TANO',
+      role: 'CONSULTANT',
+      buCode: 'ANALYSES',
+      groupCode: 'JOUR_0900',
+    },
+    {
+      username: 'HENRI_AMAN',
+      firstName: 'Henri-Emmanuel',
+      lastName: 'AMAN',
+      role: 'CONSULTANT',
+      buCode: 'ANALYSES',
+      groupCode: 'JOUR_0900',
+    },
     // DT
-    { username: 'STAG_TECH_1', firstName: 'Stagiaire', lastName: 'Technique 1', role: 'STAGIAIRE', buCode: 'DT', poleCode: 'POLE_IA_DEV', groupCode: 'JOUR_0900' },
-    { username: 'GLENN_BOLDCODE', firstName: 'Glenn', lastName: 'Boldcode', role: 'PRESTATAIRE', buCode: 'DT', poleCode: 'POLE_IA_DEV', individualExpectedArrivalTime: '10:00' },
+    {
+      username: 'STAG_TECH_1',
+      firstName: 'Stagiaire',
+      lastName: 'Technique 1',
+      role: 'STAGIAIRE',
+      buCode: 'DT',
+      poleCode: 'POLE_IA_DEV',
+      groupCode: 'JOUR_0900',
+    },
+    {
+      username: 'GLENN_BOLDCODE',
+      firstName: 'Glenn',
+      lastName: 'Boldcode',
+      role: 'PRESTATAIRE',
+      buCode: 'DT',
+      poleCode: 'POLE_IA_DEV',
+      individualExpectedArrivalTime: '10:00',
+    },
   ]
 
   for (const u of userDefs) {
@@ -141,6 +345,7 @@ async function main() {
         poleId: u.poleCode ? poles[u.poleCode] : undefined,
         scheduleGroupId: u.groupCode ? groups[u.groupCode] : undefined,
         individualExpectedArrivalTime: u.individualExpectedArrivalTime,
+        mustChangePassword: true,
       },
     })
     console.log(`  ${u.username} — ${u.role}`)
@@ -154,38 +359,170 @@ async function main() {
 
   const tabsByBu: Record<string, TabDef[]> = {
     INFO: [
-      { name: 'Google News', url: 'https://news.google.com', icon: '📰', color: '#4285F4', description: 'Flux actualités Google' },
-      { name: 'Google Alertes', url: 'https://www.google.fr/alerts', icon: '🔔', color: '#34A853', description: 'Alertes médias configurées' },
-      { name: 'YouTube', url: 'https://www.youtube.com', icon: '▶️', color: '#FF0000', description: 'Veille vidéo' },
-      { name: 'X / Twitter', url: 'https://x.com', icon: '✖️', color: '#000000', description: 'Réseau social X' },
+      {
+        name: 'Google News',
+        url: 'https://news.google.com',
+        icon: '📰',
+        color: '#4285F4',
+        description: 'Flux actualités Google',
+      },
+      {
+        name: 'Google Alertes',
+        url: 'https://www.google.fr/alerts',
+        icon: '🔔',
+        color: '#34A853',
+        description: 'Alertes médias configurées',
+      },
+      {
+        name: 'YouTube',
+        url: 'https://www.youtube.com',
+        icon: '▶️',
+        color: '#FF0000',
+        description: 'Veille vidéo',
+      },
+      {
+        name: 'X / Twitter',
+        url: 'https://x.com',
+        icon: '✖️',
+        color: '#000000',
+        description: 'Réseau social X',
+      },
     ],
     EREP: [
-      { name: 'X / Twitter', url: 'https://x.com', icon: '✖️', color: '#000000', description: 'Suivi mentions X' },
-      { name: 'Facebook', url: 'https://www.facebook.com', icon: '📘', color: '#1877F2', description: 'Suivi Facebook' },
-      { name: 'LinkedIn', url: 'https://www.linkedin.com', icon: '💼', color: '#0A66C2', description: 'Veille LinkedIn' },
-      { name: 'Google Alertes', url: 'https://www.google.fr/alerts', icon: '🔔', color: '#34A853', description: 'Alertes e-réputation' },
+      {
+        name: 'X / Twitter',
+        url: 'https://x.com',
+        icon: '✖️',
+        color: '#000000',
+        description: 'Suivi mentions X',
+      },
+      {
+        name: 'Facebook',
+        url: 'https://www.facebook.com',
+        icon: '📘',
+        color: '#1877F2',
+        description: 'Suivi Facebook',
+      },
+      {
+        name: 'LinkedIn',
+        url: 'https://www.linkedin.com',
+        icon: '💼',
+        color: '#0A66C2',
+        description: 'Veille LinkedIn',
+      },
+      {
+        name: 'Google Alertes',
+        url: 'https://www.google.fr/alerts',
+        icon: '🔔',
+        color: '#34A853',
+        description: 'Alertes e-réputation',
+      },
     ],
     SCI: [
-      { name: 'Google Drive', url: 'https://drive.google.com', icon: '📁', color: '#4285F4', description: 'Documents partagés' },
-      { name: 'Gmail', url: 'https://mail.google.com', icon: '✉️', color: '#EA4335', description: 'Messagerie' },
-      { name: 'Trello', url: 'https://trello.com', icon: '📋', color: '#0079BF', description: 'Gestion de projets' },
-      { name: 'Notion', url: 'https://notion.so', icon: '📝', color: '#000000', description: 'Base de connaissances' },
+      {
+        name: 'Google Drive',
+        url: 'https://drive.google.com',
+        icon: '📁',
+        color: '#4285F4',
+        description: 'Documents partagés',
+      },
+      {
+        name: 'Gmail',
+        url: 'https://mail.google.com',
+        icon: '✉️',
+        color: '#EA4335',
+        description: 'Messagerie',
+      },
+      {
+        name: 'Trello',
+        url: 'https://trello.com',
+        icon: '📋',
+        color: '#0079BF',
+        description: 'Gestion de projets',
+      },
+      {
+        name: 'Notion',
+        url: 'https://notion.so',
+        icon: '📝',
+        color: '#000000',
+        description: 'Base de connaissances',
+      },
     ],
     ANALYSES: [
-      { name: 'Google Drive', url: 'https://drive.google.com', icon: '📁', color: '#4285F4', description: 'Rapports et analyses' },
-      { name: 'Looker Studio', url: 'https://lookerstudio.google.com', icon: '📊', color: '#4285F4', description: 'Tableaux de bord' },
-      { name: 'Google News', url: 'https://news.google.com', icon: '📰', color: '#4285F4', description: 'Sources média' },
-      { name: 'YouTube', url: 'https://www.youtube.com', icon: '▶️', color: '#FF0000', description: 'Veille audiovisuelle' },
+      {
+        name: 'Google Drive',
+        url: 'https://drive.google.com',
+        icon: '📁',
+        color: '#4285F4',
+        description: 'Rapports et analyses',
+      },
+      {
+        name: 'Looker Studio',
+        url: 'https://lookerstudio.google.com',
+        icon: '📊',
+        color: '#4285F4',
+        description: 'Tableaux de bord',
+      },
+      {
+        name: 'Google News',
+        url: 'https://news.google.com',
+        icon: '📰',
+        color: '#4285F4',
+        description: 'Sources média',
+      },
+      {
+        name: 'YouTube',
+        url: 'https://www.youtube.com',
+        icon: '▶️',
+        color: '#FF0000',
+        description: 'Veille audiovisuelle',
+      },
     ],
     DT: [
-      { name: 'GitHub', url: 'https://github.com', icon: '🐙', color: '#24292E', description: 'Dépôts de code' },
-      { name: 'Vercel', url: 'https://vercel.com', icon: '▲', color: '#000000', description: 'Déploiements frontend' },
-      { name: 'OVH', url: 'https://www.ovhcloud.com', icon: '☁️', color: '#123F6D', description: 'Infrastructure serveurs' },
+      {
+        name: 'GitHub',
+        url: 'https://github.com',
+        icon: '🐙',
+        color: '#24292E',
+        description: 'Dépôts de code',
+      },
+      {
+        name: 'Vercel',
+        url: 'https://vercel.com',
+        icon: '▲',
+        color: '#000000',
+        description: 'Déploiements frontend',
+      },
+      {
+        name: 'OVH',
+        url: 'https://www.ovhcloud.com',
+        icon: '☁️',
+        color: '#123F6D',
+        description: 'Infrastructure serveurs',
+      },
     ],
     DAF: [
-      { name: 'Google Drive', url: 'https://drive.google.com', icon: '📁', color: '#4285F4', description: 'Documents financiers' },
-      { name: 'Gmail', url: 'https://mail.google.com', icon: '✉️', color: '#EA4335', description: 'Messagerie DAF' },
-      { name: 'Excel Online', url: 'https://www.office.com/launch/excel', icon: '📗', color: '#217346', description: 'Tableaux comptables' },
+      {
+        name: 'Google Drive',
+        url: 'https://drive.google.com',
+        icon: '📁',
+        color: '#4285F4',
+        description: 'Documents financiers',
+      },
+      {
+        name: 'Gmail',
+        url: 'https://mail.google.com',
+        icon: '✉️',
+        color: '#EA4335',
+        description: 'Messagerie DAF',
+      },
+      {
+        name: 'Excel Online',
+        url: 'https://www.office.com/launch/excel',
+        icon: '📗',
+        color: '#217346',
+        description: 'Tableaux comptables',
+      },
     ],
   }
 
@@ -219,9 +556,14 @@ async function main() {
     groups: groupDefs.length,
     tabs: tabCount,
   }
-  console.log(`\nSeed terminé : ${stats.users} utilisateurs, ${stats.bus} BU, ${stats.poles} pôles, ${stats.groups} groupes, ${stats.tabs} onglets.`)
+  console.log(
+    `\nSeed terminé : ${stats.users} utilisateurs, ${stats.bus} BU, ${stats.poles} pôles, ${stats.groups} groupes, ${stats.tabs} onglets.`
+  )
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1) })
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
   .finally(() => prisma.$disconnect())

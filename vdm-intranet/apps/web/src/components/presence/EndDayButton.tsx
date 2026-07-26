@@ -22,7 +22,8 @@ export function EndDayButton() {
   async function handleClick() {
     const ok = await confirm({
       title: 'Terminer ma journée',
-      message: "Votre heure de départ officielle sera enregistrée avec votre position actuelle. Cette action est définitive pour aujourd'hui.",
+      message:
+        "Votre heure de départ officielle sera enregistrée avec votre position actuelle. Cette action est définitive pour aujourd'hui.",
       confirmLabel: 'Terminer ma journée',
     })
     if (!ok) return
@@ -51,7 +52,8 @@ export function EndDayButton() {
           setState('idle')
           router.refresh()
         } catch (err) {
-          const msg = err instanceof Error ? err.message : "Erreur lors de l'enregistrement du départ."
+          const msg =
+            err instanceof Error ? err.message : "Erreur lors de l'enregistrement du départ."
           setState('error')
           setError(msg)
         }
@@ -60,7 +62,7 @@ export function EndDayButton() {
         setState('error')
         setError(GEO_ERRORS[posError.code] ?? 'Erreur de localisation inconnue.')
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   }
 
@@ -79,9 +81,7 @@ export function EndDayButton() {
             ? 'Enregistrement…'
             : '🚪 Terminer ma journée'}
       </button>
-      {error && (
-        <p className="text-xs text-red-600 mt-2">{error}</p>
-      )}
+      {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
     </div>
   )
 }

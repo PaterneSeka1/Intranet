@@ -26,10 +26,7 @@ export class SettingsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch()
-  upsert(
-    @CurrentUser() user: AuthUser,
-    @Body() body: { settings: SettingPair[] },
-  ) {
+  upsert(@CurrentUser() user: AuthUser, @Body() body: { settings: SettingPair[] }) {
     if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
     return this.settingsService.upsertMany(body.settings)
   }

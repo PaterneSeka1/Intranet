@@ -36,15 +36,24 @@ export function ForgotPasswordClient({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--vdm-login-bg)' }}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'var(--vdm-login-bg)' }}
+    >
       <BgImageLayer />
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
         <div className="text-center mb-8">
           {initialLogo ? (
-            <img src={initialLogo} alt="" className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-md shadow-orange-100" />
+            <img
+              src={initialLogo}
+              alt=""
+              className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-md shadow-orange-100"
+            />
           ) : (
             <div className="w-14 h-14 rounded-2xl bg-[#F28C38] flex items-center justify-center mx-auto mb-4 shadow-md shadow-orange-100">
-              <span className="text-white text-2xl font-bold">{initialAppName[0]?.toUpperCase() ?? 'V'}</span>
+              <span className="text-white text-2xl font-bold">
+                {initialAppName[0]?.toUpperCase() ?? 'V'}
+              </span>
             </div>
           )}
           <h1 className="text-lg font-bold text-gray-900">{initialAppName}</h1>
@@ -54,7 +63,8 @@ export function ForgotPasswordClient({
         {sent ? (
           <div className="space-y-5">
             <div className="bg-green-50 border border-green-100 rounded-xl px-3.5 py-3 text-sm text-green-700">
-              Si un compte existe avec cet identifiant, un email contenant un lien de réinitialisation vient d'être envoyé.
+              Si un compte existe avec cet identifiant, un email contenant un lien de
+              réinitialisation vient d'être envoyé.
             </div>
             <Link
               href="/login"
@@ -67,9 +77,13 @@ export function ForgotPasswordClient({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <p className="text-sm text-gray-500 mb-4">
-                Indiquez votre identifiant ou votre email : si un compte correspond, vous recevrez un lien pour choisir un nouveau mot de passe.
+                Indiquez votre identifiant ou votre email : si un compte correspond, vous recevrez
+                un lien pour choisir un nouveau mot de passe.
               </p>
-              <label htmlFor="fp-identifier" className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+              <label
+                htmlFor="fp-identifier"
+                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+              >
                 Identifiant ou email
               </label>
               <input
@@ -98,7 +112,10 @@ export function ForgotPasswordClient({
               {loading ? 'Envoi…' : 'Envoyer le lien de réinitialisation'}
             </button>
 
-            <Link href="/login" className="block text-center text-xs text-gray-400 hover:text-[#F28C38] transition-colors">
+            <Link
+              href="/login"
+              className="block text-center text-xs text-gray-400 hover:text-[#F28C38] transition-colors"
+            >
               Retour à la connexion
             </Link>
           </form>

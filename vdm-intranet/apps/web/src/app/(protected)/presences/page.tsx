@@ -8,26 +8,34 @@ import { API_BASE } from '@/lib/api-base'
 
 const ACCUEIL_ONLY = ['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE']
 
-async function fetchPresences(token: string, cookieName: string, date: string): Promise<PresenceRow[]> {
+async function fetchPresences(
+  token: string,
+  cookieName: string,
+  date: string
+): Promise<PresenceRow[]> {
   try {
-    const res = await fetch(
-      `${API_BASE}/api/presence/today/all?date=${date}`,
-      { headers: { Cookie: `${cookieName}=${token}` }, cache: 'no-store' },
-    )
+    const res = await fetch(`${API_BASE}/api/presence/today/all?date=${date}`, {
+      headers: { Cookie: `${cookieName}=${token}` },
+      cache: 'no-store',
+    })
     if (!res.ok) return []
     return res.json()
-  } catch { return [] }
+  } catch {
+    return []
+  }
 }
 
 async function fetchMandates(token: string, cookieName: string, date: string): Promise<Mandate[]> {
   try {
-    const res = await fetch(
-      `${API_BASE}/api/presence/mandates?date=${date}`,
-      { headers: { Cookie: `${cookieName}=${token}` }, cache: 'no-store' },
-    )
+    const res = await fetch(`${API_BASE}/api/presence/mandates?date=${date}`, {
+      headers: { Cookie: `${cookieName}=${token}` },
+      cache: 'no-store',
+    })
     if (!res.ok) return []
     return res.json()
-  } catch { return [] }
+  } catch {
+    return []
+  }
 }
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/

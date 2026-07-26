@@ -14,6 +14,7 @@ const SAFE_SELECT = {
   email: true,
   role: true,
   isActive: true,
+  mustChangePassword: true,
   lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
@@ -51,7 +52,8 @@ export class UsersService {
     if (!user) throw new NotFoundException('Utilisateur introuvable')
     if (requester) {
       const where = this.scopeWhere(requester)
-      const inScope = Object.keys(where).length === 0 ||
+      const inScope =
+        Object.keys(where).length === 0 ||
         ('businessUnitId' in where && user.businessUnit?.id === where.businessUnitId) ||
         ('poleId' in where && (user as { pole?: { id: string } }).pole?.id === where.poleId) ||
         ('id' in where && user.id === where.id)
@@ -64,17 +66,26 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(dto.password, 12)
     const fullName = [dto.firstName, dto.lastName].filter(Boolean).join(' ')
     const { password, ...rest } = dto
-    return this.prisma.user.create({
-      data: { ...rest, passwordHash, fullName },
-      select: SAFE_SELECT,
-    })
+    try {
+      return await this.prisma.user.create({
+        data: { ...rest, passwordHash, fullName, mustChangePassword: true },
+        select: SAFE_SELECT,
+      })
+    } catch (err: unknown) {
+      if (isPrismaCode(err, 'P2002')) {
+        throw new BadRequestException('Identifiant ou adresse e-mail déjà utilisé.')
+      }
+      throw err
+    }
   }
 
   async update(id: string, dto: UpdateUserDto) {
     const data: Record<string, unknown> = { ...dto }
+    delete data.currentPassword
 
     if (dto.password) {
       data.passwordHash = await bcrypt.hash(dto.password, 12)
+      data.mustChangePassword = true
       delete data.password
     }
 
@@ -83,17 +94,20 @@ export class UsersService {
         where: { id },
         select: { firstName: true, lastName: true },
       })
-      data.fullName = [
-        dto.firstName ?? current?.firstName,
-        dto.lastName ?? current?.lastName,
-      ].filter(Boolean).join(' ')
+      data.fullName = [dto.firstName ?? current?.firstName, dto.lastName ?? current?.lastName]
+        .filter(Boolean)
+        .join(' ')
     }
 
     try {
       const updated = await this.prisma.user.update({ where: { id }, data, select: SAFE_SELECT })
       return updated
     } catch (err: unknown) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Utilisateur introuvable.')
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException('Utilisateur introuvable.')
+      if (isPrismaCode(err, 'P2002')) {
+        throw new BadRequestException('Identifiant ou adresse e-mail déjà utilisé.')
+      }
       throw err
     }
   }
@@ -106,15 +120,23 @@ export class UsersService {
     }
     if (data.password) {
       if (!dto.currentPassword) {
-        throw new BadRequestException('Le mot de passe actuel est requis pour effectuer ce changement.')
+        throw new BadRequestException(
+          'Le mot de passe actuel est requis pour effectuer ce changement.'
+        )
       }
-      const current = await this.prisma.user.findUnique({ where: { id }, select: { passwordHash: true } })
+      const current = await this.prisma.user.findUnique({
+        where: { id },
+        select: { passwordHash: true },
+      })
       if (!current) throw new NotFoundException('Utilisateur introuvable.')
       const valid = await bcrypt.compare(dto.currentPassword, current.passwordHash)
       if (!valid) {
         throw new BadRequestException('Mot de passe actuel incorrect.')
       }
       data.passwordHash = await bcrypt.hash(data.password as string, 12)
+      data.mustChangePassword = false
+      data.failedLoginAttempts = 0
+      data.lockoutUntil = null
       delete data.password
     }
     if (data.firstName !== undefined || data.lastName !== undefined) {
@@ -125,13 +147,17 @@ export class UsersService {
       data.fullName = [
         (data.firstName as string | undefined) ?? current?.firstName,
         (data.lastName as string | undefined) ?? current?.lastName,
-      ].filter(Boolean).join(' ')
+      ]
+        .filter(Boolean)
+        .join(' ')
     }
     try {
       return await this.prisma.user.update({ where: { id }, data, select: SAFE_SELECT })
     } catch (err: unknown) {
       if (
-        typeof err === 'object' && err !== null && 'code' in err &&
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
         (err as { code: string }).code === 'P2002'
       ) {
         throw new BadRequestException('Cette adresse e-mail est déjà utilisée par un autre compte.')
@@ -142,9 +168,14 @@ export class UsersService {
 
   async setActive(id: string, isActive: boolean) {
     try {
-      return await this.prisma.user.update({ where: { id }, data: { isActive }, select: SAFE_SELECT })
+      return await this.prisma.user.update({
+        where: { id },
+        data: { isActive },
+        select: SAFE_SELECT,
+      })
     } catch (err: unknown) {
-      if ((err as { code?: string }).code === 'P2025') throw new NotFoundException('Utilisateur introuvable.')
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException('Utilisateur introuvable.')
       throw err
     }
   }
@@ -156,4 +187,13 @@ export class UsersService {
     if (role === Role.RESPONSABLE_POLE && poleId) return { poleId }
     return { id }
   }
+}
+
+function isPrismaCode(err: unknown, code: string): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: string }).code === code
+  )
 }
