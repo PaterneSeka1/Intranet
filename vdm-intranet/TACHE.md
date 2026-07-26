@@ -98,6 +98,33 @@ Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
 - `git diff --check` : OK.
 - `npm audit --omit=dev` : vulnérabilités restantes détectées dans l'arbre de dépendances ; les corrections complètes proposées impliquent notamment des migrations majeures Nest 11 et Next 16, à traiter dans une tâche séparée.
 
+## Analyse complète & corrections annonces — 2026-07-26
+
+- `[x]` Audit — Relire le flux annonces backend/frontend : API, DTOs, permissions, bannière, widget, layout et temps réel.
+- `[x]` Backend — Filtrer les annonces ciblées BU pour les utilisateurs non globaux : annonces globales + annonces de leur BU uniquement.
+- `[x]` Backend — Conserver la visibilité complète pour `CTO_ADMIN` et `PDG`, et la liste active filtrée quand `active=true`.
+- `[x]` Backend — Valider et nettoyer les champs d'annonce : titre, corps, BU ciblée, dates invalides, expiration avant publication.
+- `[x]` Backend — Normaliser le namespace Socket.IO `/announcements` et le parsing des origines CORS.
+- `[x]` Frontend — Corriger la date d'expiration issue du calendrier pour expirer en fin de journée.
+- `[x]` Frontend — Valider le formulaire avant envoi et garder un tri stable après création/modification/activation.
+- `[x]` Frontend — Faire réapparaître une annonce épinglée modifiée même si l'ancienne version avait été masquée.
+- `[x]` Frontend — Renforcer `LiveAnnouncements` avec resynchronisation, refresh périodique et refresh programmé à l'expiration.
+- `[x]` Validation — Lancer type-checks, builds API/Web et contrôle du diff.
+
+### Audit annonces corrigées — 2026-07-26
+
+- Les utilisateurs non `CTO_ADMIN`/`PDG` ne voient plus les annonces ciblées sur une autre BU.
+- Les annonces globales restent visibles par tous les utilisateurs authentifiés quand elles sont actives et dans leur fenêtre de publication.
+- `CTO_ADMIN` et `PDG` gardent l'accès complet à la gestion des annonces ; `DAF` et autres rôles restent refusés sur la page `/annonces`.
+- Une BU inexistante ou une date incohérente retourne maintenant une erreur métier propre au lieu d'un état incohérent ou d'une erreur Prisma brute.
+- Une annonce modifiée réapparaît dans la bannière si l'utilisateur avait masqué une ancienne version.
+- Le widget et la bannière utilisent le même état live, rafraîchi par Socket.IO, par intervalle de secours et au moment de l'expiration d'une annonce.
+- `npm run type-check --workspace=apps/api` : OK.
+- `npm run type-check --workspace=apps/web` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK.
+- `git diff --check` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

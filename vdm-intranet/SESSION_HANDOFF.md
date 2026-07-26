@@ -70,12 +70,22 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Le namespace `/announcements` émet `announcements:changed` après création, modification, activation/désactivation ou suppression.
   - Le frontend écoute cet événement et recharge `/api/announcements?active=true`, puis met à jour la bannière et le widget annonces.
   - Le socket ne diffuse qu'un signal de changement ; les données restent récupérées via l'API authentifiée existante.
+- **Corrections complémentaires annonces** :
+  - Les annonces ciblées BU sont désormais visibles uniquement par les utilisateurs de la BU concernée, en plus des annonces globales.
+  - `CTO_ADMIN` et `PDG` conservent l'accès complet à la gestion des annonces ; les autres rôles ne peuvent lire que les annonces actives de leur périmètre.
+  - Création et modification valident les textes, la BU ciblée, les dates invalides et l'ordre publication/expiration.
+  - La date d'expiration choisie dans le formulaire expire en fin de journée.
+  - La bannière mémorise la version masquée d'une annonce : une annonce épinglée modifiée réapparaît automatiquement.
+  - `LiveAnnouncements` se resynchronise aussi par intervalle de secours et au moment de l'expiration d'une annonce.
+  - Le parsing CORS API/Socket.IO ignore les espaces et valeurs vides dans `CORS_ORIGINS`.
 
 ---
 
 ## 2. Validation Effectuée
 
 - `npm run format` : OK.
+- `npm run type-check --workspace=apps/api` : OK.
+- `npm run type-check --workspace=apps/web` : OK.
 - `npm run db:generate` : OK.
 - `npx prisma validate --schema packages/database/prisma/schema.prisma` : OK.
 - `npx prisma db push --schema packages/database/prisma/schema.prisma` : OK hors sandbox ; base déjà synchronisée.
@@ -106,5 +116,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Vérifier que la page annonces est refusée à la DAF et accessible au CTO/PDG.
   - Vérifier que le bandeau défile uniquement avec les annonces épinglées.
   - Vérifier que le widget annonces affiche les annonces actives non épinglées.
+  - Vérifier avec un utilisateur rattaché à une BU que les annonces d'une autre BU ne sont pas affichées.
+  - Modifier une annonce épinglée déjà fermée côté utilisateur et vérifier qu'elle réapparaît dans la bannière.
+  - Créer une annonce avec expiration au jour J et vérifier qu'elle reste visible jusqu'à la fin de cette journée.
   - Créer/modifier un onglet avec une image locale comme icône et vérifier son affichage dans la grille.
   - Ouvrir deux sessions, créer/modifier une annonce depuis une session admin et vérifier l'actualisation automatique du widget et de la bannière dans l'autre session.
