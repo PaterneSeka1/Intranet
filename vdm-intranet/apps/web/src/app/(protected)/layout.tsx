@@ -5,7 +5,7 @@ import { isAccueilOnly } from '@/types/user'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { MustChangePasswordGuard } from '@/components/auth/MustChangePasswordGuard'
-import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner'
+import { LiveAnnouncements } from '@/components/announcements/LiveAnnouncements'
 import { MobileSidebarToggle } from '@/components/sidebar/MobileSidebarToggle'
 import type { Announcement } from '@/lib/announcements'
 import { API_BASE } from '@/lib/api-base'
@@ -84,7 +84,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
             <LogoutButton />
           </div>
         </header>
-        <AnnouncementBanner announcements={announcements} />
+        <LiveAnnouncements initialAnnouncements={announcements} />
         <main className="flex-1 p-6">{children}</main>
       </div>
     )

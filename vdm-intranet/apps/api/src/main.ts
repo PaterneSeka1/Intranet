@@ -7,6 +7,14 @@ import cookieParser = require('cookie-parser')
 import helmet from 'helmet'
 import { AppModule } from './app.module'
 
+function corsOrigins() {
+  const origins =
+    process.env.CORS_ORIGINS?.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean) ?? []
+  return origins.length ? origins : ['http://localhost:3000']
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
@@ -18,7 +26,7 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
   )
   app.enableCors({
-    origin: process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000'],
+    origin: corsOrigins(),
     credentials: true,
   })
 

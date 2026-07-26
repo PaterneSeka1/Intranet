@@ -4,37 +4,60 @@ import { useEffect, useRef, useState } from 'react'
 
 const LS_KEY = 'vdm_dismissed_announcements'
 
-function loadDismissed(): Set<string> {
+type BannerAnnouncement = {
+  id: string
+  title: string
+  body: string
+  isPinned: boolean
+  updatedAt?: string
+}
+
+type DismissedMap = Record<string, string>
+
+function fingerprint(a: BannerAnnouncement) {
+  return a.updatedAt ?? `${a.title}:${a.body}`
+}
+
+function loadDismissed(): DismissedMap {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    return new Set(raw ? JSON.parse(raw) : [])
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (Array.isArray(parsed)) {
+      return Object.fromEntries(
+        parsed.filter((id) => typeof id === 'string').map((id) => [id, 'legacy'])
+      )
+    }
+    if (parsed && typeof parsed === 'object') return parsed as DismissedMap
+    return {}
   } catch {
-    return new Set()
+    return {}
   }
 }
 
-function saveDismissed(ids: Set<string>) {
+function saveDismissed(items: DismissedMap) {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify([...ids]))
+    localStorage.setItem(LS_KEY, JSON.stringify(items))
   } catch {
     /* ignore */
   }
 }
 
 interface Props {
-  announcements: { id: string; title: string; body: string; isPinned: boolean }[]
+  announcements: BannerAnnouncement[]
 }
 
 export function AnnouncementBanner({ announcements }: Props) {
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+  const [dismissed, setDismissed] = useState<DismissedMap>({})
   const trackRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number>(0)
 
   useEffect(() => {
-    setDismissedIds(loadDismissed())
+    setDismissed(loadDismissed())
   }, [])
 
-  const visible = announcements.filter((a) => a.isPinned && !dismissedIds.has(a.id))
+  const visible = announcements.filter((a) => a.isPinned && dismissed[a.id] !== fingerprint(a))
+  const text = visible.map((a) => `📌 ${a.title} — ${a.body}`).join('   ·   ')
 
   useEffect(() => {
     const el = trackRef.current
@@ -49,18 +72,18 @@ export function AnnouncementBanner({ announcements }: Props) {
     }
     rafRef.current = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [visible.length])
+  }, [text])
 
   function dismiss() {
-    const next = new Set(dismissedIds)
-    visible.forEach((a) => next.add(a.id))
+    const next = { ...dismissed }
+    visible.forEach((a) => {
+      next[a.id] = fingerprint(a)
+    })
     saveDismissed(next)
-    setDismissedIds(next)
+    setDismissed(next)
   }
 
   if (visible.length === 0) return null
-
-  const text = visible.map((a) => `📌 ${a.title} — ${a.body}`).join('   ·   ')
 
   return (
     <div className="relative bg-[#F28C38] text-white text-xs font-medium overflow-hidden h-8 flex items-center shrink-0">

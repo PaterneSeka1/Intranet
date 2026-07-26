@@ -76,6 +76,28 @@ Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
 - `npm run build:web` : OK.
 - `git diff --check` : OK.
 
+## Ajustement — Actualisation temps réel des annonces — 2026-07-26
+
+- `[x]` Dépendances — Ajouter Socket.IO côté API et client web.
+- `[x]` Backend — Créer un gateway Socket.IO pour diffuser les changements d'annonces.
+- `[x]` Backend — Émettre un événement après création, modification, activation/désactivation ou suppression d'une annonce.
+- `[x]` Frontend — Connecter le layout protégé au socket et refetch les annonces actives.
+- `[x]` Frontend — Alimenter automatiquement la bannière et le widget annonces avec l'état temps réel.
+- `[x]` Validation — Lancer formatage et builds API/Web.
+
+### Audit temps réel annonces — 2026-07-26
+
+- Socket.IO est ajouté côté API (`@nestjs/websockets`, `@nestjs/platform-socket.io`, `socket.io`) et côté web (`socket.io-client`).
+- Le namespace `/announcements` émet `announcements:changed` après création, modification, activation/désactivation ou suppression.
+- L'événement socket ne transporte pas la liste des annonces ; le client refetch `/api/announcements?active=true` avec les cookies existants.
+- La bannière et le widget partagent le même état client temps réel via `LiveAnnouncements`.
+- Les règles existantes restent conservées : bannière = annonces épinglées ; widget = annonces actives non épinglées avec fallback épinglé.
+- `npm run format` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK après nettoyage du cache `.next`.
+- `git diff --check` : OK.
+- `npm audit --omit=dev` : vulnérabilités restantes détectées dans l'arbre de dépendances ; les corrections complètes proposées impliquent notamment des migrations majeures Nest 11 et Next 16, à traiter dans une tâche séparée.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

@@ -6,7 +6,7 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 
-type JwtUser = { id: string; role: Role }
+type JwtUser = { id: string; role: Role; businessUnitId?: string | null }
 
 @UseGuards(JwtAuthGuard)
 @Controller('announcements')

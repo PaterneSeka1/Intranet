@@ -1,17 +1,27 @@
-import { IsBoolean, IsDateString, IsOptional, IsString, MaxLength } from 'class-validator'
+import {
+  IsBoolean,
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator'
 
 export class UpdateAnnouncementDto {
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   @MaxLength(200)
   title?: string
 
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   @MaxLength(5000)
   body?: string
 
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   businessUnitId?: string | null
 

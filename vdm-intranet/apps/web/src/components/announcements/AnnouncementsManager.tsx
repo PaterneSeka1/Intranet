@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { announcementsApi, type Announcement } from '@/lib/announcements'
 import { ServerPagination } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
@@ -41,14 +41,38 @@ function todayUtc(): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
+function dateInputToUtc(value: string, endOfDay = false): Date | null {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(
+    Date.UTC(
+      year,
+      month - 1,
+      day,
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 999 : 0
+    )
+  )
+}
+
 function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
 }
 
+function sortAnnouncements(items: Announcement[]) {
+  return [...items].sort((a, b) => {
+    if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  })
+}
+
 export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
-  const [items, setItems] = useState<Announcement[]>(initialAnnouncements)
+  const [items, setItems] = useState<Announcement[]>(() => sortAnnouncements(initialAnnouncements))
   const [editing, setEditing] = useState<Announcement | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
@@ -58,6 +82,10 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
   const [filterStatus, setFilterStatus] = useState<
     'all' | 'active' | 'inactive' | 'planned' | 'expired'
   >('all')
+
+  useEffect(() => {
+    setItems(sortAnnouncements(initialAnnouncements))
+  }, [initialAnnouncements])
 
   const filteredItems = useMemo(() => {
     if (filterStatus === 'all') return items
@@ -101,27 +129,43 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setError('')
+
+    const title = form.title.trim()
+    const body = form.body.trim()
+    const publishedAt = dateInputToUtc(form.publishedAt)
+    const expiresAt = dateInputToUtc(form.expiresAt, true)
+
+    if (!title || !body) {
+      setError('Le titre et le corps de l’annonce sont obligatoires.')
+      return
+    }
+
+    if (publishedAt && expiresAt && expiresAt <= publishedAt) {
+      setError('La date d’expiration doit être postérieure à la publication.')
+      return
+    }
+
+    setSaving(true)
     try {
       const payload = {
-        title: form.title,
-        body: form.body,
+        title,
+        body,
         businessUnitId: form.businessUnitId || null,
         isPinned: form.isPinned,
         isActive: form.isActive,
-        publishedAt: form.publishedAt ? new Date(form.publishedAt).toISOString() : undefined,
-        expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+        publishedAt: publishedAt ? publishedAt.toISOString() : undefined,
+        expiresAt: expiresAt ? expiresAt.toISOString() : null,
       }
 
       if (editing) {
         const updated = await announcementsApi.update(editing.id, payload)
-        setItems((prev) => prev.map((a) => (a.id === editing.id ? updated : a)))
+        setItems((prev) => sortAnnouncements(prev.map((a) => (a.id === editing.id ? updated : a))))
         closeForm()
         toast.success('Annonce mise à jour.')
       } else {
         const created = await announcementsApi.create(payload)
-        setItems((prev) => [created, ...prev])
+        setItems((prev) => sortAnnouncements([created, ...prev]))
         closeForm()
         toast.success('Annonce créée avec succès.')
       }
@@ -135,7 +179,7 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
   async function toggleActive(a: Announcement) {
     try {
       const updated = await announcementsApi.update(a.id, { isActive: !a.isActive })
-      setItems((prev) => prev.map((x) => (x.id === a.id ? updated : x)))
+      setItems((prev) => sortAnnouncements(prev.map((x) => (x.id === a.id ? updated : x))))
       toast.info(updated.isActive ? 'Annonce activée.' : 'Annonce désactivée.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.')

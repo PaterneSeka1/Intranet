@@ -20,7 +20,8 @@ export class CreateAnnouncementDto {
 
   @IsString()
   @IsOptional()
-  businessUnitId?: string
+  @IsNotEmpty()
+  businessUnitId?: string | null
 
   @IsBoolean()
   @IsOptional()
@@ -36,5 +37,5 @@ export class CreateAnnouncementDto {
 
   @IsDateString()
   @IsOptional()
-  expiresAt?: string
+  expiresAt?: string | null
 }

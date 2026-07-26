@@ -65,6 +65,11 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Le champ `icon` accepte une image optimisée.
   - Le sélecteur d'icônes des onglets permet d'importer une image locale via le bouton `IMG`.
   - L'image est redimensionnée côté navigateur à 128px max, encodée en WebP si possible, puis affichée en `object-contain`.
+- **Actualisation temps réel des annonces** :
+  - Socket.IO est ajouté au backend Nest et au frontend Next.
+  - Le namespace `/announcements` émet `announcements:changed` après création, modification, activation/désactivation ou suppression.
+  - Le frontend écoute cet événement et recharge `/api/announcements?active=true`, puis met à jour la bannière et le widget annonces.
+  - Le socket ne diffuse qu'un signal de changement ; les données restent récupérées via l'API authentifiée existante.
 
 ---
 
@@ -78,6 +83,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
 - `npm run build:api` : OK.
 - `npm run build:web` : OK.
 - `git diff --check` : OK.
+- Note build Web : un cache `.next` incohérent a été nettoyé avant le dernier `npm run build:web`.
+- `npm audit --omit=dev` : vulnérabilités restantes détectées dans l'arbre de dépendances ; les corrections complètes proposées incluent des upgrades majeurs Nest 11 et Next 16, à planifier séparément.
 
 ### Notes d'Environnement
 
@@ -100,3 +107,4 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Vérifier que le bandeau défile uniquement avec les annonces épinglées.
   - Vérifier que le widget annonces affiche les annonces actives non épinglées.
   - Créer/modifier un onglet avec une image locale comme icône et vérifier son affichage dans la grille.
+  - Ouvrir deux sessions, créer/modifier une annonce depuis une session admin et vérifier l'actualisation automatique du widget et de la bannière dans l'autre session.

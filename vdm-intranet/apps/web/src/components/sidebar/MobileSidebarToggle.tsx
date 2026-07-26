@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import { Sidebar } from '@/components/sidebar/Sidebar'
-import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner'
+import { LiveAnnouncements } from '@/components/announcements/LiveAnnouncements'
 import type { User } from '@/types/user'
 import type { Announcement } from '@/lib/announcements'
 import { BgRestorer } from '@/components/ui/BgRestorer'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
-import { Widgets } from '@/components/widgets/Widgets'
 
 interface Props {
   user: User
@@ -86,9 +85,8 @@ export function MobileSidebarToggle({
           </div>
         </div>
 
-        <AnnouncementBanner announcements={announcements} />
+        <LiveAnnouncements initialAnnouncements={announcements} showWidgets />
         <main className="flex-1 overflow-auto">{children}</main>
-        <Widgets announcements={announcements} />
       </div>
     </div>
   )
