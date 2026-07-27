@@ -125,6 +125,7 @@ async function main() {
     role: Role
     buCode?: string
     poleCode?: string
+    managerUsername?: string
     groupCode?: string
     individualExpectedArrivalTime?: string
   }
@@ -137,6 +138,7 @@ async function main() {
       lastName: 'OUFFOUET',
       role: 'CTO_ADMIN',
       buCode: 'DT',
+      managerUsername: 'PDG',
       groupCode: 'JOUR_0830',
     },
     {
@@ -153,6 +155,7 @@ async function main() {
       lastName: 'SANOGO',
       role: 'DAF',
       buCode: 'DAF',
+      managerUsername: 'PDG',
       groupCode: 'JOUR_0800',
     },
     // Responsables BU
@@ -352,9 +355,33 @@ async function main() {
     console.log(`  ${u.username} — ${u.role}`)
   }
 
-  // ---- Onglets par BU (créés par le CTO) ----
-  const cto = await prisma.user.findUnique({ where: { username: 'CTO' }, select: { id: true } })
+  const seededUsers = await prisma.user.findMany({
+    where: { username: { in: userDefs.map((u) => u.username) } },
+    select: { id: true, username: true },
+  })
+  const userIds = Object.fromEntries(seededUsers.map((u) => [u.username, u.id]))
+
+  for (const u of userDefs) {
+    if (!u.managerUsername) continue
+    const userId = userIds[u.username]
+    const managerId = userIds[u.managerUsername]
+    if (!userId || !managerId) {
+      throw new Error(`Manager direct introuvable pour ${u.username}.`)
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { managerId },
+    })
+    console.log(`  Manager direct : ${u.username} -> ${u.managerUsername}`)
+  }
+
+  // ---- Onglets par BU (créés par le responsable applicatif du périmètre) ----
+  const [cto, daf] = await Promise.all([
+    prisma.user.findUnique({ where: { username: 'CTO' }, select: { id: true } }),
+    prisma.user.findUnique({ where: { username: 'DAF' }, select: { id: true } }),
+  ])
   if (!cto) throw new Error('CTO user not found')
+  if (!daf) throw new Error('DAF user not found')
 
   type TabDef = { name: string; url: string; icon: string; color?: string; description?: string }
 
@@ -530,10 +557,17 @@ async function main() {
   let tabCount = 0
   for (const [buCode, tabs] of Object.entries(tabsByBu)) {
     const buId = bus[buCode]
+    const createdById = buCode === 'DAF' ? daf.id : cto.id
     for (const tab of tabs) {
       await prisma.portalTab.upsert({
         where: { businessUnitId_url: { businessUnitId: buId, url: tab.url } },
-        update: { name: tab.name, icon: tab.icon, color: tab.color, description: tab.description },
+        update: {
+          name: tab.name,
+          icon: tab.icon,
+          color: tab.color,
+          description: tab.description,
+          createdById,
+        },
         create: {
           name: tab.name,
           url: tab.url,
@@ -541,7 +575,7 @@ async function main() {
           color: tab.color,
           description: tab.description,
           businessUnitId: buId,
-          createdById: cto.id,
+          createdById,
           isActive: true,
         },
       })

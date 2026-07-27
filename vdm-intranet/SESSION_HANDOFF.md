@@ -15,6 +15,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
 - Hiérarchie admin : `CTO_ADMIN` est supérieur au `PDG` et peut modifier le compte PDG ; le `PDG` ne doit pas modifier le CTO/super admin.
 - Correction d'hypothèse : la DAF n'est pas admin globale ; elle doit être traitée comme responsable/directrice de son périmètre département/BU.
 - Les directeurs/responsables doivent pouvoir créer et gérer les onglets de leur département/BU, comme les responsables de BU.
+- Clarification du 2026-07-27 : le `PDG` reste admin global des onglets et peut créer pour toutes les BU sans exception ; la `DAF` crée et gère uniquement les onglets de sa BU/direction.
+- Le champ `Manager direct` sert au rattachement hiérarchique et ne détermine pas le créateur ni le périmètre des onglets.
 - `TACHE.md` a été mis à jour avant les modifications de code, conformément à la demande utilisateur.
 
 ### Fonctionnalités Réalisées
@@ -44,7 +46,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
 - **Frontend** :
   - Guard `MustChangePasswordGuard` ajouté au layout protégé.
   - Login redirige directement vers `/mon-profil` si `mustChangePassword` est vrai.
-  - Les erreurs HTTP `403` ne redirigent plus vers `/login`.
+  - Les erreurs HTTP `403` applicatives ne redirigent plus vers `/login`.
+  - Le layout protégé distingue maintenant une session expirée/invalide d'une API indisponible : `401/403` retourne vers `/login`, tandis qu'une erreur réseau/API down affiche `ServiceUnavailablePage`.
   - Ancienne hypothèse remplacée : la DAF ne doit plus gérer globalement les onglets ; elle doit être limitée à son périmètre département/BU.
   - Les champs relationnels vidés en admin envoient `null`.
   - `vdm_bg_image` est échappé avant injection CSS.
@@ -55,6 +58,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - `CTO_ADMIN` et `PDG` sont les seuls admins globaux.
   - `CTO_ADMIN` peut gérer/modifier les comptes `CTO_ADMIN` et `PDG`; `PDG` ne peut pas modifier ces comptes ni attribuer ces rôles.
   - `DAF` est scopée sur sa BU/direction pour utilisateurs, onglets, pilotage, rapports, présence et mandats.
+  - `PDG` peut créer des onglets globaux ou ciblés pour toutes les BU ; `DAF` peut créer et gérer ses propres onglets DAF si sa BU est assignée.
+  - Le seed rattache `CTO` et `DAF` au `PDG` comme manager direct, tout en attribuant les onglets `DAF` à l'utilisateur `DAF`.
   - Le rattachement `businessUnitId`/`poleId` reste indépendant du rôle de responsable : un consultant, stagiaire ou prestataire peut appartenir à une BU sans obtenir de droits de gestion.
   - `EMPLOYE`, `CONSULTANT`, `STAGIAIRE` et `PRESTATAIRE` sont des rôles standards sans droits de gestion.
   - Les annonces globales sont réservées à `CTO_ADMIN` et `PDG`.
@@ -99,6 +104,7 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
 - `git diff --check` : OK.
 - Note build Web : un cache `.next` incohérent a été nettoyé avant le dernier `npm run build:web`.
 - Dernière validation web ciblée : `npm run type-check --workspace=apps/web -- --incremental false` : OK.
+- Dernière validation ciblée onglets/managers/auth : `npm run type-check --workspace=apps/api`, `npm run type-check --workspace=apps/web -- --incremental false`, `npx tsc --noEmit -p packages/database/tsconfig.json`, `npx prettier --check packages/database/prisma/seed.ts apps/web/src/components/users/UsersManager.tsx apps/web/src/lib/auth.ts apps/web/src/app/(protected)/layout.tsx` et `git diff --check` : OK.
 - Dernier build web propre : `rm -rf apps/web/.next`, puis `npm run build --workspace=apps/web` : OK.
 - Dernière migration ciblée : enum PostgreSQL `Role` enrichi avec `EMPLOYE`; 6 comptes seed convertis en `EMPLOYE`.
 - Note migration : `prisma migrate deploy` reste bloqué par l'ancienne migration échouée `20260630000001_module3_presence`; l'ajout local de `EMPLOYE` a été appliqué par SQL ciblé.
@@ -119,8 +125,10 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Connexion d'un compte seedé et redirection vers `/mon-profil`.
   - Changement de mot de passe puis accès normal aux pages protégées.
   - Accès CTO à la gestion globale des utilisateurs et onglets.
-  - Accès PDG à la gestion globale hors modification du CTO/super admin.
+  - Accès PDG à la gestion globale des onglets pour toutes les BU, hors modification du CTO/super admin côté utilisateurs.
   - Accès DAF/directeur/responsable à la création et gestion d'onglets limitée à son département/BU.
+  - Vérifier qu'un manager direct `PDG` sur `CTO` ou `DAF` ne change pas le périmètre BU des onglets.
+  - Vérifier qu'une session expirée ou un cookie invalide renvoie vers `/login` au lieu de la page `Service temporairement indisponible`.
   - Vérifier que la page annonces est refusée à la DAF et accessible au CTO/PDG.
   - Vérifier que le bandeau défile uniquement avec les annonces épinglées.
   - Vérifier que le widget annonces affiche les annonces actives non épinglées.

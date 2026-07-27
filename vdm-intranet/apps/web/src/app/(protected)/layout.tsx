@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserState } from '@/lib/auth'
 import { isAccueilOnly } from '@/types/user'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { LogoutButton } from '@/components/auth/LogoutButton'
@@ -38,9 +38,10 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   if (!hasToken) redirect('/login')
 
-  const user = await getCurrentUser()
+  const { user, unavailable } = await getCurrentUserState()
 
   if (!user) {
+    if (!unavailable) redirect('/login')
     return <ServiceUnavailablePage />
   }
 

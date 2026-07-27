@@ -169,6 +169,28 @@ Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
 - `rm -rf apps/web/.next` : effectué avant build.
 - `npm run build:web` : OK.
 
+## Clarification — Onglets PDG/DAF & managers directs — 2026-07-27
+
+- `[x]` Frontend utilisateurs — Ne plus traiter `CTO_ADMIN` comme rôle sans BU afin de conserver son rattachement `DT`.
+- `[x]` Seed — Rattacher le `CTO` et la `DAF` au `PDG` comme manager direct.
+- `[x]` Seed — Garder la création des onglets DAF par la `DAF`, et non par son manager direct.
+- `[x]` Frontend auth — Distinguer une API indisponible d'une session expirée : `401/403` renvoie vers `/login`, erreur réseau/API down affiche la page indisponible.
+- `[x]` Documentation — Aligner `README.md`, `TACHE.md`, `SESSION_HANDOFF.md` et `contexte_vdm_compact_avec_schema.md`.
+
+### Audit onglets PDG/DAF & managers — 2026-07-27
+
+- `PDG` reste admin global des onglets : il peut créer des onglets globaux ou ciblés pour toutes les BU sans exception.
+- `DAF` n'est pas admin globale, mais peut créer et gérer ses propres onglets sur sa BU/direction.
+- `Manager direct` reste un rattachement hiérarchique ; il ne détermine pas qui crée les onglets ni le périmètre d'accès.
+- Le seed assigne `PDG` comme manager direct du `CTO` et de la `DAF`.
+- Le seed attribue les onglets `DAF` à l'utilisateur `DAF`; les autres onglets initiaux restent attribués au `CTO`.
+- Une session expirée ou invalide ne doit plus afficher `Service temporairement indisponible`; elle redirige vers `/login`.
+- `npm run type-check --workspace=apps/api` : OK.
+- `npm run type-check --workspace=apps/web -- --incremental false` : OK.
+- `npx tsc --noEmit -p packages/database/tsconfig.json` : OK.
+- `npx prettier --check packages/database/prisma/seed.ts apps/web/src/components/users/UsersManager.tsx` : OK.
+- `git diff --check` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

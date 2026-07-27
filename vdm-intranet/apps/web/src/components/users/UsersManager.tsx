@@ -93,7 +93,7 @@ const ROLE_HINTS: Record<Role, string> = {
   PRESTATAIRE: 'Prestataire rattachable à une BU — sans droits de gestion',
 }
 
-const NO_BU_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
+const NO_BU_ROLES: Role[] = ['PDG']
 const PROTECTED_ADMIN_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
 const DIRECT_MANAGER_ROLES: Role[] = [
   'CTO_ADMIN',

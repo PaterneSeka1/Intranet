@@ -57,6 +57,8 @@ flowchart TB
 - L’autorité hiérarchique de chaque BU appartient à son Responsable.
 - En cas de doute : consultation du CTO ; dernier recours : PDG.
 - Dans l'application, les managers directs sélectionnables sont les rôles de direction/responsabilité : CTO, PDG, DAF et responsables BU/Pôle.
+- Le rattachement `manager direct` est hiérarchique : il ne donne pas automatiquement de droits de création d'onglets et ne remplace pas le périmètre BU.
+- Pour les onglets, `PDG` et `CTO_ADMIN` sont admins globaux et peuvent créer pour toutes les BU ; `DAF` crée et gère uniquement les onglets de sa direction/BU.
 - Le rôle applicatif `EMPLOYE` couvre les salariés sans rôle de consultant, stagiaire, prestataire ou responsable.
 
 ## Business Units

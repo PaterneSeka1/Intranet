@@ -134,14 +134,14 @@ Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` d
 - **Géolocalisation** : obligatoire à la première connexion, refus = connexion bloquée
 - **Horaire prioritaire** : 1. mandat journalier → 2. groupe horaire → 3. heure individuelle
 - **Employés standards** : `EMPLOYE`, `CONSULTANT`, `STAGIAIRE` et `PRESTATAIRE` sont rattachables à une BU/un pôle sans droits de gestion
-- **Onglets** : onglets globaux ou ciblés BU selon le périmètre du rôle
+- **Onglets** : `CTO_ADMIN` et `PDG` peuvent créer des onglets globaux ou ciblés pour toutes les BU ; `DAF` et `RESPONSABLE_BU` créent et gèrent uniquement les onglets de leur propre BU
 - **Annonces** : gestion réservée à `CTO_ADMIN` et `PDG`
 - **Actions annonces** : les actions par annonce sont regroupées dans un select `Actions à effectuer`
 - **Annonces ciblées** : les utilisateurs voient les annonces globales et celles de leur BU uniquement
 - **Bannière annonces** : affiche seulement les annonces actives épinglées
 - **Widget annonces** : affiche les annonces actives non épinglées, avec fallback sur les épinglées
 - **Actualisation annonces** : Socket.IO signale les changements et le client recharge l'API authentifiée
-- **Manager direct** : seuls `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` et `RESPONSABLE_POLE` sont proposés comme managers directs
+- **Manager direct** : seuls `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` et `RESPONSABLE_POLE` sont proposés comme managers directs ; ce rattachement hiérarchique ne remplace pas le périmètre BU utilisé pour les onglets
 
 ## Déploiement OVH (TODO)
 
