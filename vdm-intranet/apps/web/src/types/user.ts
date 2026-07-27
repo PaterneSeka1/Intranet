@@ -4,6 +4,7 @@ export type Role =
   | 'DAF'
   | 'RESPONSABLE_BU'
   | 'RESPONSABLE_POLE'
+  | 'EMPLOYE'
   | 'CONSULTANT'
   | 'STAGIAIRE'
   | 'PRESTATAIRE'
@@ -46,11 +47,12 @@ export const ROLE_LABELS: Record<Role, string> = {
   DAF: 'Dir. Administrative & Financière',
   RESPONSABLE_BU: 'Responsable Business Unit',
   RESPONSABLE_POLE: 'Responsable Pôle',
+  EMPLOYE: 'Employé',
   CONSULTANT: 'Consultant',
   STAGIAIRE: 'Stagiaire',
   PRESTATAIRE: 'Prestataire',
 }
 
-export const ACCUEIL_ONLY_ROLES: Role[] = ['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE']
+export const ACCUEIL_ONLY_ROLES: Role[] = ['EMPLOYE', 'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE']
 
 export const isAccueilOnly = (role: Role) => ACCUEIL_ONLY_ROLES.includes(role)

@@ -38,7 +38,9 @@ export default async function AccueilPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const showGeolocation = !['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(user.role)
+  const showGeolocation = !['EMPLOYE', 'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(
+    user.role
+  )
 
   const [presenceData, allTabs] = await Promise.all([
     serverFetch<TodayPresenceResult>('/presence/today'),

@@ -105,6 +105,12 @@ Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` d
 | POLE_PRESSE_JOUR | `$SEED_PASSWORD` | RESPONSABLE_POLE |
 | POLE_NUIT        | `$SEED_PASSWORD` | RESPONSABLE_POLE |
 | POLE_TVRADIO     | `$SEED_PASSWORD` | RESPONSABLE_POLE |
+| ANGE_KAPET       | `$SEED_PASSWORD` | EMPLOYE          |
+| LILIANE_KONAN    | `$SEED_PASSWORD` | EMPLOYE          |
+| ANDREAS_BONI     | `$SEED_PASSWORD` | EMPLOYE          |
+| ME_KOUAKOU       | `$SEED_PASSWORD` | EMPLOYE          |
+| JOSEPH_TANO      | `$SEED_PASSWORD` | EMPLOYE          |
+| HENRI_AMAN       | `$SEED_PASSWORD` | EMPLOYE          |
 | CONS_PJ_1        | `$SEED_PASSWORD` | CONSULTANT       |
 | CONS_NUIT_1      | `$SEED_PASSWORD` | CONSULTANT       |
 | CONS_TVR_1       | `$SEED_PASSWORD` | CONSULTANT       |
@@ -127,6 +133,7 @@ Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` d
 - **Présence** : fixée uniquement à la **première connexion du jour**
 - **Géolocalisation** : obligatoire à la première connexion, refus = connexion bloquée
 - **Horaire prioritaire** : 1. mandat journalier → 2. groupe horaire → 3. heure individuelle
+- **Employés standards** : `EMPLOYE`, `CONSULTANT`, `STAGIAIRE` et `PRESTATAIRE` sont rattachables à une BU/un pôle sans droits de gestion
 - **Onglets** : onglets globaux ou ciblés BU selon le périmètre du rôle
 - **Annonces** : gestion réservée à `CTO_ADMIN` et `PDG`
 - **Actions annonces** : les actions par annonce sont regroupées dans un select `Actions à effectuer`

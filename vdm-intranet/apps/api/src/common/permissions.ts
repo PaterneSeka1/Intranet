@@ -1,7 +1,12 @@
 import { Role } from '@prisma/client'
 
 /** Rôles sans sidebar — accueil uniquement */
-export const ACCUEIL_ONLY_ROLES: Role[] = [Role.CONSULTANT, Role.STAGIAIRE, Role.PRESTATAIRE]
+export const ACCUEIL_ONLY_ROLES: Role[] = [
+  Role.EMPLOYE,
+  Role.CONSULTANT,
+  Role.STAGIAIRE,
+  Role.PRESTATAIRE,
+]
 
 /** Rôles pouvant voir le pilotage, avec scope appliqué côté service */
 export const CAN_VIEW_PILOTAGE: Role[] = [

@@ -34,6 +34,7 @@ const TAB_SELECT = {
 const FULL_ACCESS: Role[] = [Role.CTO_ADMIN, Role.PDG]
 const READ_OWN_BU: Role[] = [
   Role.RESPONSABLE_POLE,
+  Role.EMPLOYE,
   Role.CONSULTANT,
   Role.STAGIAIRE,
   Role.PRESTATAIRE,

@@ -47,7 +47,7 @@ const EMPTY_FORM: FormData = {
   firstName: '',
   lastName: '',
   email: '',
-  role: 'CONSULTANT',
+  role: 'EMPLOYE',
   businessUnitId: '',
   poleId: '',
   managerId: '',
@@ -75,6 +75,7 @@ const ROLE_BADGE: Record<Role, string> = {
   DAF: 'bg-yellow-100 text-yellow-700',
   RESPONSABLE_BU: 'bg-blue-100 text-blue-700',
   RESPONSABLE_POLE: 'bg-indigo-100 text-indigo-700',
+  EMPLOYE: 'bg-slate-100 text-slate-600',
   CONSULTANT: 'bg-gray-100 text-gray-600',
   STAGIAIRE: 'bg-green-100 text-green-700',
   PRESTATAIRE: 'bg-purple-100 text-purple-700',
@@ -86,9 +87,10 @@ const ROLE_HINTS: Record<Role, string> = {
   DAF: 'Direction administrative — gestion du périmètre DAF',
   RESPONSABLE_BU: "Gestion d'une Business Unit et de ses membres",
   RESPONSABLE_POLE: "Supervision d'un pôle au sein d'une BU",
-  CONSULTANT: 'Employé rattachable à une BU — sans droits de gestion',
-  STAGIAIRE: 'Employé rattachable à une BU — sans droits de gestion',
-  PRESTATAIRE: 'Employé rattachable à une BU — sans droits de gestion',
+  EMPLOYE: 'Employé rattachable à une BU — sans droits de gestion',
+  CONSULTANT: 'Consultant rattachable à une BU — sans droits de gestion',
+  STAGIAIRE: 'Stagiaire rattachable à une BU — sans droits de gestion',
+  PRESTATAIRE: 'Prestataire rattachable à une BU — sans droits de gestion',
 }
 
 const NO_BU_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
@@ -107,6 +109,7 @@ const ALL_ROLES: Role[] = [
   'DAF',
   'RESPONSABLE_BU',
   'RESPONSABLE_POLE',
+  'EMPLOYE',
   'CONSULTANT',
   'STAGIAIRE',
   'PRESTATAIRE',

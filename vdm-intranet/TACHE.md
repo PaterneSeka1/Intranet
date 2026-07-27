@@ -142,6 +142,33 @@ Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
 - `rm -rf apps/web/.next` : effectué avant build.
 - `npm run build --workspace=apps/web` : OK.
 
+## Ajustement — Rôle employé générique — 2026-07-27
+
+- `[x]` Base de données — Ajouter le rôle Prisma `EMPLOYE`.
+- `[x]` Migration — Ajouter `20260727000000_add_employe_role`.
+- `[x]` API — Traiter `EMPLOYE` comme rôle sans droits de gestion, accueil uniquement.
+- `[x]` API — Autoriser `EMPLOYE` à lire les onglets actifs de sa BU, comme les autres rôles standards.
+- `[x]` Frontend — Ajouter `EMPLOYE` aux types, labels, badges, sidebar et formulaire utilisateur.
+- `[x]` Frontend — Utiliser `EMPLOYE` comme rôle par défaut à la création d'utilisateur.
+- `[x]` Seed — Reclasser les comptes nominatifs non-consultants en `EMPLOYE`.
+- `[x]` Documentation — Mettre à jour les fichiers `.md`.
+
+### Audit rôle employé — 2026-07-27
+
+- `EMPLOYE` couvre les salariés qui ne sont ni consultants, ni stagiaires, ni prestataires.
+- `EMPLOYE` reste rattachable à une BU/un pôle mais ne reçoit aucun droit de gestion.
+- `EMPLOYE` n'apparaît pas dans le select `Manager direct`.
+- La base locale contient 6 comptes `EMPLOYE` après mise à jour ciblée.
+- `prisma migrate deploy` reste bloqué par l'ancienne migration échouée `20260630000001_module3_presence`; l'enum local a donc été appliqué par SQL ciblé.
+- `npx prisma validate --schema packages/database/prisma/schema.prisma` : OK.
+- `npm run db:generate` : OK.
+- `npm run type-check --workspace=apps/api` : OK.
+- `npm run type-check --workspace=apps/web -- --incremental false` : OK.
+- `npx tsc --noEmit -p packages/database/tsconfig.json` : OK après suppression de l'export obsolète `TabType`.
+- `npm run build:api` : OK.
+- `rm -rf apps/web/.next` : effectué avant build.
+- `npm run build:web` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

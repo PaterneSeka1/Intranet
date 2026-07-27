@@ -6,7 +6,7 @@ import type { PresenceRow } from '@/lib/presence'
 import type { Mandate } from '@/components/presence/MandatesManager'
 import { API_BASE } from '@/lib/api-base'
 
-const ACCUEIL_ONLY = ['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE']
+const ACCUEIL_ONLY = ['EMPLOYE', 'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE']
 
 async function fetchPresences(
   token: string,

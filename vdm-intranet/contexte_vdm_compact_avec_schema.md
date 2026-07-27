@@ -57,6 +57,7 @@ flowchart TB
 - L’autorité hiérarchique de chaque BU appartient à son Responsable.
 - En cas de doute : consultation du CTO ; dernier recours : PDG.
 - Dans l'application, les managers directs sélectionnables sont les rôles de direction/responsabilité : CTO, PDG, DAF et responsables BU/Pôle.
+- Le rôle applicatif `EMPLOYE` couvre les salariés sans rôle de consultant, stagiaire, prestataire ou responsable.
 
 ## Business Units
 

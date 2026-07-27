@@ -48,6 +48,7 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: 'Pilotage Pôle', href: '/pilotage', icon: '📊' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
   ],
+  EMPLOYE: [],
   CONSULTANT: [],
   STAGIAIRE: [],
   PRESTATAIRE: [],

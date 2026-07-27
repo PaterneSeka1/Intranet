@@ -30,7 +30,9 @@ export default async function MonHistoriquePage() {
   if (!user) redirect('/login')
 
   const logs = await getMyConnections()
-  const showGeolocation = !['CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(user.role)
+  const showGeolocation = !['EMPLOYE', 'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(
+    user.role
+  )
 
   return (
     <div className="p-6">

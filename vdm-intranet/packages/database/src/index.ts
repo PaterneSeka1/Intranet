@@ -12,7 +12,6 @@ export type {
   ActivityLog,
   Role,
   PresenceStatus,
-  TabType,
   LogAction,
 } from '@prisma/client'
 
