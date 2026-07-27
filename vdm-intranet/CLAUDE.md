@@ -24,6 +24,7 @@ Toutes les commandes doivent être exécutées depuis le répertoire racine (`/v
 - **Lancer le Frontend Web en mode dev** : `npm run dev:web`
 - **Compiler l'API (production)** : `npm run build:api`
 - **Compiler le Frontend Web (production)** : `npm run build:web`
+- **Build Web propre si cache/PWA incohérent** : supprimer `apps/web/.next`, puis relancer `npm run build:web`
 - **Formater automatiquement le code (Prettier)** : `npm run format`
 
 ### Commandes de Base de Données (Prisma)

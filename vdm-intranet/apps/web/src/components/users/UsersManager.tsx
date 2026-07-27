@@ -93,6 +93,13 @@ const ROLE_HINTS: Record<Role, string> = {
 
 const NO_BU_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
 const PROTECTED_ADMIN_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
+const DIRECT_MANAGER_ROLES: Role[] = [
+  'CTO_ADMIN',
+  'PDG',
+  'DAF',
+  'RESPONSABLE_BU',
+  'RESPONSABLE_POLE',
+]
 
 const ALL_ROLES: Role[] = [
   'CTO_ADMIN',
@@ -583,7 +590,12 @@ export function UsersManager({
               >
                 <option value="">— Aucun —</option>
                 {users
-                  .filter((u) => u.isActive && (!editing || u.id !== editing.id))
+                  .filter(
+                    (u) =>
+                      u.isActive &&
+                      DIRECT_MANAGER_ROLES.includes(u.role) &&
+                      (!editing || u.id !== editing.id)
+                  )
                   .sort((a, b) =>
                     (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username)
                   )

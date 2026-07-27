@@ -125,6 +125,23 @@ Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
 - `npm run build:web` : OK.
 - `git diff --check` : OK.
 
+## Ajustement — Actions annonces & managers directs — 2026-07-27
+
+- `[x]` Annonces — Remplacer les boutons d'action par un select `Actions à effectuer`.
+- `[x]` Annonces — Garder les actions existantes : activer/désactiver, modifier, supprimer.
+- `[x]` Utilisateurs — Limiter le select `Manager direct` aux rôles de direction/responsabilité.
+- `[x]` Build Web — Supprimer `apps/web/.next` avant le build propre pour éviter les manifestes incohérents et le fallback hors connexion.
+- `[x]` Documentation — Mettre à jour les fichiers `.md`.
+
+### Audit actions & managers — 2026-07-27
+
+- La page `/annonces` affiche un select par annonce avec les actions disponibles.
+- Le select `Manager direct` affiche uniquement les utilisateurs actifs avec les rôles `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` ou `RESPONSABLE_POLE`.
+- Les rôles `CONSULTANT`, `STAGIAIRE` et `PRESTATAIRE` ne sont plus proposés comme managers directs.
+- `npm run type-check --workspace=apps/web -- --incremental false` : OK.
+- `rm -rf apps/web/.next` : effectué avant build.
+- `npm run build --workspace=apps/web` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

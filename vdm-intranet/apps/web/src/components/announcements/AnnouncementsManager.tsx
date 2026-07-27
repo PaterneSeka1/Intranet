@@ -26,6 +26,8 @@ type FormData = {
   expiresAt: string
 }
 
+type AnnouncementAction = '' | 'toggle' | 'edit' | 'delete'
+
 const EMPTY_FORM: FormData = {
   title: '',
   body: '',
@@ -203,6 +205,22 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
     }
   }
 
+  async function handleAnnouncementAction(a: Announcement, action: AnnouncementAction) {
+    if (!action) return
+
+    if (action === 'toggle') {
+      await toggleActive(a)
+      return
+    }
+
+    if (action === 'edit') {
+      openEdit(a)
+      return
+    }
+
+    await handleDelete(a)
+  }
+
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const pageItems = useMemo(
@@ -271,7 +289,7 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
           return (
             <div
               key={a.id}
-              className={`bg-white rounded-2xl border p-5 flex gap-4 ${a.isPinned ? 'border-[#F28C38]/30' : 'border-gray-100'}`}
+              className={`bg-white rounded-2xl border p-5 flex flex-col gap-4 sm:flex-row ${a.isPinned ? 'border-[#F28C38]/30' : 'border-gray-100'}`}
             >
               {a.isPinned && (
                 <div className="mt-0.5 text-[#F28C38] text-lg" title="Épinglée">
@@ -295,29 +313,22 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
                   <span>Par : {a.createdBy.fullName ?? a.createdBy.username}</span>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 shrink-0">
-                <button
-                  onClick={() => toggleActive(a)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-                    a.isActive
-                      ? 'border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-500'
-                      : 'border-green-200 text-green-600 hover:bg-green-50'
-                  }`}
+              <div className="w-full shrink-0 sm:w-auto">
+                <select
+                  aria-label={`Actions à effectuer pour ${a.title}`}
+                  defaultValue=""
+                  onChange={(e) => {
+                    const action = e.target.value as AnnouncementAction
+                    e.target.value = ''
+                    void handleAnnouncementAction(a, action)
+                  }}
+                  className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] sm:w-auto sm:min-w-[172px]"
                 >
-                  {a.isActive ? 'Désactiver' : 'Activer'}
-                </button>
-                <button
-                  onClick={() => openEdit(a)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Modifier
-                </button>
-                <button
-                  onClick={() => handleDelete(a)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
-                >
-                  Supprimer
-                </button>
+                  <option value="">Actions à effectuer</option>
+                  <option value="toggle">{a.isActive ? 'Désactiver' : 'Activer'}</option>
+                  <option value="edit">Modifier</option>
+                  <option value="delete">Supprimer</option>
+                </select>
               </div>
             </div>
           )

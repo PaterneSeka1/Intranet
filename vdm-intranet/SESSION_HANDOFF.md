@@ -48,6 +48,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Ancienne hypothèse remplacée : la DAF ne doit plus gérer globalement les onglets ; elle doit être limitée à son périmètre département/BU.
   - Les champs relationnels vidés en admin envoient `null`.
   - `vdm_bg_image` est échappé avant injection CSS.
+  - La gestion des annonces utilise maintenant un select `Actions à effectuer` par annonce.
+  - Le select `Manager direct` de création/modification utilisateur liste uniquement `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` et `RESPONSABLE_POLE`.
 - **Gouvernance rôles & périmètres** :
   - `CTO_ADMIN` et `PDG` sont les seuls admins globaux.
   - `CTO_ADMIN` peut gérer/modifier les comptes `CTO_ADMIN` et `PDG`; `PDG` ne peut pas modifier ces comptes ni attribuer ces rôles.
@@ -94,6 +96,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
 - `npm run build:web` : OK.
 - `git diff --check` : OK.
 - Note build Web : un cache `.next` incohérent a été nettoyé avant le dernier `npm run build:web`.
+- Dernière validation web ciblée : `npm run type-check --workspace=apps/web -- --incremental false` : OK.
+- Dernier build web propre : `rm -rf apps/web/.next`, puis `npm run build --workspace=apps/web` : OK.
 - `npm audit --omit=dev` : vulnérabilités restantes détectées dans l'arbre de dépendances ; les corrections complètes proposées incluent des upgrades majeurs Nest 11 et Next 16, à planifier séparément.
 
 ### Notes d'Environnement
@@ -116,6 +120,8 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Vérifier que la page annonces est refusée à la DAF et accessible au CTO/PDG.
   - Vérifier que le bandeau défile uniquement avec les annonces épinglées.
   - Vérifier que le widget annonces affiche les annonces actives non épinglées.
+  - Vérifier que les actions de `/annonces` sont disponibles dans le select `Actions à effectuer`.
+  - Créer/modifier un utilisateur et vérifier que `Manager direct` ne propose que CTO, PDG, DAF et responsables.
   - Vérifier avec un utilisateur rattaché à une BU que les annonces d'une autre BU ne sont pas affichées.
   - Modifier une annonce épinglée déjà fermée côté utilisateur et vérifier qu'elle réapparaît dans la bannière.
   - Créer une annonce avec expiration au jour J et vérifier qu'elle reste visible jusqu'à la fin de cette journée.

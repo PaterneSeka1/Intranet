@@ -18,6 +18,7 @@ Ce document décrit les consignes de travail et les standards de communication �
 2. **Implémentation Incrementale** : Préférer des modifications précises et localisées. Si plusieurs fichiers sont modifiés, faire des modifications atomiques.
 3. **Compilation et Vérification** :
    - Après chaque modification, lancer un build complet de l'API (`npm run build:api`) et/ou du Frontend (`npm run build:web`).
+   - Pour le Frontend, supprimer `apps/web/.next` avant un build propre lorsque le cache Next/PWA provoque des pages hors connexion ou des manifestes incohérents.
    - Il est obligatoire de s'assurer qu'aucun avertissement ou erreur de typage n'a été introduit.
 4. **Documentation** : Mettre à jour le fichier `SESSION_HANDOFF.md` en fin de session pour récapituler le travail fait et les prochaines tâches.
 

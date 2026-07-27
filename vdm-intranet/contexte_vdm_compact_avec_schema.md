@@ -56,6 +56,7 @@ flowchart TB
 - Pour les BU Information, E-Réputation et Analyses Médiatiques, le CTO agit comme référent opérationnel transversal.
 - L’autorité hiérarchique de chaque BU appartient à son Responsable.
 - En cas de doute : consultation du CTO ; dernier recours : PDG.
+- Dans l'application, les managers directs sélectionnables sont les rôles de direction/responsabilité : CTO, PDG, DAF et responsables BU/Pôle.
 
 ## Business Units
 

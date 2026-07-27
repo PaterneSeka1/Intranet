@@ -129,10 +129,12 @@ Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` d
 - **Horaire prioritaire** : 1. mandat journalier → 2. groupe horaire → 3. heure individuelle
 - **Onglets** : onglets globaux ou ciblés BU selon le périmètre du rôle
 - **Annonces** : gestion réservée à `CTO_ADMIN` et `PDG`
+- **Actions annonces** : les actions par annonce sont regroupées dans un select `Actions à effectuer`
 - **Annonces ciblées** : les utilisateurs voient les annonces globales et celles de leur BU uniquement
 - **Bannière annonces** : affiche seulement les annonces actives épinglées
 - **Widget annonces** : affiche les annonces actives non épinglées, avec fallback sur les épinglées
 - **Actualisation annonces** : Socket.IO signale les changements et le client recharge l'API authentifiée
+- **Manager direct** : seuls `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` et `RESPONSABLE_POLE` sont proposés comme managers directs
 
 ## Déploiement OVH (TODO)
 
@@ -150,6 +152,7 @@ pm2 start ecosystem.config.js
 npm run type-check --workspace=apps/api
 npm run type-check --workspace=apps/web
 npm run build:api
+rm -rf apps/web/.next   # recommandé avant build web si cache Next/PWA incohérent
 npm run build:web
 ```
 
