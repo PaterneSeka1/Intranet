@@ -62,6 +62,15 @@ type GroupForm = {
   isNightShift: boolean
 }
 
+type Holiday = {
+  id: string
+  date: string
+  label: string
+  isRecurring: boolean
+}
+
+type HolidayForm = { date: string; label: string; isRecurring: boolean }
+
 // ---------------------------------------------------------------------------
 // Gradients disponibles
 // ---------------------------------------------------------------------------
@@ -169,18 +178,21 @@ interface Props {
   buList: Bu[]
   initialPoles?: Pole[]
   initialSettings?: Record<string, string>
+  initialHolidays?: Holiday[]
 }
 
 const EMPTY_BU: BuForm = { name: '', code: '', description: '' }
 const EMPTY_POLE: PoleForm = { name: '', code: '', businessUnitId: '' }
+const EMPTY_HOLIDAY: HolidayForm = { date: '', label: '', isRecurring: false }
 
 export function ParametresClient({
   initialGroups,
   buList: initialBuList,
   initialPoles = [],
   initialSettings = {},
+  initialHolidays = [],
 }: Props) {
-  const [tab, setTab] = useState<'bg' | 'groups' | 'org'>('bg')
+  const [tab, setTab] = useState<'bg' | 'groups' | 'org' | 'holidays'>('bg')
 
   // --- Fond d'écran ---
   const [appBg, setAppBg] = useState(initialSettings['vdm_app_bg'] ?? '')
@@ -473,6 +485,79 @@ export function ParametresClient({
     }
   }
 
+  // --- Jours fériés ---
+  const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays)
+  const [showHolidayForm, setShowHolidayForm] = useState(false)
+  const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null)
+  const [holidayForm, setHolidayForm] = useState<HolidayForm>(EMPTY_HOLIDAY)
+  const [holidaySaving, setHolidaySaving] = useState(false)
+  const [holidayError, setHolidayError] = useState('')
+
+  function openCreateHoliday() {
+    setEditingHoliday(null)
+    setHolidayForm(EMPTY_HOLIDAY)
+    setHolidayError('')
+    setShowHolidayForm(true)
+  }
+
+  function openEditHoliday(h: Holiday) {
+    setEditingHoliday(h)
+    setHolidayForm({ date: h.date.slice(0, 10), label: h.label, isRecurring: h.isRecurring })
+    setHolidayError('')
+    setShowHolidayForm(true)
+  }
+
+  async function handleHolidaySubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setHolidaySaving(true)
+    setHolidayError('')
+    try {
+      const payload = {
+        date: holidayForm.date,
+        label: holidayForm.label,
+        isRecurring: holidayForm.isRecurring,
+      }
+      if (editingHoliday) {
+        const updated = await apiReq<Holiday>(`/public-holidays/${editingHoliday.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        })
+        setHolidays((prev) => prev.map((h) => (h.id === editingHoliday.id ? updated : h)))
+        toast.success('Jour férié mis à jour.')
+      } else {
+        const created = await apiReq<Holiday>('/public-holidays', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+        setHolidays((prev) => [...prev, created].sort((a, b) => a.date.localeCompare(b.date)))
+        toast.success('Jour férié créé.')
+      }
+      setShowHolidayForm(false)
+      setEditingHoliday(null)
+    } catch (err) {
+      setHolidayError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setHolidaySaving(false)
+    }
+  }
+
+  async function deleteHoliday(h: Holiday) {
+    const ok = await confirm({
+      title: 'Supprimer le jour férié',
+      message: `Supprimer « ${h.label} » ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    })
+    if (!ok) return
+    try {
+      await apiReq(`/public-holidays/${h.id}`, { method: 'DELETE' })
+      setHolidays((prev) => prev.filter((x) => x.id !== h.id))
+      toast.success(`Jour férié « ${h.label} » supprimé.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression.')
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Rendu
   // ---------------------------------------------------------------------------
@@ -488,7 +573,7 @@ export function ParametresClient({
 
       {/* Onglets */}
       <div className="flex flex-wrap gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
-        {(['bg', 'groups', 'org'] as const).map((t) => (
+        {(['bg', 'groups', 'holidays', 'org'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -496,7 +581,13 @@ export function ParametresClient({
               tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t === 'bg' ? 'Apparence' : t === 'groups' ? 'Groupes horaires' : 'Organisation'}
+            {t === 'bg'
+              ? 'Apparence'
+              : t === 'groups'
+                ? 'Groupes horaires'
+                : t === 'holidays'
+                  ? 'Jours fériés'
+                  : 'Organisation'}
           </button>
         ))}
       </div>
@@ -1039,6 +1130,105 @@ export function ParametresClient({
                   className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
                 >
                   {groupSaving ? 'Enregistrement…' : editingGroup ? 'Mettre à jour' : 'Créer'}
+                </button>
+              </div>
+            </form>
+          </Modal>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Tab : Jours fériés */}
+      {/* ------------------------------------------------------------------ */}
+      {tab === 'holidays' && (
+        <div>
+          <HolidaysSection
+            holidays={holidays}
+            onOpenCreate={openCreateHoliday}
+            onOpenEdit={openEditHoliday}
+            onDelete={deleteHoliday}
+          />
+
+          {/* Modale jour férié */}
+          <Modal
+            open={showHolidayForm}
+            onClose={() => setShowHolidayForm(false)}
+            title={editingHoliday ? 'Modifier le jour férié' : 'Nouveau jour férié'}
+            subtitle={
+              editingHoliday
+                ? `Éditer « ${editingHoliday.label} »`
+                : 'Ajouter une date fériée au calendrier'
+            }
+            size="md"
+          >
+            <form onSubmit={handleHolidaySubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="hol-date"
+                  className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+                >
+                  Date *
+                </label>
+                <input
+                  id="hol-date"
+                  type="date"
+                  value={holidayForm.date}
+                  onChange={(e) => setHolidayForm({ ...holidayForm, date: e.target.value })}
+                  required
+                  className={INPUT}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="hol-label"
+                  className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+                >
+                  Libellé *
+                </label>
+                <input
+                  id="hol-label"
+                  type="text"
+                  value={holidayForm.label}
+                  onChange={(e) => setHolidayForm({ ...holidayForm, label: e.target.value })}
+                  required
+                  className={INPUT}
+                  placeholder="ex: Fête de l'Indépendance"
+                />
+              </div>
+
+              <label className="flex items-center gap-2.5 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={holidayForm.isRecurring}
+                  onChange={(e) =>
+                    setHolidayForm({ ...holidayForm, isRecurring: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded border-gray-300 text-[#F28C38] focus:ring-[#F28C38]/30"
+                />
+                Récurrent chaque année (même jour/mois)
+              </label>
+
+              {holidayError && (
+                <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
+                  {holidayError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowHolidayForm(false)}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={holidaySaving}
+                  className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+                >
+                  {holidaySaving ? 'Enregistrement…' : editingHoliday ? 'Mettre à jour' : 'Créer'}
                 </button>
               </div>
             </form>
@@ -1921,6 +2111,87 @@ function BgPanel({
 
 type BuMin = { id: string; name: string; code: string }
 type PoleMin = { id: string; name: string; code: string; businessUnitId: string }
+
+function HolidaysSection({
+  holidays,
+  onOpenCreate,
+  onOpenEdit,
+  onDelete,
+}: {
+  holidays: Holiday[]
+  onOpenCreate: () => void
+  onOpenEdit: (h: Holiday) => void
+  onDelete: (h: Holiday) => Promise<void>
+}) {
+  function fmtDate(iso: string): string {
+    const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
+  return (
+    <div>
+      {/* Barre d'outils */}
+      <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+        <span className="text-sm text-gray-400">
+          {holidays.length} jour{holidays.length !== 1 ? 's' : ''} férié
+          {holidays.length !== 1 ? 's' : ''}
+        </span>
+        <button
+          onClick={onOpenCreate}
+          className="bg-[#F28C38] text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#e07d29] transition-colors shrink-0"
+        >
+          + Nouveau jour férié
+        </button>
+      </div>
+
+      {/* Liste */}
+      <div className="space-y-2">
+        {holidays.length === 0 && (
+          <p className="text-sm text-gray-400 py-8 text-center">Aucun jour férié configuré.</p>
+        )}
+        {holidays.map((h) => (
+          <div
+            key={h.id}
+            className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#F28C38]/10 flex items-center justify-center shrink-0 text-lg">
+              📅
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 text-sm flex items-center gap-2 flex-wrap">
+                {h.label}
+                {h.isRecurring && (
+                  <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                    Récurrent
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5">{fmtDate(h.date)}</div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onOpenEdit(h)}
+                className="text-xs border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50"
+              >
+                Modifier
+              </button>
+              <button
+                onClick={() => onDelete(h)}
+                className="text-xs border border-red-100 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function GroupsSection({
   groups,

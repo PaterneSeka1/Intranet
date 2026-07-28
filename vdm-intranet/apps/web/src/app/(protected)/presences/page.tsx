@@ -5,8 +5,8 @@ import { PresencesPageClient } from '@/components/presence/PresencesPageClient'
 import type { PresenceRow } from '@/lib/presence'
 import type { Mandate } from '@/components/presence/MandatesManager'
 import { API_BASE } from '@/lib/api-base'
-
-const ACCUEIL_ONLY = ['EMPLOYE', 'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE']
+import { ACCUEIL_ONLY_ROLES } from '@/types/user'
+import type { PublicHoliday } from '@/lib/public-holidays'
 
 async function fetchPresences(
   token: string,
@@ -38,6 +38,19 @@ async function fetchMandates(token: string, cookieName: string, date: string): P
   }
 }
 
+async function fetchHolidays(token: string, cookieName: string): Promise<PublicHoliday[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/public-holidays`, {
+      headers: { Cookie: `${cookieName}=${token}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
+}
+
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 function todayIso(): string {
@@ -58,7 +71,7 @@ interface Props {
 export default async function PresencesPage({ searchParams }: Props) {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (ACCUEIL_ONLY.includes(user.role)) redirect('/acces-refuse')
+  if (ACCUEIL_ONLY_ROLES.includes(user.role)) redirect('/acces-refuse')
 
   const { date: dateParam } = await searchParams
   const date = sanitizeDate(dateParam)
@@ -67,9 +80,10 @@ export default async function PresencesPage({ searchParams }: Props) {
   const cookieName = process.env.COOKIE_NAME ?? 'vdm_token'
   const token = cookieStore.get(cookieName)?.value ?? ''
 
-  const [rows, mandates] = await Promise.all([
+  const [rows, mandates, holidays] = await Promise.all([
     fetchPresences(token, cookieName, date),
     fetchMandates(token, cookieName, date),
+    fetchHolidays(token, cookieName),
   ])
 
   const canMandate = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE'].includes(
@@ -83,6 +97,7 @@ export default async function PresencesPage({ searchParams }: Props) {
       date={date}
       canMandate={canMandate}
       currentUserId={user.id}
+      holidays={holidays}
     />
   )
 }

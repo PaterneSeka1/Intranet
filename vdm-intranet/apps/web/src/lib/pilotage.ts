@@ -50,6 +50,29 @@ export type ActivityLogPage = {
   logs: ActivityLogEntry[]
 }
 
+export type PeriodReportBu = {
+  buId: string
+  buName: string
+  buCode: string
+  workingDays: number
+  totalUserDays: number
+  present: number
+  late: number
+  absent: number
+  presenceRate: number
+}
+
+/** `date` est une string ISO ; toutes les autres clés (codes BU + `overall`) sont des taux numériques. */
+export type PeriodReportTrendPoint = Record<string, string | number>
+
+export type PeriodReport = {
+  period: 'week' | 'month'
+  from: string
+  to: string
+  byBu: PeriodReportBu[]
+  trend: PeriodReportTrendPoint[]
+}
+
 async function req<T>(path: string): Promise<T> {
   const controller = new AbortController()
   const tid = setTimeout(() => controller.abort(), 30_000)
@@ -72,6 +95,8 @@ async function req<T>(path: string): Promise<T> {
 export const pilotageApi = {
   summary: (): Promise<Summary> => req<Summary>('/pilotage/summary'),
   presenceByBu: (): Promise<PresenceByBu[]> => req<PresenceByBu[]>('/pilotage/presence-by-bu'),
+  periodReport: (period: 'week' | 'month', date?: string): Promise<PeriodReport> =>
+    req<PeriodReport>(`/pilotage/period-report?period=${period}${date ? `&date=${date}` : ''}`),
   connectionsChart: (days = 14): Promise<ConnectionPoint[]> =>
     req<ConnectionPoint[]>(`/pilotage/connections-chart?days=${days}`),
   activityChart: (days = 30): Promise<ActionPoint[]> =>

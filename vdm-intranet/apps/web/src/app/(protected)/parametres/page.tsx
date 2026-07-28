@@ -35,17 +35,19 @@ type ScheduleGroup = {
   pole: { id: string; name: string; code: string } | null
   _count: { users: number }
 }
+type Holiday = { id: string; date: string; label: string; isRecurring: boolean }
 
 export default async function ParametresPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   if (user.role !== 'CTO_ADMIN') redirect('/acces-refuse')
 
-  const [groups, buList, poleList, settingsList] = await Promise.all([
+  const [groups, buList, poleList, settingsList, holidays] = await Promise.all([
     serverFetch<ScheduleGroup[]>('/presence/schedule-groups') ?? [],
     serverFetch<Bu[]>('/tabs/business-units') ?? [],
     serverFetch<Pole[]>('/tabs/poles') ?? [],
     fetchSettings(),
+    serverFetch<Holiday[]>('/public-holidays') ?? [],
   ])
 
   const initialSettings = Object.fromEntries((settingsList ?? []).map((s) => [s.key, s.value]))
@@ -57,6 +59,7 @@ export default async function ParametresPage() {
         buList={buList ?? []}
         initialPoles={poleList ?? []}
         initialSettings={initialSettings}
+        initialHolidays={holidays ?? []}
       />
     </div>
   )

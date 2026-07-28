@@ -7,6 +7,7 @@ import {
   type ConnectionLog,
 } from '@/components/historique/MonHistoriqueClient'
 import { API_BASE } from '@/lib/api-base'
+import { ACCUEIL_ONLY_ROLES } from '@/types/user'
 
 async function getMyConnections(): Promise<ConnectionLog[]> {
   try {
@@ -30,9 +31,7 @@ export default async function MonHistoriquePage() {
   if (!user) redirect('/login')
 
   const logs = await getMyConnections()
-  const showGeolocation = !['EMPLOYE', 'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(
-    user.role
-  )
+  const showGeolocation = !ACCUEIL_ONLY_ROLES.includes(user.role)
 
   return (
     <div className="p-6">

@@ -110,7 +110,9 @@ interface Props {
 export function MonHistoriqueClient({ logs, showGeolocation = true }: Props) {
   const loginCount = logs.filter((l) => l.type === 'LOGIN').length
 
-  const filteredColumns = showGeolocation ? columns : columns.filter((c) => c.key !== 'address')
+  const filteredColumns = showGeolocation
+    ? columns
+    : columns.filter((c) => c.key !== 'address' && c.key !== 'ipAddress')
 
   return (
     <DataTable<ConnectionLog>
@@ -119,7 +121,9 @@ export function MonHistoriqueClient({ logs, showGeolocation = true }: Props) {
       rowKey={(l) => l.id}
       defaultPageSize={25}
       searchable
-      searchPlaceholder="Rechercher par date, type, IP…"
+      searchPlaceholder={
+        showGeolocation ? 'Rechercher par date, type, IP…' : 'Rechercher par date, type…'
+      }
       filterFn={(l, q) =>
         fmtDate(l.date).includes(q) ||
         (l.type === 'LOGIN' ? 'connexion' : 'déconnexion').includes(q) ||

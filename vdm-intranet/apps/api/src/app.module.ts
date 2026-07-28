@@ -13,6 +13,9 @@ import { PilotageModule } from './pilotage/pilotage.module'
 import { ReportsModule } from './reports/reports.module'
 import { AnnouncementsModule } from './announcements/announcements.module'
 import { SettingsModule } from './settings/settings.module'
+import { PublicHolidaysModule } from './public-holidays/public-holidays.module'
+import { NotificationsModule } from './notifications/notifications.module'
+import { SearchModule } from './search/search.module'
 
 @Module({
   imports: [
@@ -30,6 +33,9 @@ import { SettingsModule } from './settings/settings.module'
     ReportsModule,
     AnnouncementsModule,
     SettingsModule,
+    PublicHolidaysModule,
+    NotificationsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

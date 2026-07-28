@@ -191,6 +191,54 @@ Source de vérité ajoutée : `contexte_vdm_compact_avec_schema.md`.
 - `npx prettier --check packages/database/prisma/seed.ts apps/web/src/components/users/UsersManager.tsx` : OK.
 - `git diff --check` : OK.
 
+## Correctif sécurité — Masquage IP/géolocalisation pour les rôles employés — 2026-07-28
+
+Demande : les employés ne doivent plus voir leur adresse IP ni leur géolocalisation dans leurs plateformes ; seuls les responsables doivent tout voir.
+
+- `[x]` Backend — Masquer `ipAddress` dans l'historique de connexions (`getMyConnections`) pour les rôles accueil, comme l'adresse GPS et `mapsUrl`.
+- `[x]` Backend — Appliquer la redaction de géolocalisation par rôle dans `getTodayAllPresences` (méthode oubliée lors du premier passage de `redactPresenceForRole`).
+- `[x]` Backend — Ne plus renvoyer l'objet `ConnectionLog` complet (IP, latitude/longitude, adresse) dans les réponses `login-log`/`logout-log` ; ces champs n'étaient consommés par aucun appelant.
+- `[x]` Frontend — Masquer la colonne IP du tableau "Mon historique" pour les rôles accueil, au même titre que la colonne adresse GPS.
+- `[x]` Frontend — Remplacer les listes de rôles "accueil uniquement" codées en dur (`accueil/page.tsx`, `mon-historique/page.tsx`, `presences/page.tsx`) par la constante partagée `ACCUEIL_ONLY_ROLES` de `types/user.ts`, pour éviter toute divergence future.
+- `[x]` Validation — Lancer formatage et builds API/Web.
+- `[x]` Documentation — Mettre à jour `TACHE.md` et `SESSION_HANDOFF.md`.
+
+### Audit correctif IP/géolocalisation — 2026-07-28
+
+- Rôles accueil (`EMPLOYE`, `CONSULTANT`, `STAGIAIRE`, `PRESTATAIRE`) : IP et géolocalisation totalement masquées, côté API (source de vérité) et côté interface.
+- Rôles responsables (`CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU`, `RESPONSABLE_POLE`) : accès inchangé à l'IP et à la géolocalisation (page Pilotage, journal d'activité, exports CSV), déjà réservés à ces rôles via `assertAllowed`.
+- Aucun changement de schéma Prisma ni de migration requis.
+- `npm run format` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK après nettoyage du cache `.next`.
+- `git diff --check` : OK.
+
+## Nouvelles fonctionnalités — Jours fériés, permissions, reporting, notifications, PDF, recherche — 2026-07-28
+
+Demande : ajouter les 7 fonctionnalités identifiées lors de l'audit du repo (hors périmètre RH classique — congés/documents administratifs — déjà couvert par un outil externe). Plan détaillé validé avec l'utilisateur avant implémentation (`EnterPlanMode`), décisions actées : PDF via Puppeteer, permissions centralisées sans UI/DB, reporting BU→CTO→PDG en rollup automatique, sessions actives en lecture seule.
+
+- `[x]` Migration Prisma — Modèles `PublicHoliday` et `Notification` (+ enum `NotificationType`), appliqués via `db:push` (P3006 déjà connu sur `prisma migrate dev`, cf. session `EMPLOYE`).
+- `[x]` Backend — Centraliser dans `common/permissions.ts` toutes les listes de rôles dupliquées dans `pilotage`/`reports`/`presence`/`tabs`/`announcements`/`users` (16 nouvelles constantes, câblage des constantes historiques `CAN_VIEW_USERS`/`CAN_MANAGE_USERS` sur `users.controller.ts`), sans changement de comportement.
+- `[x]` Backend + Frontend — Module `public-holidays` (CRUD CTO_ADMIN) + intégration `pilotage.service.ts::getSummary` (`isPublicHoliday`) + onglet "Jours fériés" dans `/parametres` + affichage widget calendrier et bannière `/presences`. Seed : 7 jours fixes CI.
+- `[x]` Backend + Frontend — Sessions actives : ajout `userAgent` au select de `getMyConnections` (sans le démasquer pour les rôles accueil), nouvel onglet "Sécurité" dans `/mon-profil` (lecture seule, parsing UA maison sans dépendance).
+- `[x]` Backend + Frontend — Reporting hiérarchique : `pilotage.service.ts::getPeriodReport` (agrégation semaine/mois par BU, hors week-ends) + section `PeriodReportSection` dans `/pilotage` (BarChart taux par BU + LineChart tendance).
+- `[x]` Backend + Frontend — Centre de notifications : modèle `Notification`, module `notifications` avec gateway Socket.IO **authentifiée** (parsing manuel du cookie JWT au handshake, rejet si invalide — contrairement au gateway `announcements` existant), déclencheurs sur `createMandate` et `announcements.create`, cloche `NotificationsBell` montée dans `Sidebar`, `MobileSidebarToggle` et le header "accueil seul".
+- `[x]` Backend + Frontend — Export PDF : dépendance `puppeteer`, refactor de `reports.service.ts` (extraction des requêtes Prisma en méthodes réutilisables `get*Rows`/`getGeneralData`), singleton `PdfBrowserService` (`OnModuleInit`/`OnModuleDestroy`, `app.enableShutdownHooks()` ajouté à `main.ts`), `ReportsPdfService` (rendu HTML→PDF brandé), 4 nouvelles routes `/reports/*/pdf`, bouton PDF à côté du bouton CSV dans `PilotageClient`.
+- `[x]` Backend + Frontend — Recherche globale : module `search` (réimplémente les scopes existants de `users`/`tabs`/`announcements`, jamais plus permissif), composant `GlobalSearch` (debounce 300ms) monté dans `Sidebar` et `MobileSidebarToggle`.
+- `[x]` Validation — `tsc --noEmit` après chaque chantier, `npm run format`, `npm run build:api`, `npm run build:web` (build final).
+- `[x]` Tests end-to-end réels (API démarrée en mode dev, comptes seedés) : handshake Socket.IO rejeté sans cookie / accepté avec cookie valide + réception temps réel confirmée ; 4 PDF générés et rendu visuel vérifié ; parité de permissions DAF CSV/PDF confirmée (403 sur activité/connexions/général, 200 sur présences) ; scope recherche confirmé pour un `RESPONSABLE_BU` (ne trouve pas un utilisateur d'une autre BU) ; base reseedée après tests pour repartir d'un état propre.
+- `[x]` Documentation — Mettre à jour `TACHE.md` et `SESSION_HANDOFF.md`.
+
+### Audit nouvelles fonctionnalités — 2026-07-28
+
+- Aucune régression fonctionnelle sur le refactor de permissions : la réécriture de la condition DAF (`CAN_EXPORT_EXTENDED_REPORTS`) a été vérifiée équivalente et testée en conditions réelles.
+- Le gateway `notifications` authentifie son handshake (contrairement à `announcements`, laissé inchangé, hors périmètre demandé) — pattern à réutiliser pour tout futur namespace Socket.IO sensible.
+- Puppeteer téléchargé avec succès (~300 Mo Chromium) en local ; notes opérationnelles VPS consignées dans le plan (bibliothèques système Linux requises, RAM du process persistant, nécessité de `enableShutdownHooks` pour un arrêt propre).
+- `npm run format` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK après nettoyage du cache `.next`.
+- `git diff --check` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

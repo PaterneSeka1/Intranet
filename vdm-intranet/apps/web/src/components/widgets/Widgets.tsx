@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useState } from 'react'
 import type { Announcement } from '@/lib/announcements'
+import { publicHolidaysApi, findHolidayForDate, type PublicHoliday } from '@/lib/public-holidays'
 
 type WeatherData = {
   temperature: number
@@ -87,6 +88,29 @@ function getCachedWeather(): WeatherData | null {
 function setCachedWeather(data: WeatherData) {
   try {
     localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
+  } catch {
+    /* noop */
+  }
+}
+
+const HOLIDAYS_CACHE_KEY = 'vdm_public_holidays_cache'
+const HOLIDAYS_TTL = 24 * 60 * 60 * 1000
+
+function getCachedHolidays(): PublicHoliday[] | null {
+  try {
+    const raw = localStorage.getItem(HOLIDAYS_CACHE_KEY)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw) as { data: PublicHoliday[]; ts: number }
+    if (Date.now() - ts > HOLIDAYS_TTL) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
+function setCachedHolidays(data: PublicHoliday[]) {
+  try {
+    localStorage.setItem(HOLIDAYS_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }))
   } catch {
     /* noop */
   }
@@ -181,6 +205,7 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherError, setWeatherError] = useState(false)
   const [visible, setVisible] = useState<Record<WidgetKey, boolean>>(DEFAULT_WIDGET_VISIBILITY)
+  const [holidays, setHolidays] = useState<PublicHoliday[]>([])
 
   useLayoutEffect(() => {
     try {
@@ -192,6 +217,22 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
 
     const cached = getCachedWeather()
     if (cached) setWeather(cached)
+
+    const cachedHolidays = getCachedHolidays()
+    if (cachedHolidays) setHolidays(cachedHolidays)
+  }, [])
+
+  useEffect(() => {
+    if (getCachedHolidays()) return
+    publicHolidaysApi
+      .list()
+      .then((data) => {
+        setCachedHolidays(data)
+        setHolidays(data)
+      })
+      .catch(() => {
+        /* widget calendrier reste utilisable sans jours fériés */
+      })
   }, [])
 
   function toggleWidget(key: WidgetKey) {
@@ -282,20 +323,32 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
                     {d}
                   </div>
                 ))}
-                {calCells.map((day, i) => (
-                  <div
-                    key={i}
-                    className={`text-[10px] text-center py-0.5 rounded-md font-medium transition-colors ${
-                      day === now.getDate()
-                        ? 'bg-[#F28C38] text-white'
-                        : day
-                          ? 'text-gray-700 hover:bg-gray-100'
-                          : ''
-                    }`}
-                  >
-                    {day ?? ''}
-                  </div>
-                ))}
+                {calCells.map((day, i) => {
+                  const iso = day
+                    ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                    : null
+                  const holiday = iso ? findHolidayForDate(iso, holidays) : undefined
+                  return (
+                    <div
+                      key={i}
+                      title={holiday ? `Jour férié — ${holiday.label}` : undefined}
+                      className={`relative text-[10px] text-center py-0.5 rounded-md font-medium transition-colors ${
+                        day === now.getDate()
+                          ? 'bg-[#F28C38] text-white'
+                          : holiday
+                            ? 'text-orange-600 hover:bg-orange-50'
+                            : day
+                              ? 'text-gray-700 hover:bg-gray-100'
+                              : ''
+                      }`}
+                    >
+                      {day ?? ''}
+                      {holiday && (
+                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-orange-500" />
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

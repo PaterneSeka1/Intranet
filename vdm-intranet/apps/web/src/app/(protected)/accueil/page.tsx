@@ -3,6 +3,7 @@ import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab } from '@/lib/tabs'
 import { EndDayButton } from '@/components/presence/EndDayButton'
+import { ACCUEIL_ONLY_ROLES } from '@/types/user'
 
 const STATUS_STYLE: Record<string, string> = {
   PRESENT: 'bg-green-100 text-green-700',
@@ -38,9 +39,7 @@ export default async function AccueilPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const showGeolocation = !['EMPLOYE', 'CONSULTANT', 'STAGIAIRE', 'PRESTATAIRE'].includes(
-    user.role
-  )
+  const showGeolocation = !ACCUEIL_ONLY_ROLES.includes(user.role)
 
   const [presenceData, allTabs] = await Promise.all([
     serverFetch<TodayPresenceResult>('/presence/today'),

@@ -584,6 +584,27 @@ async function main() {
     }
   }
 
+  // ---- Jours fériés (Côte d'Ivoire — dates fixes récurrentes) ----
+  const holidayDefs = [
+    { date: '2026-01-01', label: 'Jour de l’An' },
+    { date: '2026-05-01', label: 'Fête du Travail' },
+    { date: '2026-08-07', label: 'Fête de l’Indépendance' },
+    { date: '2026-08-15', label: 'Assomption' },
+    { date: '2026-11-01', label: 'Toussaint' },
+    { date: '2026-11-15', label: 'Journée nationale de la Paix' },
+    { date: '2026-12-25', label: 'Noël' },
+  ]
+  for (const h of holidayDefs) {
+    await prisma.publicHoliday.upsert({
+      where: { date_label: { date: new Date(`${h.date}T00:00:00.000Z`), label: h.label } },
+      update: {},
+      create: { date: new Date(`${h.date}T00:00:00.000Z`), label: h.label, isRecurring: true },
+    })
+  }
+  console.log(
+    `  ${holidayDefs.length} jours fériés fixes seedés (fêtes religieuses mobiles à saisir manuellement).`
+  )
+
   const stats = {
     users: userDefs.length,
     bus: buDefs.length,

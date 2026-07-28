@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -b /tmp/vdm-cookies-cto.txt http://localhost:3001/api/reports/presence/pdf -o /tmp/test-presence.pdf -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(curl -s -c /tmp/vdm-cookies-daf.txt -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"DAF\",\"password\":\"ChangeMe123!\"}')",
+      "Bash(curl -s -b /tmp/vdm-cookies-daf.txt -X PATCH http://localhost:3001/api/users/me -H 'Content-Type: application/json' -d '{\"currentPassword\":\"ChangeMe123!\",\"password\":\"NouveauMdp123!\"}')",
+      "Bash(curl -s -b /tmp/vdm-cookies-daf.txt -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/api/reports/presence/pdf)",
+      "Bash(curl -s -b /tmp/vdm-cookies-daf.txt http://localhost:3001/api/reports/activity/pdf)",
+      "Bash(curl -s -b /tmp/vdm-cookies-daf.txt http://localhost:3001/api/reports/activity)",
+      "Bash(curl -s -b /tmp/vdm-cookies-cto.txt \"http://localhost:3001/api/search?q=kap\")",
+      "Bash(curl -s -b /tmp/vdm-cookies-cto.txt \"http://localhost:3001/api/search?q=google\")",
+      "Bash(curl -s -b /tmp/vdm-cookies-cto.txt \"http://localhost:3001/api/search?q=a\")",
+      "Bash(curl -s -c /tmp/vdm-cookies-rbu.txt -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"RBU_INFO\",\"password\":\"ChangeMe123!\"}')",
+      "Bash(curl -s -b /tmp/vdm-cookies-rbu.txt -X PATCH http://localhost:3001/api/users/me -H 'Content-Type: application/json' -d '{\"currentPassword\":\"ChangeMe123!\",\"password\":\"NouveauMdp123!\"}')",
+      "Bash(curl -s -b /tmp/vdm-cookies-rbu.txt \"http://localhost:3001/api/search?q=kap\")",
+      "Bash(curl -s -b /tmp/vdm-cookies-rbu.txt \"http://localhost:3001/api/search?q=rbu\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(grep -n \"^## \\\\|^- \\\\`\\\\[x\\\\]\\\\` Tâche 1\" TACHE.md)",
+      "Bash(npx prettier *)"
+    ]
+  }
+}

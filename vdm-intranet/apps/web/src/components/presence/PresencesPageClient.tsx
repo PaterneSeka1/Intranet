@@ -5,6 +5,7 @@ import { PresenceTable } from '@/components/presence/PresenceTable'
 import { MandatesManager } from '@/components/presence/MandatesManager'
 import type { PresenceRow } from '@/lib/presence'
 import type { Mandate } from '@/components/presence/MandatesManager'
+import { findHolidayForDate, type PublicHoliday } from '@/lib/public-holidays'
 
 interface Props {
   rows: PresenceRow[]
@@ -12,6 +13,7 @@ interface Props {
   date: string
   canMandate: boolean
   currentUserId: string
+  holidays: PublicHoliday[]
 }
 
 function fmtDateLabel(iso: string): string {
@@ -42,10 +44,18 @@ function shiftDate(iso: string, days: number): string {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`
 }
 
-export function PresencesPageClient({ rows, mandates, date, canMandate, currentUserId }: Props) {
+export function PresencesPageClient({
+  rows,
+  mandates,
+  date,
+  canMandate,
+  currentUserId,
+  holidays,
+}: Props) {
   const router = useRouter()
   const today = todayIso()
   const isToday = date === today
+  const holiday = findHolidayForDate(date, holidays)
 
   const present = rows.filter((r) => r.status === 'PRESENT').length
   const late = rows.filter((r) => r.status === 'LATE').length
@@ -96,6 +106,13 @@ export function PresencesPageClient({ rows, mandates, date, canMandate, currentU
           )}
         </div>
       </div>
+
+      {/* Bannière jour férié */}
+      {holiday && (
+        <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 text-sm text-orange-700 mb-4">
+          Jour férié — {holiday.label}
+        </div>
+      )}
 
       {/* Bannière week-end */}
       {isWeekend(date) && (

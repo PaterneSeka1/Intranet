@@ -9,6 +9,11 @@ import { PrismaService } from '../prisma/prisma.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { Role } from '@prisma/client'
+import {
+  CAN_MANAGE_USERS,
+  CAN_MANAGE_USERS_BU_SCOPE,
+  PROTECTED_ADMIN_ROLES,
+} from '../common/permissions'
 
 const SAFE_SELECT = {
   id: true,
@@ -37,10 +42,6 @@ type Requester = {
   businessUnitId?: string | null
   poleId?: string | null
 }
-
-const GLOBAL_USER_MANAGERS: Role[] = [Role.CTO_ADMIN, Role.PDG]
-const PROTECTED_ADMIN_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
-const BU_SCOPED_USER_ROLES: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
 
 @Injectable()
 export class UsersService {
@@ -203,14 +204,14 @@ export class UsersService {
 
   private scopeWhere(requester: Requester) {
     const { role, businessUnitId, poleId, id } = requester
-    if (GLOBAL_USER_MANAGERS.includes(role)) return {}
-    if (BU_SCOPED_USER_ROLES.includes(role) && businessUnitId) return { businessUnitId }
+    if (CAN_MANAGE_USERS.includes(role)) return {}
+    if (CAN_MANAGE_USERS_BU_SCOPE.includes(role) && businessUnitId) return { businessUnitId }
     if (role === Role.RESPONSABLE_POLE && poleId) return { poleId }
     return { id }
   }
 
   private assertCanCreateRole(requester: Requester, role: Role) {
-    if (!GLOBAL_USER_MANAGERS.includes(requester.role)) {
+    if (!CAN_MANAGE_USERS.includes(requester.role)) {
       throw new ForbiddenException('Vous ne pouvez pas créer un utilisateur.')
     }
     if (requester.role === Role.PDG && PROTECTED_ADMIN_ROLES.includes(role)) {

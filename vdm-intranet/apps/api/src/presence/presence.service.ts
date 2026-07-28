@@ -12,8 +12,13 @@ import { EndDayDto } from './dto/end-day.dto'
 import { CreateMandateDto } from './dto/create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
-import { Role } from '@prisma/client'
-import { ACCUEIL_ONLY_ROLES } from '../common/permissions'
+import { NotificationType, Role } from '@prisma/client'
+import {
+  ACCUEIL_ONLY_ROLES,
+  CAN_VIEW_PRESENCE_GLOBAL,
+  CAN_VIEW_PRESENCE_BU_SCOPE,
+} from '../common/permissions'
+import { NotificationsService } from '../notifications/notifications.service'
 
 type Requester = {
   id: string
@@ -75,7 +80,8 @@ type GeolocatedPresence = {
 export class PresenceService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly schedule: PresenceScheduleService
+    private readonly schedule: PresenceScheduleService,
+    private readonly notifications: NotificationsService
   ) {}
 
   // ----------------------------------------------------------------
@@ -127,6 +133,8 @@ export class PresenceService {
         where: { date: today, user: { isActive: true, ...scope } },
       }),
     ])
+
+    for (const presence of presences) this.redactPresenceForRole(presence, requester.role)
 
     const presenceMap = new Map(presences.map((p) => [p.userId, p]))
     const mandateMap = new Map(mandates.map((m) => [m.userId, m]))
@@ -293,7 +301,7 @@ export class PresenceService {
       },
     })
 
-    return log
+    return { id: log.id }
   }
 
   // ----------------------------------------------------------------
@@ -332,7 +340,7 @@ export class PresenceService {
       },
     })
 
-    return log
+    return { id: log.id }
   }
 
   // ----------------------------------------------------------------
@@ -527,6 +535,7 @@ export class PresenceService {
         address: true,
         mapsUrl: true,
         ipAddress: true,
+        userAgent: true,
         isFirstConnectionOfDay: true,
       },
     })
@@ -535,6 +544,7 @@ export class PresenceService {
       for (const log of logs) {
         log.address = null
         log.mapsUrl = null
+        log.ipAddress = null
       }
     }
 
@@ -617,6 +627,13 @@ export class PresenceService {
       },
     })
 
+    await this.notifications.notifyUser(target.id, {
+      type: NotificationType.MANDATE_ASSIGNED,
+      title: 'Nouveau mandat de présence',
+      body: `Heure d'arrivée attendue le ${dto.date} : ${dto.expectedArrivalTime}`,
+      link: '/presences',
+    })
+
     return mandate
   }
 
@@ -633,9 +650,9 @@ export class PresenceService {
     if (!mandate) throw new NotFoundException('Mandat introuvable')
 
     const canDelete =
-      ([Role.CTO_ADMIN, Role.PDG] as Role[]).includes(requester.role) ||
+      CAN_VIEW_PRESENCE_GLOBAL.includes(requester.role) ||
       mandate.createdById === requester.id ||
-      (([Role.DAF, Role.RESPONSABLE_BU] as Role[]).includes(requester.role) &&
+      (CAN_VIEW_PRESENCE_BU_SCOPE.includes(requester.role) &&
         mandate.user.businessUnitId === requester.businessUnitId) ||
       (requester.role === Role.RESPONSABLE_POLE && mandate.user.poleId === requester.poleId)
 
@@ -696,11 +713,8 @@ export class PresenceService {
   }
 
   private buildUserScope(requester: Requester): Record<string, unknown> {
-    if (([Role.CTO_ADMIN, Role.PDG] as Role[]).includes(requester.role)) return {}
-    if (
-      ([Role.DAF, Role.RESPONSABLE_BU] as Role[]).includes(requester.role) &&
-      requester.businessUnitId
-    ) {
+    if (CAN_VIEW_PRESENCE_GLOBAL.includes(requester.role)) return {}
+    if (CAN_VIEW_PRESENCE_BU_SCOPE.includes(requester.role) && requester.businessUnitId) {
       return { businessUnitId: requester.businessUnitId }
     }
     if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {
@@ -713,11 +727,8 @@ export class PresenceService {
     requester: Requester,
     target: { businessUnitId?: string | null; poleId?: string | null }
   ): boolean {
-    if (([Role.CTO_ADMIN, Role.PDG] as Role[]).includes(requester.role)) return true
-    if (
-      ([Role.DAF, Role.RESPONSABLE_BU] as Role[]).includes(requester.role) &&
-      requester.businessUnitId
-    ) {
+    if (CAN_VIEW_PRESENCE_GLOBAL.includes(requester.role)) return true
+    if (CAN_VIEW_PRESENCE_BU_SCOPE.includes(requester.role) && requester.businessUnitId) {
       return target.businessUnitId === requester.businessUnitId
     }
     if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {

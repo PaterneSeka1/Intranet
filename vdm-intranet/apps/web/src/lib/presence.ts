@@ -109,6 +109,19 @@ export interface FirstLoginPayload {
 
 export type EndDayPayload = FirstLoginPayload
 
+export interface ConnectionLogEntry {
+  id: string
+  type: 'LOGIN' | 'LOGOUT'
+  date: string
+  connectedAt: string
+  disconnectedAt: string | null
+  address: string | null
+  mapsUrl: string | null
+  ipAddress: string | null
+  userAgent: string | null
+  isFirstConnectionOfDay: boolean
+}
+
 async function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController()
   const tid = setTimeout(() => controller.abort(), 30_000)
@@ -163,4 +176,6 @@ export const presenceApi = {
   }) => presenceReq<DailyMandate>('/mandates', { method: 'POST', body: JSON.stringify(data) }),
   deleteMandate: (id: string) =>
     presenceReq<{ deleted: boolean }>(`/mandates/${id}`, { method: 'DELETE' }),
+  myConnections: (limit = 20) =>
+    presenceReq<ConnectionLogEntry[]>(`/my-connections?limit=${limit}`),
 }

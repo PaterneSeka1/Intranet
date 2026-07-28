@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { Roles } from '../common/decorators/roles.decorator'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
+import { CAN_VIEW_USERS, CAN_MANAGE_USERS } from '../common/permissions'
 
 type JwtUser = {
   id: string
@@ -35,42 +36,42 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(Role.CTO_ADMIN, Role.PDG, Role.DAF, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE)
+  @Roles(...CAN_VIEW_USERS)
   @ApiOperation({ summary: 'Liste des utilisateurs (selon rôle)' })
   findAll(@CurrentUser() user: JwtUser) {
     return this.usersService.findAll(user)
   }
 
   @Get(':id')
-  @Roles(Role.CTO_ADMIN, Role.PDG, Role.DAF, Role.RESPONSABLE_BU, Role.RESPONSABLE_POLE)
+  @Roles(...CAN_VIEW_USERS)
   @ApiOperation({ summary: "Détail d'un utilisateur (scopé selon rôle)" })
   findOne(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     return this.usersService.findOne(id, user)
   }
 
   @Post()
-  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @Roles(...CAN_MANAGE_USERS)
   @ApiOperation({ summary: 'Créer un utilisateur (CTO_ADMIN, PDG)' })
   create(@CurrentUser() user: JwtUser, @Body() dto: CreateUserDto) {
     return this.usersService.create(dto, user)
   }
 
   @Patch(':id')
-  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @Roles(...CAN_MANAGE_USERS)
   @ApiOperation({ summary: 'Modifier un utilisateur (CTO_ADMIN, PDG)' })
   update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: JwtUser) {
     return this.usersService.update(id, dto, user)
   }
 
   @Patch(':id/activate')
-  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @Roles(...CAN_MANAGE_USERS)
   @ApiOperation({ summary: 'Activer un compte (CTO_ADMIN, PDG)' })
   activate(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     return this.usersService.setActive(id, true, user)
   }
 
   @Patch(':id/deactivate')
-  @Roles(Role.CTO_ADMIN, Role.PDG)
+  @Roles(...CAN_MANAGE_USERS)
   @ApiOperation({ summary: 'Désactiver un compte (CTO_ADMIN, PDG)' })
   deactivate(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     return this.usersService.setActive(id, false, user)

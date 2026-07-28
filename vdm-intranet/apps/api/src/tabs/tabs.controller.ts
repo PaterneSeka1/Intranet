@@ -21,6 +21,7 @@ import { UpdateBusinessUnitDto } from './dto/update-business-unit.dto'
 import { CreatePoleDto } from './dto/create-pole.dto'
 import { UpdatePoleDto } from './dto/update-pole.dto'
 import { Role } from '@prisma/client'
+import { CAN_MANAGE_ORGANIZATION } from '../common/permissions'
 
 type AuthUser = {
   id: string
@@ -45,7 +46,7 @@ export class TabsController {
   @Post('business-units')
   @ApiOperation({ summary: 'Créer une BU (CTO_ADMIN)' })
   createBu(@CurrentUser() user: AuthUser, @Body() dto: CreateBusinessUnitDto) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_ORGANIZATION.includes(user.role)) throw new ForbiddenException()
     return this.tabsService.createBusinessUnit(dto)
   }
 
@@ -56,14 +57,14 @@ export class TabsController {
     @Param('id') id: string,
     @Body() dto: UpdateBusinessUnitDto
   ) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_ORGANIZATION.includes(user.role)) throw new ForbiddenException()
     return this.tabsService.updateBusinessUnit(id, dto)
   }
 
   @Delete('business-units/:id')
   @ApiOperation({ summary: 'Supprimer une BU (CTO_ADMIN)' })
   deleteBu(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_ORGANIZATION.includes(user.role)) throw new ForbiddenException()
     return this.tabsService.deleteBusinessUnit(id)
   }
 
@@ -78,21 +79,21 @@ export class TabsController {
   @Post('poles')
   @ApiOperation({ summary: 'Créer un pôle (CTO_ADMIN)' })
   createPole(@CurrentUser() user: AuthUser, @Body() dto: CreatePoleDto) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_ORGANIZATION.includes(user.role)) throw new ForbiddenException()
     return this.tabsService.createPole(dto)
   }
 
   @Patch('poles/:id')
   @ApiOperation({ summary: 'Modifier un pôle (CTO_ADMIN)' })
   updatePole(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdatePoleDto) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_ORGANIZATION.includes(user.role)) throw new ForbiddenException()
     return this.tabsService.updatePole(id, dto)
   }
 
   @Delete('poles/:id')
   @ApiOperation({ summary: 'Supprimer un pôle (CTO_ADMIN)' })
   deletePole(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_ORGANIZATION.includes(user.role)) throw new ForbiddenException()
     return this.tabsService.deletePole(id)
   }
 

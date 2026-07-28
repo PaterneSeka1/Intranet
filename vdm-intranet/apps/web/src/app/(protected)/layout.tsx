@@ -14,6 +14,7 @@ import { BgRestorer } from '@/components/ui/BgRestorer'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
 import { ServiceUnavailablePage } from '@/components/ui/ServiceUnavailablePage'
 import { fetchSettings } from '@/lib/settings'
+import { NotificationsBell } from '@/components/notifications/NotificationsBell'
 
 async function getActiveAnnouncements(): Promise<Announcement[]> {
   try {
@@ -82,6 +83,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
             >
               Mon historique
             </Link>
+            <NotificationsBell />
             <LogoutButton />
           </div>
         </header>

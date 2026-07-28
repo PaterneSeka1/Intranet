@@ -30,6 +30,19 @@ export class PilotageController {
     return this.pilotageService.getPresenceByBu(user)
   }
 
+  @Get('period-report')
+  @ApiOperation({ summary: 'Rapport de présence agrégé sur une période (semaine ou mois)' })
+  getPeriodReport(
+    @CurrentUser() user: AuthUser,
+    @Query('period') period = 'week',
+    @Query('date') date?: string
+  ) {
+    if (period !== 'week' && period !== 'month') {
+      throw new BadRequestException('period doit être "week" ou "month".')
+    }
+    return this.pilotageService.getPeriodReport(user, period, date)
+  }
+
   @Get('connections-chart')
   @ApiOperation({ summary: 'Connexions par jour (N derniers jours)' })
   getConnectionsChart(@CurrentUser() user: AuthUser, @Query('days') days?: string) {

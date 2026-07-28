@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { SettingsService, SettingPair } from './settings.service'
 import { Role } from '@prisma/client'
+import { CAN_MANAGE_SETTINGS } from '../common/permissions'
 
 type AuthUser = { id: string; role: Role }
 
@@ -27,14 +28,14 @@ export class SettingsController {
   @UseGuards(JwtAuthGuard)
   @Patch()
   upsert(@CurrentUser() user: AuthUser, @Body() body: { settings: SettingPair[] }) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_SETTINGS.includes(user.role)) throw new ForbiddenException()
     return this.settingsService.upsertMany(body.settings)
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':key')
   remove(@CurrentUser() user: AuthUser, @Param('key') key: string) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_SETTINGS.includes(user.role)) throw new ForbiddenException()
     return this.settingsService.deleteKey(key)
   }
 }

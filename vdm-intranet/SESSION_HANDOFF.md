@@ -19,6 +19,45 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
 - Le champ `Manager direct` sert au rattachement hiérarchique et ne détermine pas le créateur ni le périmètre des onglets.
 - `TACHE.md` a été mis à jour avant les modifications de code, conformément à la demande utilisateur.
 
+### Nouvelle demande réalisée — Masquage IP/géolocalisation pour les rôles employés (2026-07-28)
+
+- Demande : les employés ne doivent plus voir leur adresse IP dans leurs plateformes ; seuls les responsables doivent tout voir, y compris la géolocalisation.
+- `presence.service.ts::getMyConnections` neutralise désormais `ipAddress` pour les rôles accueil, en plus de `address`/`mapsUrl` déjà masqués.
+- `presence.service.ts::getTodayAllPresences` applique désormais `redactPresenceForRole`, ce qu'il ne faisait pas contrairement aux autres méthodes du service.
+- `recordLoginLog`/`recordLogoutLog` ne renvoient plus l'objet `ConnectionLog` complet (IP, latitude/longitude, adresse) dans la réponse HTTP ; seul `{ id }` est retourné, ces champs n'étant consommés par aucun appelant frontend.
+- `MonHistoriqueClient.tsx` masque la colonne IP pour les rôles accueil, au même titre que la colonne adresse GPS (`showGeolocation`).
+- Les listes de rôles "accueil uniquement" codées en dur dans `accueil/page.tsx`, `mon-historique/page.tsx` et `presences/page.tsx` ont été remplacées par la constante partagée `ACCUEIL_ONLY_ROLES` (`types/user.ts`).
+- Aucune fuite trouvée côté Pilotage/rapports CSV : déjà réservés aux rôles responsables via `assertAllowed` (`pilotage.service.ts`, `reports.service.ts`).
+- `TACHE.md` a été mis à jour avec le détail de ce correctif.
+
+### Nouvelle demande réalisée — 7 nouvelles fonctionnalités (2026-07-28)
+
+Demande : ajouter les fonctionnalités identifiées comme utiles lors d'un audit complet du repo (hors périmètre RH classique, déjà couvert par un outil externe). Plan détaillé conçu et validé avec l'utilisateur (mode plan) avant implémentation, avec 4 décisions d'architecture actées explicitement :
+
+- Export PDF via **Puppeteer** (HTML→PDF brandé), pas pdfkit.
+- Permissions **centralisées dans un seul fichier backend**, sans nouveau modèle DB ni UI de gestion.
+- Reporting BU→CTO→PDG en **rollup automatique en lecture**, pas de workflow de soumission.
+- Sessions actives en **historique lecture seule** (réutilise `ConnectionLog`), pas de `jti`/table `Session`/révocation.
+
+Fonctionnalités livrées, dans l'ordre d'implémentation :
+
+1. **Migration Prisma** — modèles `PublicHoliday` et `Notification` (+ enum `NotificationType`), appliqués via `db:push` (blocage `prisma migrate dev` P3006 déjà connu).
+2. **Permissions centralisées** — `common/permissions.ts` regroupe désormais 16 nouvelles constantes ; toutes les listes de rôles dupliquées dans `pilotage`/`reports`/`presence`/`tabs`/`announcements`/`users` ont été remplacées par des imports, sans changement de comportement (vérifié par tests réels, notamment la restriction DAF sur les rapports étendus).
+3. **Jours fériés** — module `public-holidays` (CRUD `CTO_ADMIN`), intégré à `pilotage.service.ts::getSummary`, onglet dédié dans `/parametres`, affichage widget calendrier + bannière `/presences`. 7 jours fixes CI seedés ; fêtes mobiles à saisir manuellement.
+4. **Sessions actives** — nouvel onglet "Sécurité" dans `/mon-profil`, réutilise `GET /presence/my-connections` (ajout de `userAgent` au select, sans démasquer IP/GPS pour les rôles accueil), parsing user-agent maison sans nouvelle dépendance.
+5. **Reporting hiérarchique** — `GET /pilotage/period-report?period=week|month`, agrégation par BU hors week-ends, nouvelle section `PeriodReportSection` dans `/pilotage` (BarChart + LineChart).
+6. **Centre de notifications** — module `notifications` avec gateway Socket.IO **authentifiée au handshake** (parsing manuel du cookie JWT, rejet si invalide — contrairement au gateway `announcements` existant, non modifié car hors périmètre), déclenchée sur création de mandat et publication d'annonce, cloche `NotificationsBell` visible pour tous les rôles (y compris accueil).
+7. **Export PDF** — dépendance `puppeteer` ajoutée, `reports.service.ts` refactorisé (extraction des requêtes en méthodes `get*Rows`/`getGeneralData` réutilisables), singleton `PdfBrowserService` avec `app.enableShutdownHooks()` ajouté à `main.ts`, 4 routes `/reports/*/pdf`, bouton PDF ajouté dans `PilotageClient`.
+8. **Recherche globale** — module `search` (réimplémente les scopes existants par domaine, jamais plus permissif qu'eux), composant `GlobalSearch` monté dans `Sidebar`/`MobileSidebarToggle`.
+
+Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés, mots de passe changés temporairement puis base reseedée) :
+
+- Handshake Socket.IO `/notifications` : rejeté sans cookie (`io server disconnect`), accepté avec cookie valide, réception `notification:new` confirmée en moins d'une seconde après création d'un mandat.
+- 4 PDF générés avec succès (`file` confirme `PDF document`), rendu visuel vérifié (branding, tableau, en-tête/pied de page).
+- Parité de permissions DAF confirmée entre CSV et PDF (403 sur activité/connexions/général, 200 sur présences).
+- Scope de la recherche globale confirmé : un `RESPONSABLE_BU` ne retrouve pas un utilisateur d'une autre BU, mais se retrouve lui-même.
+- `TACHE.md` mis à jour avec le détail complet de cette session.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
@@ -109,13 +148,16 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
 - Dernière migration ciblée : enum PostgreSQL `Role` enrichi avec `EMPLOYE`; 6 comptes seed convertis en `EMPLOYE`.
 - Note migration : `prisma migrate deploy` reste bloqué par l'ancienne migration échouée `20260630000001_module3_presence`; l'ajout local de `EMPLOYE` a été appliqué par SQL ciblé.
 - `npm audit --omit=dev` : vulnérabilités restantes détectées dans l'arbre de dépendances ; les corrections complètes proposées incluent des upgrades majeurs Nest 11 et Next 16, à planifier séparément.
+- Validation ciblée masquage IP/géolocalisation (2026-07-28) : `npx tsc --noEmit -p apps/api/tsconfig.json`, `npx tsc --noEmit -p apps/web/tsconfig.json`, `npm run format`, `rm -rf apps/web/.next` puis `npm run build:web`, `npm run build:api`, `git diff --check` : OK.
+- Validation 7 nouvelles fonctionnalités (2026-07-28) : `tsc --noEmit` après chaque chantier, `npm run format`, `npm run build:api`, `npm run build:web` (build final) : OK. `npm install puppeteer --workspace=apps/api` : OK (Chromium téléchargé avec succès, ~300 Mo, dans `~/.cache/puppeteer`).
+- Tests réels effectués en démarrant l'API en mode dev (`npm run dev:api`) avec des comptes seedés (mot de passe changé temporairement pour lever `mustChangePassword`, base reseedée après tests) : handshake Socket.IO `/notifications` (rejet non authentifié, réception temps réel confirmée), génération des 4 PDF, parité de permissions DAF CSV/PDF, scope de la recherche globale par rôle.
 
 ### Notes d'Environnement
 
 - Les commandes Prisma et seed doivent charger le `.env` racine avant exécution si elles sont lancées via workspace.
 - L'accès PostgreSQL local nécessite une exécution hors sandbox dans cet environnement.
-- `docker ps` :
-  - Impossible dans ce shell : commande `docker` indisponible.
+- `docker ps` : disponible dans ce shell au 2026-07-28 (le conteneur `vdm_postgres` tourne sur le port 5434) — la note précédente indiquant `docker` indisponible ne s'applique plus à cet environnement.
+- `node dist/main` (`start:prod`) échoue avec `MODULE_NOT_FOUND` après `nest build` dans cet environnement (résolution de module cassée sur les imports relatifs comme `./app.controller`) ; utiliser `npm run dev:api` (`ts-node-dev`) pour toute vérification runtime locale, non affecté par ce problème.
 
 ---
 
@@ -140,3 +182,13 @@ Les correctifs sécurité et bugs listés dans `TACHE.md` ont été implémenté
   - Créer une annonce avec expiration au jour J et vérifier qu'elle reste visible jusqu'à la fin de cette journée.
   - Créer/modifier un onglet avec une image locale comme icône et vérifier son affichage dans la grille.
   - Ouvrir deux sessions, créer/modifier une annonce depuis une session admin et vérifier l'actualisation automatique du widget et de la bannière dans l'autre session.
+  - Se connecter avec un compte `EMPLOYE`/`CONSULTANT`/`STAGIAIRE`/`PRESTATAIRE` et vérifier que la page "Mon historique" n'affiche plus ni la colonne IP ni la colonne adresse GPS.
+  - Se connecter avec un compte responsable (`CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU`, `RESPONSABLE_POLE`) et vérifier que l'IP et la géolocalisation restent visibles là où elles l'étaient déjà (Mon historique, Pilotage, exports CSV).
+  - Créer un jour férié récurrent dans `/parametres` et vérifier son affichage dans le widget calendrier et la bannière `/presences` à la date correspondante.
+  - Vérifier que chaque rôle (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU, RESPONSABLE_POLE, EMPLOYE) garde exactement les mêmes accès qu'avant le refactor de `common/permissions.ts` — en particulier le refus DAF sur les rapports étendus (CSV et PDF).
+  - Comparer le taux de présence hebdomadaire affiché dans la nouvelle section "Reporting hiérarchique" de `/pilotage` à une somme manuelle jour par jour pour une BU connue.
+  - Consulter l'onglet "Sécurité" de `/mon-profil` avec un compte accueil et vérifier l'absence d'IP/GPS dans les connexions listées.
+  - Créer un mandat pour un utilisateur connecté dans un autre onglet/navigateur et vérifier la réception immédiate de la notification (cloche) sans rafraîchir la page.
+  - Télécharger un rapport en PDF depuis `/pilotage` pour un rôle CTO_ADMIN (doit réussir sur les 4 rapports) et pour un rôle DAF (doit échouer sur activité/connexions/général, comme en CSV).
+  - Utiliser la recherche globale (icône dans la sidebar) avec un compte `RESPONSABLE_POLE` et vérifier qu'aucun utilisateur hors de son pôle n'apparaît dans les résultats.
+  - Vérifier en production que les bibliothèques système Chromium (`libnss3`, `libatk-bridge2.0-0`, etc.) sont installées sur le VPS avant le premier déploiement post-export PDF, faute de quoi `puppeteer.launch()` échouera.

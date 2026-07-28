@@ -23,6 +23,7 @@ import {
   type ActivityLogPage,
 } from '@/lib/pilotage'
 import { ServerPagination } from '@/components/ui/DataTable'
+import { PeriodReportSection } from '@/components/pilotage/PeriodReportSection'
 import { toast } from '@/lib/toast'
 
 import {
@@ -32,6 +33,7 @@ import {
   getToday,
   type DateRange,
 } from '@/lib/csv-export'
+import { downloadPdfBlob } from '@/lib/pdf-export'
 
 type ReportKey = 'presence' | 'activity' | 'connections' | 'general'
 
@@ -152,6 +154,7 @@ export function PilotageClient({ role }: Props) {
 
   // Exports
   const [exportLoading, setExportLoading] = useState<ReportKey | null>(null)
+  const [pdfExportLoading, setPdfExportLoading] = useState<ReportKey | null>(null)
   const [ranges, setRanges] = useState<Record<ReportKey, DateRange>>({
     presence: { from: getMonthStart(), to: getToday() },
     activity: { from: getMonthStart(), to: getToday() },
@@ -245,6 +248,28 @@ export function PilotageClient({ role }: Props) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement.')
     } finally {
       setExportLoading(null)
+    }
+  }
+
+  async function handleExportPdf(report: ReportConfig) {
+    const { from, to } = ranges[report.key]
+    if (report.hasDateRange && from && to && from > to) {
+      toast.error('La date de début doit être antérieure ou égale à la date de fin.')
+      return
+    }
+    setPdfExportLoading(report.key)
+    try {
+      const blob = await downloadPdfBlob(
+        report.key,
+        report.hasDateRange && from ? from : undefined,
+        report.hasDateRange && to ? to : undefined
+      )
+      triggerDownload(blob, report.filename.replace('.csv', '.pdf'))
+      toast.success(`Rapport « ${report.label} » téléchargé (PDF).`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement.')
+    } finally {
+      setPdfExportLoading(null)
     }
   }
 
@@ -419,23 +444,41 @@ export function PilotageClient({ role }: Props) {
                   </div>
                 )}
 
-                {/* Bouton téléchargement */}
-                <button
-                  onClick={() => handleExport(report)}
-                  disabled={exportLoading === report.key}
-                  className="mt-auto w-full bg-[#F28C38] hover:bg-[#e07d29] active:bg-[#d06e1a] text-white font-semibold py-2 rounded-xl text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  {exportLoading === report.key ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Génération…
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm leading-none">↓</span>Télécharger CSV
-                    </>
-                  )}
-                </button>
+                {/* Boutons téléchargement */}
+                <div className="mt-auto flex gap-2">
+                  <button
+                    onClick={() => handleExport(report)}
+                    disabled={exportLoading === report.key}
+                    className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] active:bg-[#d06e1a] text-white font-semibold py-2 rounded-xl text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {exportLoading === report.key ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Génération…
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm leading-none">↓</span>CSV
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleExportPdf(report)}
+                    disabled={pdfExportLoading === report.key}
+                    className="flex-1 border border-[#F28C38] text-[#F28C38] hover:bg-[#F28C38]/5 font-semibold py-2 rounded-xl text-xs transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {pdfExportLoading === report.key ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-[#F28C38] border-t-transparent rounded-full animate-spin" />
+                        Génération…
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm leading-none">↓</span>PDF
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -493,6 +536,9 @@ export function PilotageClient({ role }: Props) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* ── Reporting hiérarchique BU→CTO→PDG ── */}
+      <PeriodReportSection />
 
       {/* ── Top actions (pie) ── */}
       {activityChart.length > 0 && (

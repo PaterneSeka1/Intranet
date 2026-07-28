@@ -8,6 +8,12 @@ import { LogAction, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateTabDto } from './dto/create-tab.dto'
 import { UpdateTabDto } from './dto/update-tab.dto'
+import {
+  CAN_MANAGE_TABS,
+  CAN_MANAGE_TABS_GLOBAL,
+  CAN_MANAGE_TABS_BU_SCOPE,
+  CAN_VIEW_TABS_OWN_BU,
+} from '../common/permissions'
 
 type Requester = {
   id: string
@@ -30,16 +36,6 @@ const TAB_SELECT = {
   businessUnit: { select: { id: true, name: true, code: true } },
   createdBy: { select: { id: true, username: true, fullName: true } },
 } as const
-
-const FULL_ACCESS: Role[] = [Role.CTO_ADMIN, Role.PDG]
-const READ_OWN_BU: Role[] = [
-  Role.RESPONSABLE_POLE,
-  Role.EMPLOYE,
-  Role.CONSULTANT,
-  Role.STAGIAIRE,
-  Role.PRESTATAIRE,
-]
-const MANAGE_OWN_BU: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
 
 @Injectable()
 export class TabsService {
@@ -203,7 +199,7 @@ export class TabsService {
   }
 
   async findAll(requester: Requester, buId?: string) {
-    if (FULL_ACCESS.includes(requester.role)) {
+    if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
       // Global tabs always included; optionally narrow by BU
       const where = buId ? { OR: [{ businessUnitId: buId }, { businessUnitId: null }] } : {}
       return this.prisma.portalTab.findMany({
@@ -214,12 +210,15 @@ export class TabsService {
       })
     }
 
-    if (MANAGE_OWN_BU.includes(requester.role) || READ_OWN_BU.includes(requester.role)) {
+    if (
+      CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) ||
+      CAN_VIEW_TABS_OWN_BU.includes(requester.role)
+    ) {
       const orConditions = requester.businessUnitId
         ? [{ businessUnitId: requester.businessUnitId }, { businessUnitId: null }]
         : [{ businessUnitId: null }]
       const where: Record<string, unknown> = { OR: orConditions }
-      if (READ_OWN_BU.includes(requester.role)) where.isActive = true
+      if (CAN_VIEW_TABS_OWN_BU.includes(requester.role)) where.isActive = true
       return this.prisma.portalTab.findMany({
         where,
         select: TAB_SELECT,
@@ -232,12 +231,12 @@ export class TabsService {
   }
 
   async create(requester: Requester, dto: CreateTabDto) {
-    if (!FULL_ACCESS.includes(requester.role) && !MANAGE_OWN_BU.includes(requester.role)) {
+    if (!CAN_MANAGE_TABS.includes(requester.role)) {
       throw new ForbiddenException('Vous ne pouvez pas créer un onglet.')
     }
 
     let targetBuId: string | null
-    if (FULL_ACCESS.includes(requester.role)) {
+    if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
       // No businessUnitId = global tab (visible to all users)
       targetBuId = dto.businessUnitId ?? null
     } else {
@@ -328,10 +327,11 @@ export class TabsService {
   }
 
   private assertCanManage(requester: Requester, tabBuId: string | null) {
-    if (FULL_ACCESS.includes(requester.role)) return
+    if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) return
     if (tabBuId === null)
       throw new ForbiddenException('Seuls les administrateurs peuvent gérer les onglets globaux.')
-    if (MANAGE_OWN_BU.includes(requester.role) && requester.businessUnitId === tabBuId) return
+    if (CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) && requester.businessUnitId === tabBuId)
+      return
     throw new ForbiddenException('Accès refusé à cet onglet.')
   }
 

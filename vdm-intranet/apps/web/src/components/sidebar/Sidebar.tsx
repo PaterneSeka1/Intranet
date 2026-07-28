@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { User, Role } from '@/types/user'
 import { LogoutOverlay } from '@/components/auth/LogoutOverlay'
+import { NotificationsBell } from '@/components/notifications/NotificationsBell'
+import { GlobalSearch } from '@/components/search/GlobalSearch'
 
 type MenuItem = { label: string; href: string; icon: string }
 
@@ -93,11 +95,17 @@ export function Sidebar({
               </span>
             </div>
           )}
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="vdm-sb-text text-sm font-bold leading-tight">{appName}</div>
             <div className="vdm-sb-text-faint text-xs">{appSubtitle}</div>
           </div>
+          <NotificationsBell dark />
         </div>
+      </div>
+
+      {/* Recherche globale */}
+      <div className="px-3 pt-3">
+        <GlobalSearch dark />
       </div>
 
       {/* Nav */}

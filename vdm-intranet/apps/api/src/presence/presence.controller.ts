@@ -22,6 +22,7 @@ import { Role } from '@prisma/client'
 import { CreateMandateDto } from './dto/create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
+import { CAN_MANAGE_MANDATES, CAN_MANAGE_SCHEDULE_GROUPS } from '../common/permissions'
 
 type AuthUser = {
   id: string
@@ -80,7 +81,7 @@ export class PresenceController {
 
   @Post('schedule-groups')
   createScheduleGroup(@CurrentUser() user: AuthUser, @Body() dto: CreateScheduleGroupDto) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.createScheduleGroup(dto, user.id)
   }
 
@@ -90,13 +91,13 @@ export class PresenceController {
     @Param('id') id: string,
     @Body() dto: UpdateScheduleGroupDto
   ) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.updateScheduleGroup(id, dto, user.id)
   }
 
   @Delete('schedule-groups/:id')
   deleteScheduleGroup(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    if (user.role !== Role.CTO_ADMIN) throw new ForbiddenException()
+    if (!CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.deleteScheduleGroup(id, user.id)
   }
 
@@ -121,27 +122,13 @@ export class PresenceController {
 
   @Post('mandates')
   createMandate(@CurrentUser() user: AuthUser, @Body() dto: CreateMandateDto) {
-    const CAN_MANDATE: Role[] = [
-      Role.CTO_ADMIN,
-      Role.PDG,
-      Role.DAF,
-      Role.RESPONSABLE_BU,
-      Role.RESPONSABLE_POLE,
-    ]
-    if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
+    if (!CAN_MANAGE_MANDATES.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.createMandate(dto, user)
   }
 
   @Delete('mandates/:id')
   deleteMandate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    const CAN_MANDATE: Role[] = [
-      Role.CTO_ADMIN,
-      Role.PDG,
-      Role.DAF,
-      Role.RESPONSABLE_BU,
-      Role.RESPONSABLE_POLE,
-    ]
-    if (!CAN_MANDATE.includes(user.role)) throw new ForbiddenException()
+    if (!CAN_MANAGE_MANDATES.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.deleteMandate(id, user)
   }
 

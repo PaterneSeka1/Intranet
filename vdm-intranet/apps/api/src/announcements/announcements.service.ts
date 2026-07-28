@@ -4,15 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { LogAction, Prisma, Role } from '@prisma/client'
+import { LogAction, NotificationType, Prisma, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateAnnouncementDto } from './dto/create-announcement.dto'
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto'
 import { AnnouncementsGateway } from './announcements.gateway'
+import { NotificationsService } from '../notifications/notifications.service'
+import { CAN_MANAGE_ANNOUNCEMENTS } from '../common/permissions'
 
 type Requester = { id: string; role: Role; businessUnitId?: string | null }
-
-const MANAGE_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
 
 const ANNOUNCEMENT_SELECT = {
   id: true,
@@ -33,11 +33,12 @@ const ANNOUNCEMENT_SELECT = {
 export class AnnouncementsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly announcementsGateway: AnnouncementsGateway
+    private readonly announcementsGateway: AnnouncementsGateway,
+    private readonly notifications: NotificationsService
   ) {}
 
   findAll(requester: Requester | undefined, activeOnly = false) {
-    const canSeeAll = requester && MANAGE_ROLES.includes(requester.role)
+    const canSeeAll = requester && CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)
     const now = new Date()
     const whereParts: Prisma.AnnouncementWhereInput[] = []
 
@@ -68,7 +69,7 @@ export class AnnouncementsService {
   }
 
   async create(dto: CreateAnnouncementDto, requester: Requester) {
-    if (!MANAGE_ROLES.includes(requester.role)) {
+    if (!CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)) {
       throw new ForbiddenException('Réservé aux administrateurs.')
     }
 
@@ -105,11 +106,28 @@ export class AnnouncementsService {
       title,
     })
     this.announcementsGateway.emitChanged('created', announcement.id)
+
+    if (announcement.isActive) {
+      const targets = await this.prisma.user.findMany({
+        where: { isActive: true, ...(businessUnitId ? { businessUnitId } : {}) },
+        select: { id: true },
+      })
+      await this.notifications.notifyUsers(
+        targets.map((u) => u.id),
+        {
+          type: NotificationType.ANNOUNCEMENT_PUBLISHED,
+          title: 'Nouvelle annonce',
+          body: title,
+          link: '/annonces',
+        }
+      )
+    }
+
     return announcement
   }
 
   async update(id: string, dto: UpdateAnnouncementDto, requester: Requester) {
-    if (!MANAGE_ROLES.includes(requester.role)) {
+    if (!CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)) {
       throw new ForbiddenException('Réservé aux administrateurs.')
     }
 
@@ -153,7 +171,7 @@ export class AnnouncementsService {
   }
 
   async remove(id: string, requester: Requester) {
-    if (!MANAGE_ROLES.includes(requester.role)) {
+    if (!CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)) {
       throw new ForbiddenException('Réservé aux administrateurs.')
     }
 

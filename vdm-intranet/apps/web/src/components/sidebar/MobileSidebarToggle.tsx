@@ -7,6 +7,8 @@ import type { User } from '@/types/user'
 import type { Announcement } from '@/lib/announcements'
 import { BgRestorer } from '@/components/ui/BgRestorer'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
+import { NotificationsBell } from '@/components/notifications/NotificationsBell'
+import { GlobalSearch } from '@/components/search/GlobalSearch'
 
 interface Props {
   user: User
@@ -81,7 +83,13 @@ export function MobileSidebarToggle({
                 </span>
               </div>
             )}
-            <span className="font-bold text-gray-800 text-sm">{appName}</span>
+            <span className="font-bold text-gray-800 text-sm hidden sm:inline">{appName}</span>
+          </div>
+          <div className="flex-1 max-w-xs">
+            <GlobalSearch />
+          </div>
+          <div className="ml-auto">
+            <NotificationsBell />
           </div>
         </div>
 

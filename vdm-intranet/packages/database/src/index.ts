@@ -10,9 +10,12 @@ export type {
   PortalTab,
   Announcement,
   ActivityLog,
+  PublicHoliday,
+  Notification,
   Role,
   PresenceStatus,
   LogAction,
+  NotificationType,
 } from '@prisma/client'
 
 import { PrismaClient } from '@prisma/client'

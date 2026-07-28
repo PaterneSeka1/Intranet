@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { toast } from '@/lib/toast'
 import { ROLE_LABELS, type User } from '@/types/user'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { presenceApi, type ConnectionLogEntry } from '@/lib/presence'
+import { parseUserAgent } from '@/lib/user-agent'
 
 import { API_BASE as API } from '@/lib/api-base'
 
@@ -34,7 +36,7 @@ interface Props {
 
 export function MonProfilClient({ user }: Props) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'info' | 'password'>(
+  const [activeTab, setActiveTab] = useState<'info' | 'password' | 'security'>(
     user.mustChangePassword ? 'password' : 'info'
   )
 
@@ -170,21 +172,22 @@ export function MonProfilClient({ user }: Props) {
 
       {/* Onglets */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {(user.mustChangePassword ? (['password'] as const) : (['info', 'password'] as const)).map(
-          (t) => (
-            <button
-              key={t}
-              onClick={() => setActiveTab(t)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === t
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {t === 'info' ? 'Informations' : 'Mot de passe'}
-            </button>
-          )
-        )}
+        {(user.mustChangePassword
+          ? (['password'] as const)
+          : (['info', 'password', 'security'] as const)
+        ).map((t) => (
+          <button
+            key={t}
+            onClick={() => setActiveTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === t
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t === 'info' ? 'Informations' : t === 'password' ? 'Mot de passe' : 'Sécurité'}
+          </button>
+        ))}
       </div>
 
       {/* Tab Informations */}
@@ -331,6 +334,67 @@ export function MonProfilClient({ user }: Props) {
           </form>
         </div>
       )}
+
+      {/* Tab Sécurité */}
+      {activeTab === 'security' && <SecuritySection />}
+    </div>
+  )
+}
+
+function SecuritySection() {
+  const [logs, setLogs] = useState<ConnectionLogEntry[] | null>(null)
+
+  useEffect(() => {
+    presenceApi
+      .myConnections(20)
+      .then(setLogs)
+      .catch(() => {
+        toast.error('Impossible de charger les connexions récentes.')
+        setLogs([])
+      })
+  }, [])
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <h2 className="text-sm font-bold text-gray-900 mb-1">Connexions récentes</h2>
+      <p className="text-xs text-gray-400 mb-4">
+        Historique de vos connexions par appareil et navigateur — à titre informatif uniquement.
+      </p>
+
+      {logs === null && <p className="text-sm text-gray-400 py-4">Chargement…</p>}
+      {logs?.length === 0 && (
+        <p className="text-sm text-gray-400 py-4">Aucune connexion enregistrée.</p>
+      )}
+
+      <div className="space-y-2">
+        {logs?.map((log) => {
+          const { label, os } = parseUserAgent(log.userAgent)
+          const icon = os === 'Android' || os === 'iOS' ? '📱' : '🖥️'
+          const at =
+            log.type === 'LOGOUT' ? (log.disconnectedAt ?? log.connectedAt) : log.connectedAt
+          return (
+            <div
+              key={log.id}
+              className="bg-gray-50 rounded-xl px-3.5 py-2.5 flex items-center gap-3"
+            >
+              <span className="text-lg shrink-0">{icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-gray-700 font-medium">{label}</div>
+                <div className="text-xs text-gray-400">
+                  {log.type === 'LOGIN' ? 'Connexion' : 'Déconnexion'} ·{' '}
+                  {new Date(at).toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
 import { LogAction, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import {
+  CAN_VIEW_REPORTS,
+  CAN_EXPORT_EXTENDED_REPORTS,
+  CAN_VIEW_REPORTS_GLOBAL,
+  CAN_VIEW_REPORTS_BU_SCOPE,
+} from '../common/permissions'
 
 type Requester = {
   id: string
@@ -9,17 +15,13 @@ type Requester = {
   poleId?: string | null
 }
 
-const ALLOWED_ROLES: Role[] = [
-  Role.CTO_ADMIN,
-  Role.PDG,
-  Role.DAF,
-  Role.RESPONSABLE_BU,
-  Role.RESPONSABLE_POLE,
-]
-
-const GLOBAL_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
-const BU_SCOPED_ROLES: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
 type ReportAccess = 'presence' | 'extended'
+
+export const STATUS_LABELS: Record<string, string> = {
+  PRESENT: 'Présent',
+  LATE: 'En retard',
+  ABSENT: 'Absent',
+}
 
 function getToday(): Date {
   const now = new Date()
@@ -30,19 +32,19 @@ function getToday(): Date {
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private assertAllowed(requester: Requester, access: ReportAccess = 'extended') {
-    if (!ALLOWED_ROLES.includes(requester.role)) {
+  assertAllowed(requester: Requester, access: ReportAccess = 'extended') {
+    if (!CAN_VIEW_REPORTS.includes(requester.role)) {
       throw new ForbiddenException('Accès réservé aux responsables.')
     }
-    if (access === 'extended' && requester.role === Role.DAF) {
+    if (access === 'extended' && !CAN_EXPORT_EXTENDED_REPORTS.includes(requester.role)) {
       throw new ForbiddenException('La DAF est limitée aux rapports de présence et absence.')
     }
   }
 
-  private buildUserWhere(requester: Requester, access: ReportAccess = 'extended'): object {
-    if (GLOBAL_ROLES.includes(requester.role)) return {}
+  buildUserWhere(requester: Requester, access: ReportAccess = 'extended'): object {
+    if (CAN_VIEW_REPORTS_GLOBAL.includes(requester.role)) return {}
     if (access === 'presence' && requester.role === Role.DAF) return {}
-    if (BU_SCOPED_ROLES.includes(requester.role) && requester.businessUnitId) {
+    if (CAN_VIEW_REPORTS_BU_SCOPE.includes(requester.role) && requester.businessUnitId) {
       return { businessUnitId: requester.businessUnitId }
     }
     if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {
@@ -60,23 +62,19 @@ export class ReportsService {
     return '﻿' + lines.join('\r\n')
   }
 
-  private fmtDate(d: Date | string | null | undefined): string {
+  fmtDate(d: Date | string | null | undefined): string {
     if (!d) return ''
     const dt = new Date(d)
     return `${String(dt.getUTCDate()).padStart(2, '0')}/${String(dt.getUTCMonth() + 1).padStart(2, '0')}/${dt.getUTCFullYear()}`
   }
 
-  private fmtDateTime(d: Date | string | null | undefined): string {
+  fmtDateTime(d: Date | string | null | undefined): string {
     if (!d) return ''
     const dt = new Date(d)
     return `${this.fmtDate(dt)} ${String(dt.getUTCHours()).padStart(2, '0')}:${String(dt.getUTCMinutes()).padStart(2, '0')}`
   }
 
-  private parseReportDate(
-    value: string | undefined,
-    label: string,
-    endOfDay = false
-  ): Date | undefined {
+  parseReportDate(value: string | undefined, label: string, endOfDay = false): Date | undefined {
     if (!value) return undefined
     const timestamp = Date.parse(value)
     if (Number.isNaN(timestamp)) {
@@ -89,7 +87,7 @@ export class ReportsService {
     return date
   }
 
-  private assertDateRange(dateFrom?: Date, dateTo?: Date) {
+  assertDateRange(dateFrom?: Date, dateTo?: Date) {
     if (dateFrom && dateTo && dateFrom > dateTo) {
       throw new BadRequestException(
         'La date de début doit être antérieure ou égale à la date de fin.'
@@ -97,7 +95,7 @@ export class ReportsService {
     }
   }
 
-  async presenceCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
+  async getPresenceRows(requester: Requester, dateFrom?: string, dateTo?: string) {
     this.assertAllowed(requester, 'presence')
     const userWhere = this.buildUserWhere(requester, 'presence')
 
@@ -114,7 +112,7 @@ export class ReportsService {
       lte: parsedTo ?? getToday(),
     }
 
-    const rows = await this.prisma.presence.findMany({
+    return this.prisma.presence.findMany({
       where: {
         date: dateFilter,
         user: userWhere,
@@ -133,14 +131,11 @@ export class ReportsService {
       orderBy: [{ date: 'desc' }, { user: { lastName: 'asc' } }],
       take: 10000,
     })
+  }
 
+  async presenceCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
+    const rows = await this.getPresenceRows(requester, dateFrom, dateTo)
     await this.logExport(requester.id, LogAction.PRESENCE_REPORT_EXPORTED)
-
-    const STATUS: Record<string, string> = {
-      PRESENT: 'Présent',
-      LATE: 'En retard',
-      ABSENT: 'Absent',
-    }
 
     return this.toCsv(
       [
@@ -164,7 +159,7 @@ export class ReportsService {
         r.user.role,
         r.user.businessUnit?.name ?? '',
         r.user.pole?.name ?? '',
-        STATUS[r.status] ?? r.status,
+        STATUS_LABELS[r.status] ?? r.status,
         r.expectedArrivalTime,
         this.fmtDateTime(r.officialArrivalTime),
         r.delayMinutes ?? '',
@@ -174,7 +169,7 @@ export class ReportsService {
     )
   }
 
-  async activityCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
+  async getActivityRows(requester: Requester, dateFrom?: string, dateTo?: string) {
     this.assertAllowed(requester)
     const userWhere = this.buildUserWhere(requester)
 
@@ -186,7 +181,7 @@ export class ReportsService {
     if (parsedFrom) dateFilter.gte = parsedFrom
     if (parsedTo) dateFilter.lte = parsedTo
 
-    const rows = await this.prisma.activityLog.findMany({
+    return this.prisma.activityLog.findMany({
       where: {
         ...(Object.keys(dateFilter).length ? { occurredAt: dateFilter } : {}),
         user: userWhere,
@@ -204,7 +199,10 @@ export class ReportsService {
       orderBy: { occurredAt: 'desc' },
       take: 5000,
     })
+  }
 
+  async activityCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
+    const rows = await this.getActivityRows(requester, dateFrom, dateTo)
     await this.logExport(requester.id, LogAction.ACTIVITY_REPORT_EXPORTED)
 
     return this.toCsv(
@@ -235,7 +233,7 @@ export class ReportsService {
     )
   }
 
-  async connectionsCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
+  async getConnectionRows(requester: Requester, dateFrom?: string, dateTo?: string) {
     this.assertAllowed(requester)
     const userWhere = this.buildUserWhere(requester)
 
@@ -252,7 +250,7 @@ export class ReportsService {
       lte: parsedTo ?? getToday(),
     }
 
-    const rows = await this.prisma.connectionLog.findMany({
+    return this.prisma.connectionLog.findMany({
       where: {
         date: dateFilter,
         user: userWhere,
@@ -270,7 +268,10 @@ export class ReportsService {
       orderBy: [{ date: 'desc' }, { connectedAt: 'desc' }],
       take: 5000,
     })
+  }
 
+  async connectionsCsv(requester: Requester, dateFrom?: string, dateTo?: string) {
+    const rows = await this.getConnectionRows(requester, dateFrom, dateTo)
     await this.logExport(requester.id, LogAction.CONNECTION_REPORT_EXPORTED)
 
     return this.toCsv(
@@ -303,7 +304,7 @@ export class ReportsService {
     )
   }
 
-  async generalCsv(requester: Requester) {
+  async getGeneralData(requester: Requester) {
     this.assertAllowed(requester)
     const userWhere = this.buildUserWhere(requester)
 
@@ -332,13 +333,18 @@ export class ReportsService {
       this.prisma.connectionLog.count({ where: { date: today, type: 'LOGIN', user: userWhere } }),
     ])
 
+    return { users, presences, connectionsToday: connections, today }
+  }
+
+  async generalCsv(requester: Requester) {
+    const {
+      users,
+      presences,
+      connectionsToday: connections,
+      today,
+    } = await this.getGeneralData(requester)
     await this.logExport(requester.id, LogAction.GENERAL_REPORT_EXPORTED)
 
-    const STATUS: Record<string, string> = {
-      PRESENT: 'Présent',
-      LATE: 'En retard',
-      ABSENT: 'Absent',
-    }
     const presMap = new Map(presences.map((p) => [p.user.username, p]))
 
     let csv = this.toCsv(['RAPPORT GÉNÉRAL VDM INTRANET', `Généré le ${this.fmtDate(today)}`], [])
@@ -354,7 +360,7 @@ export class ReportsService {
         u.businessUnit?.name ?? '',
         u.pole?.name ?? '',
         u.scheduleGroup?.expectedArrivalTime ?? u.individualExpectedArrivalTime ?? '',
-        pres ? STATUS[pres.status] : 'Absent',
+        pres ? STATUS_LABELS[pres.status] : 'Absent',
         pres ? this.fmtDateTime(pres.officialArrivalTime) : '',
         pres?.delayMinutes ?? '',
         this.fmtDateTime(u.lastLoginAt),
@@ -382,13 +388,13 @@ export class ReportsService {
     return csv
   }
 
-  private async logExport(userId: string, action: LogAction) {
+  async logExport(userId: string, action: LogAction, format: 'csv' | 'pdf' = 'csv') {
     await this.prisma.activityLog.create({
       data: {
         userId,
         action,
         entity: 'Report',
-        details: { exportedAt: new Date().toISOString() } as object,
+        details: { exportedAt: new Date().toISOString(), format } as object,
       },
     })
   }
