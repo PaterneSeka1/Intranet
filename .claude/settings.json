@@ -16,7 +16,16 @@
       "Bash(curl -s -b /tmp/vdm-cookies-rbu.txt \"http://localhost:3001/api/search?q=rbu\")",
       "Bash(echo \"exit: $?\")",
       "Bash(grep -n \"^## \\\\|^- \\\\`\\\\[x\\\\]\\\\` Tâche 1\" TACHE.md)",
-      "Bash(npx prettier *)"
+      "Bash(npx prettier *)",
+      "Bash(sips -g pixelWidth -g pixelHeight -g format apps/web/public/logo_intranet.png)",
+      "Bash(python3 -c \"import PIL; print\\(PIL.__version__\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(rm -f /private/tmp/claude-502/-Users-macbookpro-YAGAMI-Intranet/ce26961d-c20a-4cff-9739-256531935c7d/scratchpad/test-*.png *)",
+      "mcp__MCP_DOCKER__browser_take_screenshot",
+      "mcp__MCP_DOCKER__browser_console_messages"
+    ],
+    "additionalDirectories": [
+      "/private/tmp/claude-502/-Users-macbookpro-YAGAMI-Intranet/ce26961d-c20a-4cff-9739-256531935c7d/scratchpad"
     ]
   }
 }

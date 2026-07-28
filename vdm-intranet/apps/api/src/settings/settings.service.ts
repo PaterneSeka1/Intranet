@@ -113,7 +113,10 @@ function isValidOpacityPercent(value: string): boolean {
 
 function isValidImageUrl(value: string): boolean {
   return (
-    value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image/')
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:image/') ||
+    /^\/[^/]/.test(value)
   )
 }
 

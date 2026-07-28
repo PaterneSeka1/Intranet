@@ -239,6 +239,28 @@ Demande : ajouter les 7 fonctionnalités identifiées lors de l'audit du repo (h
 - `npm run build:web` : OK après nettoyage du cache `.next`.
 - `git diff --check` : OK.
 
+## Identité visuelle — Logo entreprise & icônes PWA — 2026-07-28
+
+Demande : intégrer un nouveau logo pour la PWA, puis un second logo distinct comme logo officiel de l'entreprise ; supprimer le premier visuel (une planche complète, pas une icône) une fois les icônes PWA extraites.
+
+- `[x]` Recadrage précis de l'emblème circulaire depuis `logo_intranet.png` (planche complète avec texte "INTRANET" et bande de fonctionnalités, exclus du recadrage) → génération de `icon-192.png` et `icon-512.png`, référencés uniquement dans `manifest.ts` (aucun autre usage, conformément à la demande).
+- `[x]` Suppression de `logo_intranet.png` (fichier source de la planche, plus nécessaire une fois les icônes extraites).
+- `[x]` `logo_entreprise.png` (nouveau logo "Veilleur des Médias" fourni par l'utilisateur) déposé dans `public/` et activé comme logo de l'entreprise via le paramètre existant `vdm_logo` (mécanisme déjà en place : Sidebar, MobileSidebarToggle, pages login/mot-de-passe-oublié/réinitialisation, favicon).
+- `[x]` Correctif — `settings.service.ts::isValidImageUrl` n'acceptait que `http(s)://` et `data:image/`, rejetant les chemins relatifs (`/logo_entreprise.png`) pourtant déjà utilisés comme fallback ailleurs dans le code (`/icon.svg`) ; ajout du support des chemins relatifs racine.
+- `[x]` **Bug découvert et corrigé** — `middleware.ts` redirigeait vers `/login` toute requête non authentifiée vers des fichiers publics statiques (`manifest.webmanifest`, `sw.js`, `offline.html`, icônes PWA, logo), cassant silencieusement l'installabilité PWA (le manifeste renvoyait du HTML au lieu du JSON) et l'affichage du logo sur la page de connexion elle-même. Matcher étendu pour exclure ces fichiers, sur le même principe que l'exclusion déjà en place pour `favicon.ico`.
+- `[x]` Validation — `tsc --noEmit`, `npm run format`, `npm run build:api`, `npm run build:web`.
+- `[x]` Test réel : API + Web démarrés en mode dev, paramètre `vdm_logo` appliqué via `PATCH /settings` (comme le ferait un admin), vérification `curl` que `manifest.webmanifest`/`sw.js`/`offline.html`/les icônes/le logo renvoient bien du contenu valide (200, bytes PNG/JSON corrects) sans cookie de session, et qu'une page protégée continue de rediriger correctement (307). Base reseedée après test (le paramètre `vdm_logo` persiste au reseed, `AppSetting` n'étant pas vidé par `seed.ts`).
+- `[x]` Documentation — Mettre à jour `TACHE.md` et `SESSION_HANDOFF.md`.
+
+### Audit identité visuelle & correctif middleware — 2026-07-28
+
+- Le favicon (`layout.tsx` : `vdm_favicon || vdm_logo || '/icon.svg'`) utilise maintenant `logo_entreprise.png` par défaut, faute de `vdm_favicon` dédié — ce logo étant un bandeau large (2172×724), le rendu dans l'onglet navigateur (case carrée) peut sembler écrasé. À surveiller ; un favicon carré dédié pourrait être ajouté via `vdm_favicon` si le rendu ne convient pas.
+- Le bug de middleware corrigé ici affectait potentiellement l'installation PWA depuis le tout premier chargement de `/login`, avant même la correction des icônes PWA de cette session — les deux correctifs sont complémentaires et nécessaires ensemble pour une PWA installable.
+- `npm run format` : OK.
+- `npm run build:api` : OK.
+- `npm run build:web` : OK après nettoyage du cache `.next`.
+- `git diff --check` : OK.
+
 - `[x]` Tâche 1 : Base de données — Schéma Prisma & Migrations
   - `[x]` Mettre à jour `schema.prisma` avec `mustChangePassword`, `failedLoginAttempts` et `lockoutUntil`
   - `[x]` Ajouter la migration SQL `20260726000000_add_user_login_security`

@@ -58,6 +58,15 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Scope de la recherche globale confirmé : un `RESPONSABLE_BU` ne retrouve pas un utilisateur d'une autre BU, mais se retrouve lui-même.
 - `TACHE.md` mis à jour avec le détail complet de cette session.
 
+### Nouvelle demande réalisée — Identité visuelle : logo entreprise & icônes PWA (2026-07-28)
+
+- `logo_intranet.png` (planche complète avec texte et bande de fonctionnalités) supprimé après extraction précise de l'emblème circulaire vers `icon-192.png`/`icon-512.png` (référencés uniquement dans `manifest.ts`, aucun autre usage — conformément à la demande explicite de l'utilisateur).
+- `logo_entreprise.png` (nouveau logo officiel "Veilleur des Médias") activé comme logo de l'entreprise via le paramètre `vdm_logo` existant (`AppSetting`), repris automatiquement par tous les consommateurs déjà en place (Sidebar, MobileSidebarToggle, pages login/mot-de-passe-oublié/réinitialisation, favicon).
+- **Bug découvert et corrigé** : `middleware.ts` bloquait (redirection `/login`) l'accès non authentifié aux fichiers publics statiques (`manifest.webmanifest`, `sw.js`, `offline.html`, icônes, logo) — cassait silencieusement l'installabilité PWA depuis la toute première visite (le manifeste renvoyait la page HTML de login au lieu du JSON) et empêchait l'affichage du logo sur `/login` elle-même. Matcher étendu pour exclure ces fichiers, même principe que l'exclusion déjà en place pour `favicon.ico`.
+- Correctif complémentaire : `settings.service.ts::isValidImageUrl` accepte désormais les chemins relatifs racine (`/logo_entreprise.png`), pas seulement `http(s)://`/`data:image/`.
+- Point d'attention laissé ouvert : le favicon (fallback `vdm_favicon || vdm_logo`) utilise maintenant le bandeau large `logo_entreprise.png` faute de favicon dédié — rendu potentiellement écrasé dans l'onglet navigateur ; un `vdm_favicon` carré dédié pourrait être ajouté si besoin.
+- Test réel effectué : `PATCH /settings` avec cookie CTO_ADMIN, puis vérification `curl` que tous les fichiers publics renvoient du contenu valide (200, bytes corrects) sans cookie, et qu'une page protégée redirige toujours (307). Base reseedée après test (le paramètre `vdm_logo` survit au reseed, non couvert par le nettoyage de `seed.ts`).
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
