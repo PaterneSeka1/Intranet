@@ -122,7 +122,9 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-gray-100 shadow-2xl z-[9500] overflow-hidden">
+        <div
+          className={`absolute ${dark ? 'left-0' : 'right-0'} mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-gray-100 shadow-2xl z-[9500] overflow-hidden`}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <span className="font-bold text-sm text-gray-900">Notifications</span>
             {items && items.some((i) => !i.isRead) && (

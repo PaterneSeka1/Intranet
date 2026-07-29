@@ -99,7 +99,9 @@ export function Sidebar({
             <div className="vdm-sb-text text-sm font-bold leading-tight">{appName}</div>
             <div className="vdm-sb-text-faint text-xs">{appSubtitle}</div>
           </div>
-          <NotificationsBell dark />
+          <div className="hidden lg:block">
+            <NotificationsBell dark />
+          </div>
         </div>
       </div>
 
