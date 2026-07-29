@@ -89,11 +89,11 @@ export function Sidebar({
           {logo ? (
             <img src={logo} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-[#F28C38] flex items-center justify-center shrink-0">
-              <span className="text-white text-sm font-bold">
-                {appName[0]?.toUpperCase() ?? 'V'}
-              </span>
-            </div>
+            <img
+              src="/icon-192.png"
+              alt=""
+              className="w-8 h-8 rounded-lg object-cover shrink-0"
+            />
           )}
           <div className="flex-1 min-w-0">
             <div className="vdm-sb-text text-sm font-bold leading-tight">{appName}</div>

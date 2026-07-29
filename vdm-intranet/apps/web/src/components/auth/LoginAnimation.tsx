@@ -53,10 +53,13 @@ export function LoginAnimation({ username, onComplete }: Props) {
 
         {/* Sceau */}
         <div className="la-seal">
-          <div className="la-mark">V</div>
-          <div className="la-name">VEILLEUR DES MÉDIAS</div>
-          <div className="la-rule" />
-          <h1 className="la-welcome">{display ? `Bienvenue, ${display}.` : 'Bienvenue.'}</h1>
+          <div className="la-card">
+            <div className="la-logo-plaque">
+              <img src="/logo_entreprise.png" alt="Veilleur des Médias" />
+            </div>
+            <div className="la-rule" />
+            <h1 className="la-welcome">{display ? `Bienvenue, ${display}.` : 'Bienvenue.'}</h1>
+          </div>
         </div>
       </div>
     </>,
@@ -67,7 +70,7 @@ export function LoginAnimation({ username, onComplete }: Props) {
 const CSS = `
 .la-scene {
   position: fixed; inset: 0; z-index: 200;
-  background: #060A0F;
+  background: #0B121C;
   display: flex; align-items: center; justify-content: center;
   animation: la-out 0.5s ease 2.4s both;
 }
@@ -109,7 +112,7 @@ const CSS = `
 /* Surface */
 .la-surface {
   position: absolute; inset: 0;
-  background: linear-gradient(160deg, #16202E 0%, #101820 55%, #0C1520 100%);
+  background: linear-gradient(160deg, #24354A 0%, #1B293C 55%, #131D2A 100%);
   border-top: 1px solid rgba(255,255,255,.04);
   border-bottom: 1px solid rgba(0,0,0,.4);
   display: flex; flex-direction: column;
@@ -182,22 +185,29 @@ const CSS = `
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.la-mark {
-  width: 56px; height: 56px;
-  background: #F28C38;
+.la-card {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 36px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(11,18,28,.7) 0%, rgba(11,18,28,.88) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow: 0 24px 64px rgba(0,0,0,.55);
+}
+
+.la-logo-plaque {
+  background: #fff;
   border-radius: 14px;
+  padding: 12px 22px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 24px; font-weight: 800; color: #fff;
-  font-family: system-ui, -apple-system, sans-serif;
-  box-shadow: 0 0 32px rgba(242,140,56,.5), 0 8px 24px rgba(0,0,0,.6);
+  box-shadow: 0 0 36px rgba(242,140,56,.4), 0 8px 24px rgba(0,0,0,.5);
   margin-bottom: 16px;
 }
-.la-name {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 10px; font-weight: 700;
-  letter-spacing: .2em; text-transform: uppercase;
-  color: rgba(237,232,223,.4);
-  margin-bottom: 12px;
+.la-logo-plaque img {
+  display: block;
+  height: 34px;
+  width: auto;
 }
 .la-rule {
   width: 28px; height: 1px;

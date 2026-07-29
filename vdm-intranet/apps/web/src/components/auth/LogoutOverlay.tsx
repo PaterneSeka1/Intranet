@@ -29,7 +29,7 @@ export function LogoutOverlay({ onCancel }: Props) {
     const t = setTimeout(async () => {
       await api.auth.logout().catch(() => {})
       router.push('/login')
-    }, 2600)
+    }, 3400)
     return () => clearTimeout(t)
   }, [phase, router])
 
@@ -43,7 +43,12 @@ export function LogoutOverlay({ onCancel }: Props) {
           if (e.target === e.currentTarget) onCancel()
         }}
       >
-        <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-2xl w-full max-w-xs mx-4 text-center animate-modal-in">
+        <div className="bg-[#1B293C] rounded-2xl p-8 border border-white/10 shadow-2xl w-full max-w-xs mx-4 text-center animate-modal-in">
+          <img
+            src="/logo_entreprise.png"
+            alt="Veilleur des Médias"
+            className="h-7 w-auto mx-auto mb-6 bg-white rounded-md px-2 py-1"
+          />
           <div className="w-12 h-12 rounded-xl bg-[#F28C38]/10 border border-[#F28C38]/20 flex items-center justify-center mx-auto mb-5">
             <svg
               width="20"
@@ -58,13 +63,13 @@ export function LogoutOverlay({ onCancel }: Props) {
             </svg>
           </div>
           <h2 className="text-white font-semibold text-base mb-1">Se déconnecter ?</h2>
-          <p className="text-gray-400 text-sm mb-7 leading-relaxed">
+          <p className="text-white/50 text-sm mb-7 leading-relaxed">
             Votre session sera fermée et vous serez redirigé vers la page de connexion.
           </p>
           <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 py-2.5 border border-gray-700 rounded-xl text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+              className="flex-1 py-2.5 border border-white/15 rounded-xl text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
             >
               Annuler
             </button>
@@ -124,10 +129,13 @@ export function LogoutOverlay({ onCancel }: Props) {
 
         {/* Sceau central */}
         <div className="lo-seal">
-          <div className="lo-mark">V</div>
-          <div className="lo-name">VEILLEUR DES MÉDIAS</div>
-          <div className="lo-rule" />
-          <div className="lo-farewell">À bientôt</div>
+          <div className="lo-card">
+            <div className="lo-logo-plaque">
+              <img src="/logo_entreprise.png" alt="Veilleur des Médias" />
+            </div>
+            <div className="lo-rule" />
+            <div className="lo-farewell">À bientôt</div>
+          </div>
         </div>
       </div>
     </>,
@@ -139,9 +147,9 @@ const DOOR_CSS = `
 /* Scène */
 .lo-scene {
   position: fixed; inset: 0; z-index: 200;
-  background: #060A0F;
+  background: #0B121C;
   display: flex; align-items: center; justify-content: center;
-  animation: lo-scene-out 0.5s ease 2.2s both;
+  animation: lo-scene-out 0.5s ease 2.8s both;
 }
 @keyframes lo-scene-out { to { opacity:0; } }
 
@@ -150,24 +158,25 @@ const DOOR_CSS = `
   position: absolute; inset: 0;
   background: radial-gradient(ellipse 60% 50% at 50% 50%,
     rgba(242,140,56,.15) 0%, rgba(242,140,56,.04) 40%, transparent 70%);
-  animation: lo-glow-out 0.8s ease 0.9s both;
+  animation: lo-glow-out 0.8s ease 1.3s both;
 }
 @keyframes lo-glow-out { to { opacity:0; } }
 
-/* Portes — partent ouvertes, se ferment */
+/* Portes — partent ouvertes, se ferment sur le sceau */
 .lo-door {
   position: absolute; top:0; height:100%; width:50%;
+  z-index: 20;
   will-change: transform;
 }
 .lo-door-l {
   left:0;
   transform-origin: 0% 50%;
-  animation: lo-close-l 1.2s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+  animation: lo-close-l 1.2s cubic-bezier(0.16,1,0.3,1) 1.3s both;
 }
 .lo-door-r {
   right:0;
   transform-origin: 100% 50%;
-  animation: lo-close-r 1.2s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+  animation: lo-close-r 1.2s cubic-bezier(0.16,1,0.3,1) 1.3s both;
 }
 @keyframes lo-close-l {
   from { transform: perspective(1200px) rotateY(88deg); }
@@ -181,7 +190,7 @@ const DOOR_CSS = `
 /* Surface */
 .lo-surface {
   position: absolute; inset: 0;
-  background: linear-gradient(160deg, #16202E 0%, #101820 55%, #0C1520 100%);
+  background: linear-gradient(160deg, #24354A 0%, #1B293C 55%, #131D2A 100%);
   border-top: 1px solid rgba(255,255,255,.04);
   border-bottom: 1px solid rgba(0,0,0,.4);
   display: flex; flex-direction: column;
@@ -224,34 +233,41 @@ const DOOR_CSS = `
 .lo-h-r { right:20px; }
 .lo-h-l { left:20px; }
 
-/* Sceau */
+/* Sceau — apparaît d'abord, la porte se referme dessus ensuite */
 .lo-seal {
   position:relative; z-index:10;
   display:flex; flex-direction:column; align-items:center;
   gap:0; pointer-events:none;
-  animation: lo-seal-in 0.7s cubic-bezier(0.22,1,0.36,1) 1.1s both;
+  animation: lo-seal-in 0.7s cubic-bezier(0.22,1,0.36,1) 0.15s both;
 }
 @keyframes lo-seal-in {
   from { opacity:0; transform:scale(.9); }
   to   { opacity:1; transform:scale(1); }
 }
 
-.lo-mark {
-  width:56px; height:56px;
-  background:#F28C38;
-  border-radius:14px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:24px; font-weight:800; color:#fff;
-  font-family:system-ui,-apple-system,sans-serif;
-  box-shadow:0 0 32px rgba(242,140,56,.4), 0 8px 24px rgba(0,0,0,.6);
-  margin-bottom:16px;
+.lo-card {
+  display:flex; flex-direction:column; align-items:center;
+  padding:28px 36px;
+  border-radius:20px;
+  background:linear-gradient(180deg, rgba(11,18,28,.7) 0%, rgba(11,18,28,.88) 100%);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 24px 64px rgba(0,0,0,.55);
 }
-.lo-name {
-  font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
-  font-size:10px; font-weight:700;
-  letter-spacing:.2em; text-transform:uppercase;
-  color:rgba(237,232,223,.4);
-  margin-bottom:12px;
+
+.lo-logo-plaque {
+  background:#fff;
+  border-radius:16px;
+  padding:14px 24px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 40px rgba(242,140,56,.35), 0 12px 28px rgba(0,0,0,.55);
+  margin-bottom:18px;
+}
+.lo-logo-plaque img {
+  display:block;
+  height:36px;
+  width:auto;
 }
 .lo-rule {
   width:28px; height:1px;

@@ -196,9 +196,7 @@ export function ServiceUnavailablePage() {
 
           {/* Footer */}
           <div className="px-8 py-3.5 bg-gray-50/70 border-t border-gray-100 flex items-center justify-center gap-2">
-            <div className="w-5 h-5 rounded-md bg-[#F28C38] flex items-center justify-center shrink-0">
-              <span className="text-white text-[10px] font-bold leading-none">V</span>
-            </div>
+            <img src="/icon-192.png" alt="" className="w-5 h-5 rounded-md object-cover shrink-0" />
             <span className="text-[11px] text-gray-400">VDM Intranet · Veilleur des Médias</span>
           </div>
         </div>

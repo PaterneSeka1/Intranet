@@ -3,7 +3,7 @@ import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab } from '@/lib/tabs'
 import { EndDayButton } from '@/components/presence/EndDayButton'
-import { ACCUEIL_ONLY_ROLES } from '@/types/user'
+import { ACCUEIL_ONLY_ROLES, ROLE_LABELS } from '@/types/user'
 
 const STATUS_STYLE: Record<string, string> = {
   PRESENT: 'bg-green-100 text-green-700',
@@ -35,6 +35,34 @@ function formatDepartureDelay(minutes: number | null | undefined): string {
   return minutes > 0 ? `+${minutes} min (plus tard)` : `${minutes} min (plus tôt)`
 }
 
+function greeting(): string {
+  const hour = new Date().getUTCHours()
+  if (hour < 12) return 'Bonjour'
+  if (hour < 18) return 'Bon après-midi'
+  return 'Bonsoir'
+}
+
+function StatBlock({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: React.ReactNode
+  accent?: boolean
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+        {label}
+      </div>
+      <div className={`text-sm font-semibold ${accent ? 'text-[#F28C38]' : 'text-gray-800'}`}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
 export default async function AccueilPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
@@ -51,13 +79,37 @@ export default async function AccueilPage() {
   const presence = presenceData?.presence ?? null
   const status = presence?.status ?? 'ABSENT'
   const activeTabs = (allTabs ?? []).filter((t) => t.isActive)
+  const displayName = user.firstName || user.fullName || user.username
 
   return (
     <div className="p-6 space-y-6">
+      {/* Hero de bienvenue */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#1B293C] px-6 py-7 sm:px-8 sm:py-9">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#F28C38]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-10 h-48 w-48 rounded-full bg-[#F28C38]/10 blur-3xl" />
+        <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#F28C38] mb-2">
+              {ROLE_LABELS[user.role]}
+              {user.businessUnit ? ` · ${user.businessUnit.name}` : ''}
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+              {greeting()}, {displayName} 👋
+            </h1>
+            <p className="text-sm text-white/60 mt-1.5 capitalize">{formatDate()}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Carte présence — uniquement les données du jour */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-medium text-gray-500 capitalize">{formatDate()}</p>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-base">
+              🕒
+            </span>
+            Ma journée
+          </h2>
           <span
             className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_STYLE[status] ?? DEFAULT_STATUS_STYLE}`}
           >
@@ -65,43 +117,27 @@ export default async function AccueilPage() {
           </span>
         </div>
         <div
-          className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}
+          className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-5`}
         >
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-              Heure attendue
-            </div>
-            <div className="text-sm font-semibold text-gray-800">
-              {presence?.expectedArrivalTime && presence.expectedArrivalTime !== '--:--'
+          <StatBlock
+            label="Heure attendue"
+            value={
+              presence?.expectedArrivalTime && presence.expectedArrivalTime !== '--:--'
                 ? presence.expectedArrivalTime
-                : (presenceData?.scheduleSource?.time ?? '—')}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-              Arrivée officielle
-            </div>
-            <div className="text-sm font-semibold text-gray-800">
-              {formatTime(presence?.officialArrivalTime)}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-              Retard
-            </div>
-            <div
-              className={`text-sm font-semibold ${presence?.delayMinutes ? 'text-orange-600' : 'text-gray-800'}`}
-            >
-              {presence?.delayMinutes ? `+${presence.delayMinutes} min` : '—'}
-            </div>
-          </div>
+                : (presenceData?.scheduleSource?.time ?? '—')
+            }
+          />
+          <StatBlock label="Arrivée officielle" value={formatTime(presence?.officialArrivalTime)} />
+          <StatBlock
+            label="Retard"
+            value={presence?.delayMinutes ? `+${presence.delayMinutes} min` : '—'}
+            accent={!!presence?.delayMinutes}
+          />
           {showGeolocation && (
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-                Localisation
-              </div>
-              <div className="text-sm font-semibold">
-                {presence?.mapsUrl ? (
+            <StatBlock
+              label="Localisation"
+              value={
+                presence?.mapsUrl ? (
                   <a
                     href={presence.mapsUrl}
                     target="_blank"
@@ -112,59 +148,43 @@ export default async function AccueilPage() {
                   </a>
                 ) : (
                   '—'
-                )}
-              </div>
-            </div>
+                )
+              }
+            />
           )}
         </div>
 
         {showGeolocation && presence?.address && (
           <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-            {presence.address}
+            📍 {presence.address}
           </div>
         )}
 
         {/* Départ */}
         {presence && (
-          <div className="mt-5 pt-4 border-t border-gray-100">
+          <div className="mt-5 pt-5 border-t border-gray-100">
             <div
-              className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}
+              className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-5`}
             >
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-                  Départ attendu
-                </div>
-                <div className="text-sm font-semibold text-gray-800">
-                  {presence.expectedDepartureTime ?? '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-                  Départ officiel
-                </div>
-                <div className="text-sm font-semibold text-gray-800">
-                  {formatTime(presence.officialDepartureTime)}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-                  Écart
-                </div>
-                <div
-                  className={`text-sm font-semibold ${presence.departureDelayMinutes ? 'text-orange-600' : 'text-gray-800'}`}
-                >
-                  {presence.officialDepartureTime
+              <StatBlock label="Départ attendu" value={presence.expectedDepartureTime ?? '—'} />
+              <StatBlock
+                label="Départ officiel"
+                value={formatTime(presence.officialDepartureTime)}
+              />
+              <StatBlock
+                label="Écart"
+                value={
+                  presence.officialDepartureTime
                     ? formatDepartureDelay(presence.departureDelayMinutes)
-                    : '—'}
-                </div>
-              </div>
+                    : '—'
+                }
+                accent={!!presence.departureDelayMinutes}
+              />
               {showGeolocation && (
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
-                    Localisation
-                  </div>
-                  <div className="text-sm font-semibold">
-                    {presence.departureMapsUrl ? (
+                <StatBlock
+                  label="Localisation"
+                  value={
+                    presence.departureMapsUrl ? (
                       <a
                         href={presence.departureMapsUrl}
                         target="_blank"
@@ -175,20 +195,20 @@ export default async function AccueilPage() {
                       </a>
                     ) : (
                       '—'
-                    )}
-                  </div>
-                </div>
+                    )
+                  }
+                />
               )}
             </div>
 
             {showGeolocation && presence.departureAddress && (
               <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                {presence.departureAddress}
+                📍 {presence.departureAddress}
               </div>
             )}
 
             {!presence.officialDepartureTime && (
-              <div className="mt-4">
+              <div className="mt-5">
                 <EndDayButton />
               </div>
             )}
@@ -199,9 +219,17 @@ export default async function AccueilPage() {
       {/* Onglets de la BU */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-gray-700">Mes ressources</h2>
+          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-base">
+              📌
+            </span>
+            Mes ressources
+          </h2>
           {['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU'].includes(user.role) && (
-            <a href="/onglets" className="text-xs text-[#F28C38] hover:underline">
+            <a
+              href="/onglets"
+              className="text-xs font-semibold text-[#F28C38] hover:underline"
+            >
               Gérer les onglets →
             </a>
           )}
@@ -225,9 +253,11 @@ export default async function AccueilPage() {
                 href={tab.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-40 bg-white rounded-2xl border border-gray-100 p-5 flex flex-col items-center gap-3 hover:border-[#F28C38]/30 hover:shadow-sm transition-all group"
+                className="w-40 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center gap-3 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
               >
-                <span className="text-4xl">{tab.icon ?? '🔗'}</span>
+                <span className="w-14 h-14 rounded-2xl bg-[#F28C38]/10 flex items-center justify-center text-3xl group-hover:bg-[#F28C38]/15 transition-colors">
+                  {tab.icon ?? '🔗'}
+                </span>
                 <span className="text-sm font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
                   {tab.name}
                 </span>

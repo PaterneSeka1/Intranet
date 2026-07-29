@@ -8,7 +8,7 @@ export default function LandingPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const t = setTimeout(() => router.push('/login'), 3800)
+    const t = setTimeout(() => router.push('/login'), 4200)
     return () => clearTimeout(t)
   }, [router])
 
@@ -46,10 +46,13 @@ export default function LandingPage() {
 
         {/* Sceau VDM */}
         <div className="seal">
-          <div className="seal-mark">V</div>
-          <div className="seal-name pt-10">VEILLEUR DES MÉDIAS</div>
-          <div className="seal-rule" />
-          <div className="seal-sub">Portail interne · Abidjan, Côte d&rsquo;Ivoire</div>
+          <div className="seal-card">
+            <div className="seal-logo-plaque">
+              <img src="/logo_entreprise.png" alt="Veilleur des Médias" />
+            </div>
+            <div className="seal-rule" />
+            <div className="seal-sub">Portail interne · Abidjan, Côte d&rsquo;Ivoire</div>
+          </div>
         </div>
 
         {/* Lien de passage direct */}
@@ -63,14 +66,14 @@ export default function LandingPage() {
 
 const CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; background: #060A0F; }
+html, body { height: 100%; overflow: hidden; background: #0B121C; }
 
 /* ─── Scène ─── */
 .scene {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: #060A0F;
-  animation: scene-out 0.5s ease 3.3s both;
+  background: #0B121C;
+  animation: scene-out 0.5s ease 3.6s both;
 }
 @keyframes scene-out {
   to { opacity: 0; }
@@ -84,7 +87,7 @@ html, body { height: 100%; overflow: hidden; background: #060A0F; }
     rgba(242,140,56,.05) 40%,
     transparent 70%);
   opacity: 0;
-  animation: glow-reveal 0.9s ease 1.6s both;
+  animation: glow-reveal 0.9s ease 0.5s both;
 }
 @keyframes glow-reveal {
   to { opacity: 1; }
@@ -100,12 +103,12 @@ html, body { height: 100%; overflow: hidden; background: #060A0F; }
 .door-l {
   left: 0;
   transform-origin: 0% 50%;
-  animation: open-l 1.4s cubic-bezier(0.7, 0, 0.84, 0) 1.5s both;
+  animation: open-l 1.4s cubic-bezier(0.7, 0, 0.84, 0) 0.4s both;
 }
 .door-r {
   right: 0;
   transform-origin: 100% 50%;
-  animation: open-r 1.4s cubic-bezier(0.7, 0, 0.84, 0) 1.5s both;
+  animation: open-r 1.4s cubic-bezier(0.7, 0, 0.84, 0) 0.4s both;
 }
 @keyframes open-l {
   from { transform: perspective(1200px) rotateY(0deg); }
@@ -119,7 +122,7 @@ html, body { height: 100%; overflow: hidden; background: #060A0F; }
 /* ─── Surface de la porte ─── */
 .door-surface {
   position: absolute; inset: 0;
-  background: linear-gradient(160deg, #16202E 0%, #101820 55%, #0C1520 100%);
+  background: linear-gradient(160deg, #24354A 0%, #1B293C 55%, #131D2A 100%);
   border-top: 1px solid rgba(255,255,255,.04);
   border-bottom: 1px solid rgba(0,0,0,.4);
   display: flex; flex-direction: column;
@@ -195,37 +198,36 @@ html, body { height: 100%; overflow: hidden; background: #060A0F; }
   display: flex; flex-direction: column; align-items: center; gap: 0;
   pointer-events: none;
   z-index: 10;
-  animation: seal-in 0.9s cubic-bezier(0.22,1,0.36,1) 0.1s both,
-             seal-out 0.4s ease 1.2s both;
+  animation: seal-in 0.9s cubic-bezier(0.22,1,0.36,1) 1.8s both;
 }
 @keyframes seal-in {
   from { opacity: 0; transform: translateY(16px) scale(0.95); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-@keyframes seal-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+
+.seal-card {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 30px 40px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(11,18,28,.7) 0%, rgba(11,18,28,.88) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow: 0 24px 64px rgba(0,0,0,.55);
 }
 
-.seal-mark {
-  width: 64px; height: 64px;
-  background: #F28C38;
+.seal-logo-plaque {
+  background: #fff;
   border-radius: 16px;
+  padding: 14px 26px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 28px; font-weight: 800;
-  color: #fff;
-  font-family: system-ui, -apple-system, sans-serif;
-  letter-spacing: -.5px;
-  box-shadow: 0 0 40px rgba(242,140,56,.5), 0 8px 32px rgba(0,0,0,.6);
+  box-shadow: 0 0 40px rgba(242,140,56,.4), 0 10px 28px rgba(0,0,0,.5);
   margin-bottom: 18px;
 }
-
-.seal-name {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  font-size: 11px; font-weight: 700;
-  letter-spacing: .2em; text-transform: uppercase;
-  color: rgba(237,232,223,.5);
-  margin-bottom: 14px;
+.seal-logo-plaque img {
+  display: block;
+  height: 38px;
+  width: auto;
 }
 
 .seal-rule {
@@ -238,7 +240,8 @@ html, body { height: 100%; overflow: hidden; background: #060A0F; }
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 11px; font-weight: 400;
   letter-spacing: .04em;
-  color: rgba(237,232,223,.25);
+  color: rgba(237,232,223,.55);
+  text-align: center;
 }
 
 /* ─── Lien skip ─── */

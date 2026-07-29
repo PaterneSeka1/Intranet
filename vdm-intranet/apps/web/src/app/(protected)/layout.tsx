@@ -64,9 +64,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
             {logo ? (
               <img src={logo} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
             ) : (
-              <div className="w-7 h-7 rounded-lg bg-[#F28C38] flex items-center justify-center">
-                <span className="text-white text-xs font-bold">{appName[0]?.toUpperCase()}</span>
-              </div>
+              <img
+                src="/icon-192.png"
+                alt=""
+                className="w-7 h-7 rounded-lg object-cover shrink-0"
+              />
             )}
             <span className="font-bold text-gray-800 text-sm">{appName}</span>
           </div>
