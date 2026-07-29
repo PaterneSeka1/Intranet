@@ -20,7 +20,8 @@ Toutes les commandes doivent être exécutées depuis le répertoire racine (`/v
 
 ### Commandes de Développement & Build
 
-- **Lancer l'API en mode dev** : `npm run dev:api`
+- **Lancer l'API en mode dev** : `npm run dev:api` (démarre automatiquement Docker Desktop et le conteneur PostgreSQL si nécessaire, via le hook `predev:api` → `scripts/ensure-db.sh`)
+- **Démarrer uniquement la base de données** : `npm run db:up`
 - **Lancer le Frontend Web en mode dev** : `npm run dev:web`
 - **Compiler l'API (production)** : `npm run build:api`
 - **Compiler le Frontend Web (production)** : `npm run build:web`

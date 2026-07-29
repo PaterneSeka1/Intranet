@@ -77,6 +77,8 @@ npm run dev:web   # http://localhost:3000
 npm run dev:api   # http://localhost:3001
 ```
 
+> `npm run dev:api` démarre automatiquement Docker Desktop (si arrêté) et le conteneur PostgreSQL avant de lancer l'API (hook `predev:api` → `scripts/ensure-db.sh`). Pour ne démarrer que la base sans l'API : `npm run db:up`.
+
 ## Commandes base de données
 
 ```bash

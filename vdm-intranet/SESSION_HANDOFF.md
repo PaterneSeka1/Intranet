@@ -67,6 +67,34 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Point d'attention laissé ouvert : le favicon (fallback `vdm_favicon || vdm_logo`) utilise maintenant le bandeau large `logo_entreprise.png` faute de favicon dédié — rendu potentiellement écrasé dans l'onglet navigateur ; un `vdm_favicon` carré dédié pourrait être ajouté si besoin.
 - Test réel effectué : `PATCH /settings` avec cookie CTO_ADMIN, puis vérification `curl` que tous les fichiers publics renvoient du contenu valide (200, bytes corrects) sans cookie, et qu'une page protégée redirige toujours (307). Base reseedée après test (le paramètre `vdm_logo` survit au reseed, non couvert par le nettoyage de `seed.ts`).
 
+### Nouvelle demande réalisée — Démarrage automatique de PostgreSQL (2026-07-29)
+
+- Problème signalé par l'utilisateur comme récurrent : `npm run dev:api` échouait par intermittence avec `PrismaClientInitializationError: Can't reach database server at localhost:5434`.
+- Cause identifiée : le daemon Docker Desktop n'est pas relancé automatiquement (ex. après redémarrage du Mac), donc le conteneur `vdm_postgres` défini dans `docker-compose.yml` n'existe pas quand l'API démarre.
+- Créé `scripts/ensure-db.sh` : vérifie si le daemon Docker répond (`docker info`), lance Docker Desktop (`open -a Docker`, macOS uniquement) et attend son démarrage jusqu'à 120s si besoin, démarre le conteneur via `docker compose up -d postgres`, puis attend que Postgres réponde (`pg_isready`, jusqu'à 30s) avant de rendre la main.
+- Ajouté dans `package.json` racine : `db:up` (exécute le script directement) et `predev:api`, qui se déclenche automatiquement avant `dev:api` via le hook npm standard `pre<script>` — aucune action manuelle requise avant de lancer l'API.
+- Testé en conditions réelles : conteneur et daemon Docker arrêtés puis `npm run dev:api` relance les deux automatiquement et l'API démarre sans erreur Prisma.
+- `README.md` et `CLAUDE.md` mis à jour pour documenter ce comportement.
+
+### Nouvelle demande réalisée — Page "hors ligne" affichée trop souvent (2026-07-29)
+
+- Demande : l'utilisateur tombe systématiquement sur un écran "hors ligne" en naviguant, alors que web/API/Postgres tournent tous normalement (vérifié : `curl /api/health` → 200 pendant l'incident).
+- **Cause racine trouvée (confirmée par reproduction)** : `ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }])` dans `apps/api/src/app.module.ts:26`, combiné à `ThrottlerGuard` posé en garde globale (`APP_GUARD`, ligne 41), limitait **toute** l'API à 10 requêtes/minute par IP — y compris `GET /auth/me`, `/announcements`, `/settings`, `/notifications/unread-count`, `/pilotage/*`, etc. Un seul chargement de page protégée (auth/me + annonces + paramètres + notifications + données de la page) dépasse déjà ce quota à lui seul ; toute navigation normale déclenchait donc un `429 Too Many Requests`, traité comme une panne par `getCurrentUserState()` (`unavailable: true`) → écran "Service temporairement indisponible" (`ServiceUnavailablePage.tsx`), visuellement proche du vrai fallback PWA (`public/sw.js`/`offline.html`), d'où la confusion initiale du diagnostic précédent.
+- Reproduit en isolant le rate-limiter : boucle de requêtes `fetch` locales vers `/api/health` → succès jusqu'à la 10e, puis `429` en boucle jusqu'à expiration de la fenêtre de 60s.
+- **Correctif** : `apps/api/src/app.module.ts:26` — limite globale relevée à `300` req/min (`ttl: 60000, limit: 300`). Les endpoints sensibles au brute-force (`POST /auth/login` 5/min, `/auth/forgot-password` 3/heure, `/auth/reset-password` 5/min dans `auth.controller.ts`) gardent leurs propres surcharges `@Throttle`, plus strictes et déjà correctement scopées — non modifiées.
+- Correctif complémentaire conservé de la première tentative de diagnostic (moins critique mais toujours utile) : `apps/web/src/lib/auth.ts` — `getCurrentUserState`/`serverFetch` utilisent `fetchWithTimeout` (8s) et `getCurrentUserState` retente une fois avant de conclure à une vraie panne, pour absorber un aléa réseau transitoire réel (indépendant du rate limit).
+- Validation : reproduction du 429 avant correctif, confirmation de sa disparition après (60/60 requêtes locales en rafale sans 429) ; `npx tsc --noEmit -p apps/api/tsconfig.json` OK, `npm run build:api` OK ; `npx tsc --noEmit -p apps/web/tsconfig.json` OK, `rm -rf apps/web/.next` puis `npm run build:web` OK.
+
+### Nouvelle demande réalisée — "Mon historique" vide : bug du changement de mot de passe obligatoire (2026-07-29)
+
+- Demande : vérifier que la page `/mon-historique` charge bien les données.
+- Le code de la page (`mon-historique/page.tsx`, `presence.controller.ts::getMyConnections`, `presence.service.ts::getMyConnections`) est correct et fonctionnel — vérifié en le relisant en détail, rien à corriger côté fetch/affichage.
+- **Vraie cause de la page vide, trouvée en base** : les tables `presences`, `activity_logs` et `connection_logs` sont toutes à 0 ligne, y compris pour l'utilisateur actuellement connecté (`mustChangePassword = false` chez lui, mais toujours 0 présence). 21 des 22 comptes seedés ont encore `mustChangePassword = true`.
+- **Bug identifié dans `LoginClient.tsx`** : quand `user.mustChangePassword` est vrai, le frontend redirigeait immédiatement vers `/mon-profil` (`handleSubmit`) sans jamais regarder `requiresFirstLoginGeolocation` (pourtant renvoyé par `POST /auth/login`, `auth.service.ts:83`) — la géolocalisation obligatoire de 1ère connexion (`/presence/first-login`, qui crée le `Presence` du jour ET le `ConnectionLog`) n'était donc **jamais déclenchée** pour un compte forcé à changer son mot de passe. Après le changement de mot de passe, `MonProfilClient.tsx::handlePasswordSubmit` ne fait qu'un `router.refresh()`, sans jamais repasser par ce flux non plus. Résultat : un compte fraîchement seedé/réinitialisé n'a jamais de présence ni d'historique de connexion tant qu'il n'a pas fait un second cycle login/logout un jour où le mot de passe n'a plus besoin d'être changé.
+- **Correctif** : `apps/web/src/components/auth/LoginClient.tsx::handleSubmit` — la géolocalisation (`requiresFirstLoginGeolocation`) est désormais vérifiée **avant** `mustChangePassword`. Le flux GPS → `/presence/first-login` s'exécute d'abord si nécessaire ; l'utilisateur atterrit ensuite sur `/accueil`, puis `MustChangePasswordGuard` (déjà en place dans `(protected)/layout.tsx`) le renvoie vers `/mon-profil` comme avant.
+- Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK, `rm -rf apps/web/.next` puis `npm run build:web` OK.
+- **Non fait** : le correctif ne rétro-répare pas les comptes déjà bloqués sans présence pour aujourd'hui (dont l'utilisateur en session actuellement) — il faudra qu'ils se déconnectent/reconnectent une fois pour déclencher la géolocalisation et voir apparaître leurs premières lignes d'historique.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
@@ -166,6 +194,7 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Les commandes Prisma et seed doivent charger le `.env` racine avant exécution si elles sont lancées via workspace.
 - L'accès PostgreSQL local nécessite une exécution hors sandbox dans cet environnement.
 - `docker ps` : disponible dans ce shell au 2026-07-28 (le conteneur `vdm_postgres` tourne sur le port 5434) — la note précédente indiquant `docker` indisponible ne s'applique plus à cet environnement.
+- Depuis le 2026-07-29, `npm run dev:api` démarre automatiquement Docker Desktop (si arrêté) et le conteneur `vdm_postgres` via le hook `predev:api` → `scripts/ensure-db.sh` ; ne plus diagnostiquer `PrismaClientInitializationError: Can't reach database server` comme un problème d'environnement avant d'avoir vérifié que ce hook s'est bien exécuté (voir sa sortie `[db] ...` dans les logs de démarrage).
 - `node dist/main` (`start:prod`) échoue avec `MODULE_NOT_FOUND` après `nest build` dans cet environnement (résolution de module cassée sur les imports relatifs comme `./app.controller`) ; utiliser `npm run dev:api` (`ts-node-dev`) pour toute vérification runtime locale, non affecté par ce problème.
 
 ---

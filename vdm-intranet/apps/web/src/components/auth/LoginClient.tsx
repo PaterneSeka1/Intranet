@@ -65,20 +65,26 @@ export function LoginClient({
         password
       )
 
+      // La géolocalisation de 1ère connexion du jour est prioritaire sur le
+      // changement de mot de passe obligatoire : sinon la présence du jour
+      // n'est jamais enregistrée pour un compte fraîchement créé/réinitialisé.
+      // Une fois la géolocalisation faite (ou si elle n'est pas requise),
+      // MustChangePasswordGuard renvoie l'utilisateur vers /mon-profil.
+      if (requiresFirstLoginGeolocation) {
+        setStep('geo')
+        return
+      }
+
       if (user.mustChangePassword) {
         router.replace('/mon-profil')
         router.refresh()
         return
       }
 
-      if (requiresFirstLoginGeolocation) {
-        setStep('geo')
-      } else {
-        presenceApi.loginLog({ userAgent: navigator.userAgent }).catch(() => {
-          toast.warning('Présence non enregistrée — veuillez réessayer.')
-        })
-        setStep('animating')
-      }
+      presenceApi.loginLog({ userAgent: navigator.userAgent }).catch(() => {
+        toast.warning('Présence non enregistrée — veuillez réessayer.')
+      })
+      setStep('animating')
     } catch (err) {
       if (err instanceof ApiError) {
         setError(

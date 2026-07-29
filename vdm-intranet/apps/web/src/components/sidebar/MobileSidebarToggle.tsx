@@ -75,7 +75,7 @@ export function MobileSidebarToggle({
           </button>
           <div className="flex items-center gap-2">
             {logo ? (
-              <img src={logo} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
+              <img src={logo} alt="" className="w-7 h-7 rounded-lg object-contain bg-white shrink-0" />
             ) : (
               <img
                 src="/icon-192.png"

@@ -8,6 +8,8 @@
     "packages/*"
   ],
   "scripts": {
+    "db:up": "bash scripts/ensure-db.sh",
+    "predev:api": "npm run db:up",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
     "build:web": "npm run build --workspace=apps/web",

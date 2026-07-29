@@ -517,3 +517,45 @@ Ce plan détaille les modifications à apporter au portail intranet pour corrige
   - Se connecter avec n'importe quel compte seedé pour la première fois et vérifier qu'il est redirigé vers l'écran de profil pour changer son mot de passe, avec interdiction d'accéder aux autres pages.
 - **Vérification d'énumération :**
   - Tenter de se connecter avec un nom d'utilisateur inexistant ou erroné, et vérifier que la durée de réponse (temps CPU consommé par bcrypt) et le message d'erreur ("Identifiants invalides") sont identiques.
+
+---
+
+## Fix récurrent — Démarrage automatique de PostgreSQL avant l'API — 2026-07-29
+
+Signalé par l'utilisateur comme un problème trop récurrent : `npm run dev:api` échoue par intermittence avec `PrismaClientInitializationError: Can't reach database server at localhost:5434`, faute de conteneur Postgres actif.
+
+- `[x]` Diagnostiquer la cause : le daemon Docker Desktop n'est pas relancé automatiquement (ex. après redémarrage du Mac), donc le conteneur `vdm_postgres` (`docker-compose.yml`) n'existe pas au démarrage de l'API
+- `[x]` Créer `scripts/ensure-db.sh` : démarre Docker Desktop si besoin (`open -a Docker`, avec attente jusqu'à 120s), lance `docker compose up -d postgres`, attend `pg_isready` (jusqu'à 30s)
+- `[x]` Ajouter `db:up` et `predev:api` dans `package.json` racine, déclenchés automatiquement avant `npm run dev:api` via le hook npm `pre<script>`
+- `[x]` Validation — testé en conditions réelles : Docker/Postgres arrêtés puis `npm run dev:api` relance tout automatiquement, API démarrée sans erreur Prisma
+- `[x]` Documentation — `README.md`, `CLAUDE.md`, `SESSION_HANDOFF.md` mis à jour
+
+//SESSION TERMINEE
+
+## Fix — Page "hors ligne" affichée trop souvent en navigation — 2026-07-29
+
+Signalé par l'utilisateur : navigation qui retombe systématiquement sur un écran "hors ligne", alors que web/API/DB tournent normalement — gênant l'usage courant.
+
+- `[x]` Diagnostiquer les deux mécanismes pouvant produire cet écran : fallback PWA réel (`public/sw.js`/`public/offline.html`) vs `ServiceUnavailablePage.tsx` déclenché par `(protected)/layout.tsx` sur échec de `getCurrentUserState()`
+- `[x]` Première hypothèse (aléa réseau transitoire) — [MODIFY] [auth.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/lib/auth.ts) : ajout de `fetchWithTimeout` (8s) + retry dans `getCurrentUserState`, timeout aussi sur `serverFetch` — correctif utile mais insuffisant, le symptôme persistait
+- `[x]` **Cause racine trouvée par reproduction** : `ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }])` (`app.module.ts:26`) posé en garde globale (`APP_GUARD`) limite **toute** l'API à 10 req/min/IP, y compris `/auth/me`, `/announcements`, `/settings`, `/notifications/*`, `/pilotage/*` — un seul chargement de page protégée dépasse déjà ce quota, d'où un `429` systématique traité comme panne
+- `[x]` Reproduit isolément : boucle `fetch` locale vers `/api/health` → OK jusqu'à la 10e requête, puis `429` en rafale jusqu'à expiration de la fenêtre de 60s
+- `[x]` [MODIFY] [app.module.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/app.module.ts) — limite globale relevée à `300` req/min ; les surcharges `@Throttle` existantes sur `login`/`forgot-password`/`reset-password` (`auth.controller.ts`) restent inchangées (déjà correctement scopées pour la protection anti brute-force)
+- `[x]` Validation — reproduction du 429 confirmée avant correctif puis disparition après (60/60 requêtes locales en rafale sans 429) ; `npx tsc --noEmit -p apps/api/tsconfig.json`, `npm run build:api`, `npx tsc --noEmit -p apps/web/tsconfig.json`, `rm -rf apps/web/.next` puis `npm run build:web` : OK
+- `[ ]` Vérification manuelle — naviguer plusieurs minutes sur toutes les pages protégées en conditions réelles et confirmer que l'écran "service indisponible" n'apparaît plus
+
+//SESSION TERMINEE
+
+## Fix — "Mon historique" ne charge aucune donnée — 2026-07-29
+
+Demande : vérifier que `/mon-historique` charge bien les données.
+
+- `[x]` Relire le code de la page/API (`mon-historique/page.tsx`, `presence.controller.ts`/`presence.service.ts::getMyConnections`) — correct, aucun bug de fetch/affichage
+- `[x]` Constater en base que `presences`, `activity_logs` et `connection_logs` sont à 0 ligne, y compris pour l'utilisateur en session (21/22 comptes ont encore `mustChangePassword = true`)
+- `[x]` Identifier la cause : dans `LoginClient.tsx`, un compte avec `mustChangePassword = true` était redirigé vers `/mon-profil` sans jamais passer par la géolocalisation obligatoire (`requiresFirstLoginGeolocation`, `auth.service.ts:83`) ni par `/presence/first-login` — aucune présence/`ConnectionLog` n'est donc jamais créée le jour du changement de mot de passe forcé, ni ensuite via `MonProfilClient.tsx::handlePasswordSubmit` (simple `router.refresh()`)
+- `[x]` [MODIFY] [LoginClient.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/auth/LoginClient.tsx) — vérifier `requiresFirstLoginGeolocation` avant `mustChangePassword` dans `handleSubmit` ; le flux GPS s'exécute d'abord, `MustChangePasswordGuard` renvoie ensuite vers `/mon-profil` comme avant
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json`, `rm -rf apps/web/.next` puis `npm run build:web` : OK
+- `[ ]` Non rétro-compatible : les comptes déjà bloqués sans présence du jour (dont le compte en session actuelle) doivent se déconnecter/reconnecter une fois pour déclencher la géolocalisation et faire apparaître leurs premières lignes d'historique
+- `[ ]` Vérification manuelle — se déconnecter/reconnecter avec un compte `mustChangePassword = true` et vérifier que l'écran GPS apparaît avant le changement de mot de passe forcé, puis que `/mon-historique` affiche la ligne de connexion du jour
+
+//SESSION TERMINEE

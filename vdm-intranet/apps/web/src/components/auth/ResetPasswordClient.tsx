@@ -34,19 +34,11 @@ function Shell({
       <BgImageLayer />
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
         <div className="text-center mb-8">
-          {logo ? (
-            <img
-              src={logo}
-              alt=""
-              className="w-14 h-14 rounded-2xl object-cover mx-auto mb-4 shadow-md shadow-orange-100"
-            />
-          ) : (
-            <img
-              src="/logo_entreprise.png"
-              alt="Veilleur des Médias"
-              className="h-12 w-auto mx-auto mb-4"
-            />
-          )}
+          <img
+            src={logo || '/logo_entreprise.png'}
+            alt="Veilleur des Médias"
+            className="h-12 w-auto mx-auto mb-4"
+          />
           <h1 className="text-lg font-bold text-gray-900">{appName}</h1>
           <p className="text-xs text-gray-400 mt-0.5">{appSubtitle}</p>
         </div>

@@ -23,7 +23,7 @@ import { SearchModule } from './search/search.module'
       isGlobal: true,
       envFilePath: ['../../.env', '.env'],
     }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     PrismaModule,
     AuthModule,
     UsersModule,
