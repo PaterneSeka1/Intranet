@@ -19,7 +19,7 @@ Portail intranet de **Veilleur des Médias** — gestion des présences, rôles,
 
 ## Structure
 
-```
+```text
 vdm-intranet/
 ├── apps/
 │   ├── web/          # Next.js App Router (port 3000)
