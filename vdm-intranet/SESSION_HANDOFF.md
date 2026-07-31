@@ -110,6 +110,16 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Portée volontairement limitée à ces deux fichiers (pas README.md/CLAUDE.md/METHODE_DE_TRAVAIL.md), et au déclenchement uniquement quand du code a changé (pas sur un tour purement conversationnel) — choix validés avec l'utilisateur.
 - Limite connue : le watcher de settings d'une session déjà démarrée ne surveille pas un `.claude/settings.local.json` créé après son lancement ; un `/hooks` ou un redémarrage peut être nécessaire pour l'activer immédiatement dans une session en cours (les nouvelles sessions le chargent normalement au démarrage).
 
+### Correctif — Annonces épinglées absentes du widget flottant (2026-07-31)
+
+- Demande : les annonces épinglées doivent aussi apparaître dans le widget flottant "Annonces", fixées en haut.
+- Bug trouvé dans `AnnouncementWidget` (`Widgets.tsx`) : la logique n'affichait les annonces épinglées que s'il n'existait aucune annonce non épinglée (fallback), au lieu de les afficher en priorité — comportement inverse de ce qu'implique un épinglage. Le tri backend (`isPinned: 'desc'` puis `publishedAt: 'desc'`, `announcements.service.ts::findAll`) était déjà correct ; seul le frontend cassait cet ordre.
+- Correctif : `Widgets.tsx::AnnouncementWidget` sépare désormais les annonces épinglées (toujours affichées, en tête) des non épinglées (complètent la liste jusqu'à 3 éléments au total).
+- Ancienne description à corriger : le widget n'affiche plus seulement les "annonces actives non épinglées avec fallback sur les épinglées" — voir section "Fonctionnalités Réalisées" mise à jour ci-dessous.
+- Suite immédiate (même jour) : demande complémentaire pour que **toutes** les annonces actives s'affichent dans le widget, avec défilement. `AnnouncementWidget` (`Widgets.tsx`) ne limite plus à 3 éléments : les épinglées restent affichées en bloc fixe en haut (non scrollable), les non épinglées sont listées en dessous dans une zone scrollable (`max-h-56 overflow-y-auto`). Extraction d'un sous-composant `AnnouncementItem` pour éviter la duplication de rendu entre les deux blocs.
+- Correctif suivant (même jour) : en conditions réelles avec beaucoup d'annonces épinglées, le bloc épinglé (non scrollable) grossissait sans limite et faisait déborder le widget de l'écran (constaté par capture d'écran utilisateur sur `/annonces`). `AnnouncementWidget` fusionne désormais épinglées + non épinglées en une seule liste (épinglées toujours en premier) dans une unique zone scrollable, sous un en-tête fixe ; le widget entier est plafonné à `max-h-[min(60vh,26rem)]`.
+- Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
@@ -160,7 +170,7 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
   - `DAF` peut exporter uniquement le rapport `Présences / absences`, pour tout le personnel sans exception.
   - Les exports `activité`, `connexions` et `rapport général` sont refusés côté API pour `DAF`.
   - La bannière défilante affiche uniquement les annonces épinglées.
-  - Le widget `Annonces` affiche les annonces actives non épinglées, avec fallback sur les épinglées.
+  - Le widget `Annonces` affiche toutes les annonces actives (épinglées en tête) dans une seule liste scrollable, widget plafonné en hauteur (`max-h-[min(60vh,26rem)]`) quel que soit le nombre d'annonces (corrigé le 2026-07-31 — auparavant limité à 3 éléments avec fallback inversé sur les épinglées, puis bloc épinglé non plafonné qui pouvait déborder de l'écran).
 - **Icônes image pour onglets** :
   - Le champ `icon` accepte une image optimisée.
   - Le sélecteur d'icônes des onglets permet d'importer une image locale via le bouton `IMG`.
@@ -226,7 +236,7 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
   - Vérifier qu'une session expirée ou un cookie invalide renvoie vers `/login` au lieu de la page `Service temporairement indisponible`.
   - Vérifier que la page annonces est refusée à la DAF et accessible au CTO/PDG.
   - Vérifier que le bandeau défile uniquement avec les annonces épinglées.
-  - Vérifier que le widget annonces affiche les annonces actives non épinglées.
+  - Vérifier qu'avec un grand nombre d'annonces (épinglées et non épinglées) le widget reste plafonné en hauteur et que toute la liste défile correctement (épinglées en tête).
   - Vérifier que les actions de `/annonces` sont disponibles dans le select `Actions à effectuer`.
   - Créer/modifier un utilisateur et vérifier que `Manager direct` ne propose que CTO, PDG, DAF et responsables.
   - Créer/modifier un utilisateur avec le rôle `Employé` et vérifier qu'il reste sans droits de gestion.

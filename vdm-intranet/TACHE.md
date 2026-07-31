@@ -594,3 +594,37 @@ Demande : automatiser la mise à jour de `SESSION_HANDOFF.md`/`TACHE.md` après 
 - Fichiers spécifiques à ce poste (`settings.local.json`, `.md-sync-state`), non partagés avec l'équipe.
 
 //SESSION TERMINEE
+
+## Fix — Annonces épinglées absentes du widget flottant — 2026-07-31
+
+Demande : dans le widget "Annonces", les annonces épinglées doivent aussi apparaître, fixées en haut.
+
+- `[x]` Diagnostiquer la cause : `AnnouncementWidget` (`Widgets.tsx`) n'affichait les annonces épinglées qu'en fallback (aucune annonce non épinglée disponible), au lieu de les afficher en priorité et en permanence en tête de liste
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — `AnnouncementWidget` place désormais les annonces épinglées en tête (toujours affichées), complétées par les annonces non épinglées jusqu'à 3 éléments au total
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`, correction de la description obsolète du comportement du widget
+
+### Audit widget annonces épinglées — 2026-07-31
+
+- Le tri backend (`announcements.service.ts::findAll`, `orderBy: [{ isPinned: 'desc' }, { publishedAt: 'desc' }]`) était déjà correct ; seul le frontend cassait cet ordre en priorisant les non épinglées.
+- Le widget affiche maintenant les annonces épinglées en premier et de façon permanente, puis complète avec les annonces non épinglées les plus récentes jusqu'à 3 éléments.
+- Aucun changement backend, base de données ou permission requis.
+
+## Ajustement — Widget annonces : afficher toutes les annonces avec défilement — 2026-07-31
+
+Demande complémentaire, même jour : toutes les annonces actives doivent s'afficher dans le widget, avec possibilité de scroller.
+
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — `AnnouncementWidget` ne limite plus la liste à 3 éléments : bloc épinglées fixe en haut (non scrollable) + bloc non épinglées scrollable (`max-h-56 overflow-y-auto`) en dessous
+- `[x]` Extraction du sous-composant `AnnouncementItem` pour partager le rendu entre les deux blocs sans duplication
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
+
+## Correctif — Widget annonces débordant l'écran avec beaucoup d'épinglées — 2026-07-31
+
+Signalé par capture d'écran utilisateur sur `/annonces` : avec un grand nombre d'annonces épinglées, le bloc fixe (non scrollable) grossissait sans limite et le widget débordait de l'écran. Demande : plafonner la taille du widget et faire défiler l'ensemble de la liste.
+
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — `AnnouncementWidget` fusionne épinglées + non épinglées en une seule liste (épinglées en premier) dans une unique zone scrollable, sous un en-tête fixe (`shrink-0`)
+- `[x]` Widget entier plafonné à `max-h-[min(60vh,26rem)]` quel que soit le nombre d'annonces
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
+
+//SESSION TERMINEE
