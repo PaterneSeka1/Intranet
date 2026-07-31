@@ -29,7 +29,6 @@ export function LoginClient({
   const [step, setStep] = useState<Step>('form')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -58,7 +57,6 @@ export function LoginClient({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setError('')
     try {
       const { user, requiresFirstLoginGeolocation } = await api.auth.login(
         username.trim(),
@@ -87,13 +85,13 @@ export function LoginClient({
       setStep('animating')
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(
+        toast.error(
           err.status === 401
             ? 'Identifiant ou mot de passe incorrect.'
             : 'Erreur serveur — réessayez.'
         )
       } else {
-        setError('Impossible de contacter le serveur.')
+        toast.error('Impossible de contacter le serveur.')
       }
     } finally {
       setLoading(false)
@@ -172,12 +170,6 @@ export function LoginClient({
               autoComplete="current-password"
             />
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
-              {error}
-            </div>
-          )}
 
           <button
             type="submit"

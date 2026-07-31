@@ -13,25 +13,36 @@ export class ApiError extends Error {
   }
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
+async function req<T>(
+  path: string,
+  init?: RequestInit & { skipAuthRedirect?: boolean }
+): Promise<T> {
+  const { skipAuthRedirect, ...requestInit } = init ?? {}
   const controller = new AbortController()
   const tid = setTimeout(() => controller.abort(), 30_000)
   let res: Response
   try {
     res = await fetch(`${BASE}/api${path}`, {
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      headers: { 'Content-Type': 'application/json', ...requestInit.headers },
       signal: controller.signal,
-      ...init,
+      ...requestInit,
     })
   } finally {
     clearTimeout(tid)
   }
   if (res.status === 401) {
-    if (typeof window !== 'undefined') {
+    // Sur /auth/login, un 401 signifie « identifiants invalides », pas une session
+    // expirée : il ne faut donc pas rediriger/recharger la page de connexion.
+    if (!skipAuthRedirect && typeof window !== 'undefined') {
       window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`
     }
-    throw new ApiError(res.status, 'Session expirée. Redirection vers la connexion…')
+    throw new ApiError(
+      res.status,
+      skipAuthRedirect
+        ? 'Identifiant ou mot de passe incorrect.'
+        : 'Session expirée. Redirection vers la connexion…'
+    )
   }
   if (!res.ok) {
     let msg = 'Erreur serveur'
@@ -57,6 +68,7 @@ export const api = {
       req<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
+        skipAuthRedirect: true,
       }),
     logout: () => req<{ message: string }>('/auth/logout', { method: 'POST' }),
     me: () => req<User>('/auth/me'),

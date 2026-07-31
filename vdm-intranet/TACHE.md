@@ -628,3 +628,15 @@ Signalé par capture d'écran utilisateur sur `/annonces` : avec un grand nombre
 - `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
 
 //SESSION TERMINEE
+
+## Fix — Rechargement de la page de login sur erreur de connexion — 2026-07-31
+
+Demande : ajouter un toast d'erreur sur la page de connexion et retirer le rechargement de page en cas d'erreur.
+
+- `[x]` Diagnostiquer la cause : `api.ts::req` redirigeait/rechargeait (`window.location.href = '/login?...'`) sur **tout** statut 401, y compris la réponse de `POST /auth/login` en cas de mauvais identifiants — comportement correct pour une session expirée sur une route protégée, mais provoquant un rechargement intempestif de la page de connexion elle-même sur un simple mot de passe incorrect
+- `[x]` [MODIFY] [api.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/lib/api.ts) — ajout de l'option `skipAuthRedirect` sur `req`, activée uniquement pour `api.auth.login`, pour ne plus rediriger/recharger sur un 401 de connexion
+- `[x]` [MODIFY] [LoginClient.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/auth/LoginClient.tsx) — remplacement du bandeau d'erreur inline (`error`/`setError`) par `toast.error(...)`, conforme à la convention déjà utilisée ailleurs (`MonProfilClient.tsx`)
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
+
+//SESSION TERMINEE

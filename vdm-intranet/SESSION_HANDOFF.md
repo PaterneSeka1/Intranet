@@ -120,6 +120,14 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Correctif suivant (même jour) : en conditions réelles avec beaucoup d'annonces épinglées, le bloc épinglé (non scrollable) grossissait sans limite et faisait déborder le widget de l'écran (constaté par capture d'écran utilisateur sur `/annonces`). `AnnouncementWidget` fusionne désormais épinglées + non épinglées en une seule liste (épinglées toujours en premier) dans une unique zone scrollable, sous un en-tête fixe ; le widget entier est plafonné à `max-h-[min(60vh,26rem)]`.
 - Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
 
+### Correctif — Rechargement de la page de login sur erreur (2026-07-31)
+
+- Demande : ajouter un toast sur la page de connexion, retirer le rechargement de page en cas d'erreur.
+- **Cause trouvée** : `api.ts::req` redirige/recharge vers `/login?from=...` sur tout statut `401` — logique correcte pour une session expirée sur une route protégée, mais appliquée aussi à `POST /auth/login` lui-même, dont un mauvais mot de passe renvoie légitimement un 401 ; la page de login se rechargeait donc sur elle-même à chaque tentative échouée.
+- Correctif : ajout d'une option `skipAuthRedirect` sur `req` (`api.ts`), activée uniquement pour `api.auth.login`, pour désactiver cette redirection sur l'endpoint de connexion.
+- `LoginClient.tsx` remplace le bandeau d'erreur inline (`error`/`setError`) par `toast.error(...)`, conforme à la convention déjà en place ailleurs (`MonProfilClient.tsx`).
+- Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
