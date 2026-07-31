@@ -95,6 +95,21 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK, `rm -rf apps/web/.next` puis `npm run build:web` OK.
 - **Non fait** : le correctif ne rétro-répare pas les comptes déjà bloqués sans présence pour aujourd'hui (dont l'utilisateur en session actuellement) — il faudra qu'ils se déconnectent/reconnectent une fois pour déclencher la géolocalisation et voir apparaître leurs premières lignes d'historique.
 
+### Nouvelle demande réalisée — Widgets flottants absents pour les rôles accueil (2026-07-31)
+
+- Demande : ajouter les widgets flottants (annonces, horloge, calendrier, météo) pour tous les employés sans exception.
+- Cause trouvée : `(protected)/layout.tsx` rend deux arborescences selon `isAccueilOnly(user.role)` ; la branche `MobileSidebarToggle` passe `showWidgets` à `LiveAnnouncements`, mais la branche dédiée aux rôles accueil (`EMPLOYE`, `CONSULTANT`, `STAGIAIRE`, `PRESTATAIRE`) ne le faisait pas — `Widgets.tsx` lui-même n'impose aucune restriction de rôle.
+- Correctif : ajout de la prop `showWidgets` sur l'appel `LiveAnnouncements` de la branche `isAccueilOnly` (`layout.tsx`).
+- Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
+
+### Nouvelle demande réalisée — Synchronisation automatique de SESSION_HANDOFF.md/TACHE.md (2026-07-31)
+
+- Demande : mettre à jour automatiquement ces deux fichiers après chaque requête, sans intervention manuelle.
+- Mécanisme retenu : Stop hook (`.claude/settings.local.json`, personnel à ce poste, non versionné) plutôt qu'un appel récursif `claude -p` — écarté après test réel, car bloqué par le trust-dialog du CLI en mode non interactif sur ce poste (workspace non marqué "trusted" dans `~/.claude.json`, donc `Edit`/`--allowedTools` refusés même en `-p`).
+- `.claude/hooks/sync-md-docs.sh` détecte les changements de code non commités dans `vdm-intranet/apps`/`vdm-intranet/packages`, compare à un hash stocké dans `.claude/.md-sync-state` (gitignored), et bloque la fin de tour (`decision: "block"`) tant que `SESSION_HANDOFF.md`/`TACHE.md` n'ont pas été mis à jour et que le hash n'a pas été rafraîchi.
+- Portée volontairement limitée à ces deux fichiers (pas README.md/CLAUDE.md/METHODE_DE_TRAVAIL.md), et au déclenchement uniquement quand du code a changé (pas sur un tour purement conversationnel) — choix validés avec l'utilisateur.
+- Limite connue : le watcher de settings d'une session déjà démarrée ne surveille pas un `.claude/settings.local.json` créé après son lancement ; un `/hooks` ou un redémarrage peut être nécessaire pour l'activer immédiatement dans une session en cours (les nouvelles sessions le chargent normalement au démarrage).
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :

@@ -89,7 +89,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
             <LogoutButton />
           </div>
         </header>
-        <LiveAnnouncements initialAnnouncements={announcements} />
+        <LiveAnnouncements initialAnnouncements={announcements} showWidgets />
         <main className="flex-1 p-6">{children}</main>
       </div>
     )

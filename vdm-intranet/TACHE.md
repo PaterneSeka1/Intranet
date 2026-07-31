@@ -559,3 +559,38 @@ Demande : vérifier que `/mon-historique` charge bien les données.
 - `[ ]` Vérification manuelle — se déconnecter/reconnecter avec un compte `mustChangePassword = true` et vérifier que l'écran GPS apparaît avant le changement de mot de passe forcé, puis que `/mon-historique` affiche la ligne de connexion du jour
 
 //SESSION TERMINEE
+
+## Fix — Widgets flottants absents pour les rôles accueil — 2026-07-31
+
+Demande : ajouter les widgets flottants (annonces, horloge, calendrier, météo) pour tous les employés sans exception.
+
+- `[x]` Diagnostiquer la cause : `(protected)/layout.tsx` rend deux arborescences selon `isAccueilOnly(user.role)` ; la branche `MobileSidebarToggle` passe `showWidgets` à `LiveAnnouncements`, mais la branche dédiée aux rôles accueil (`EMPLOYE`, `CONSULTANT`, `STAGIAIRE`, `PRESTATAIRE`) ne le faisait pas
+- `[x]` [MODIFY] [layout.tsx](<file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/app/(protected)/layout.tsx>) — ajout de la prop `showWidgets` sur l'appel `LiveAnnouncements` de la branche `isAccueilOnly`
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
+
+### Audit widgets accueil — 2026-07-31
+
+- Les rôles accueil (`EMPLOYE`, `CONSULTANT`, `STAGIAIRE`, `PRESTATAIRE`) reçoivent désormais les mêmes widgets flottants (annonces, horloge, calendrier, météo) que les autres rôles.
+- `Widgets.tsx` lui-même n'impose aucune restriction de rôle ; le blocage venait uniquement du layout parent.
+- `npx tsc --noEmit -p apps/web/tsconfig.json` : OK.
+
+//SESSION TERMINEE
+
+## Automatisation — Synchronisation automatique SESSION_HANDOFF.md/TACHE.md — 2026-07-31
+
+Demande : automatiser la mise à jour de `SESSION_HANDOFF.md`/`TACHE.md` après chaque requête, sans intervention manuelle.
+
+- `[x]` Choisir le mécanisme : Stop hook (`.claude/settings.local.json`, personnel/non versionné) plutôt qu'un appel récursif `claude -p` — écarté après test réel (bloqué par le trust-dialog du CLI en mode non interactif sur ce poste)
+- `[x]` Créer `.claude/hooks/sync-md-docs.sh` : détecte les changements de code non commités dans `vdm-intranet/apps`/`vdm-intranet/packages`, compare à un hash stocké dans `.claude/.md-sync-state` (gitignored), et bloque la fin de tour (`decision: "block"`) tant que les deux fichiers n'ont pas été mis à jour
+- `[x]` Enregistrer le hook dans `.claude/settings.local.json` (racine `/Users/macbookpro/YAGAMI/Intranet`, hors du dossier `vdm-intranet`)
+- `[x]` Ajouter `.claude/.md-sync-state` (et `.claude/settings.local.json`) au `.gitignore` racine
+- `[x]` Validation — `jq -e` sur le hook, test manuel du script (détection + idempotence après écriture du hash)
+
+### Audit synchronisation automatique — 2026-07-31
+
+- Portée volontairement limitée à `SESSION_HANDOFF.md`/`TACHE.md` (pas les autres `.md` du projet), déclenchement uniquement quand du code a changé dans `apps`/`packages` — choix validés avec l'utilisateur.
+- Limite connue : le watcher de settings d'une session déjà démarrée ne surveille pas un `.claude/settings.local.json` créé après son lancement ; un `/hooks` ou un redémarrage peut être nécessaire pour l'activer immédiatement dans une session en cours (les nouvelles sessions le chargent normalement au démarrage).
+- Fichiers spécifiques à ce poste (`settings.local.json`, `.md-sync-state`), non partagés avec l'équipe.
+
+//SESSION TERMINEE
