@@ -40,4 +40,6 @@ export const notificationsApi = {
   markRead: (id: string) => req<NotificationItem>(`/notifications/${id}/read`, { method: 'PATCH' }),
 
   markAllRead: () => req<{ updated: number }>('/notifications/read-all', { method: 'PATCH' }),
+
+  remove: (id: string) => req<{ id: string }>(`/notifications/${id}`, { method: 'DELETE' }),
 }

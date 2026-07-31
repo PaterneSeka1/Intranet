@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { io } from 'socket.io-client'
 import { API_BASE } from '@/lib/api-base'
 import { notificationsApi, type NotificationItem } from '@/lib/notifications'
@@ -102,6 +102,17 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
     }
   }
 
+  async function handleDelete(e: ReactMouseEvent, item: NotificationItem) {
+    e.stopPropagation()
+    setItems((prev) => (prev ? prev.filter((i) => i.id !== item.id) : prev))
+    if (!item.isRead) setUnreadCount((c) => Math.max(0, c - 1))
+    try {
+      await notificationsApi.remove(item.id)
+    } catch {
+      /* noop */
+    }
+  }
+
   return (
     <div className="relative" ref={panelRef}>
       <button
@@ -145,22 +156,33 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
               <p className="text-sm text-gray-400 text-center py-6">Aucune notification.</p>
             )}
             {items?.map((item) => (
-              <button
+              <div
                 key={item.id}
-                onClick={() => handleItemClick(item)}
-                className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                className={`group relative border-b border-gray-50 hover:bg-gray-50 transition-colors ${
                   item.isRead ? '' : 'bg-[#F28C38]/5'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  {!item.isRead && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#F28C38] shrink-0" />
-                  )}
-                  <span className="text-sm font-semibold text-gray-900">{item.title}</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.body}</p>
-                <p className="text-[10px] text-gray-400 mt-1">{fmtDate(item.createdAt)}</p>
-              </button>
+                <button
+                  onClick={() => handleItemClick(item)}
+                  className="w-full text-left px-4 py-3 pr-9"
+                >
+                  <div className="flex items-center gap-2">
+                    {!item.isRead && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#F28C38] shrink-0" />
+                    )}
+                    <span className="text-sm font-semibold text-gray-900">{item.title}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.body}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{fmtDate(item.createdAt)}</p>
+                </button>
+                <button
+                  onClick={(e) => handleDelete(e, item)}
+                  aria-label="Supprimer la notification"
+                  className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                >
+                  ✕
+                </button>
+              </div>
             ))}
           </div>
         </div>

@@ -53,6 +53,13 @@ export class NotificationsService {
     return { updated: result.count }
   }
 
+  async remove(id: string, userId: string) {
+    const notification = await this.prisma.notification.findFirst({ where: { id, userId } })
+    if (!notification) throw new NotFoundException('Notification introuvable.')
+    await this.prisma.notification.delete({ where: { id } })
+    return { id }
+  }
+
   async notifyUser(userId: string, payload: NotifyPayload) {
     await this.prisma.notification.create({ data: { userId, ...payload } })
     this.gateway.emitToUser(userId)

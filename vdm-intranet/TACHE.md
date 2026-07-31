@@ -640,3 +640,16 @@ Demande : ajouter un toast d'erreur sur la page de connexion et retirer le recha
 - `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
 
 //SESSION TERMINEE
+
+## Fix — Suppression de notifications — 2026-07-31
+
+Demande : pouvoir supprimer les notifications depuis la cloche `NotificationsBell`.
+
+- `[x]` Backend — Ajouter `notifications.service.ts::remove(id, userId)` (vérification ownership via `findFirst` avant `delete`, même pattern que `markRead`)
+- `[x]` Backend — Ajouter la route `DELETE /notifications/:id` dans `notifications.controller.ts`
+- `[x]` Frontend — Ajouter `notificationsApi.remove(id)` dans `lib/notifications.ts`
+- `[x]` Frontend — [MODIFY] [NotificationsBell.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/notifications/NotificationsBell.tsx) — bouton de suppression par notification (visible au survol), suppression optimiste de la liste et du compteur non lus
+- `[x]` Validation — `npx tsc --noEmit -p apps/api/tsconfig.json`, `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[ ]` Vérification manuelle — supprimer une notification lue et une non lue depuis la cloche, vérifier la disparition immédiate et la mise à jour du compteur
+
+//SESSION TERMINEE

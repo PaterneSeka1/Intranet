@@ -128,6 +128,14 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - `LoginClient.tsx` remplace le bandeau d'erreur inline (`error`/`setError`) par `toast.error(...)`, conforme à la convention déjà en place ailleurs (`MonProfilClient.tsx`).
 - Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
 
+### Nouvelle fonctionnalité réalisée — Suppression de notifications (2026-07-31)
+
+- Demande : pouvoir supprimer les notifications depuis la cloche `NotificationsBell`.
+- Backend : `notifications.service.ts::remove(id, userId)` (vérifie l'ownership via `findFirst` avant `delete`, même pattern que `markRead`) ; route `DELETE /notifications/:id` ajoutée dans `notifications.controller.ts`.
+- Frontend : `notificationsApi.remove(id)` ajouté dans `lib/notifications.ts` ; `NotificationsBell.tsx` affiche désormais un bouton ✕ par notification (visible au survol), suppression avec mise à jour optimiste de la liste et du compteur non lus.
+- Validation : `npx tsc --noEmit -p apps/api/tsconfig.json` OK, `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
+- Non fait : pas de suppression groupée ("tout supprimer") — non demandée, seule la suppression unitaire par notification a été implémentée.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
@@ -263,3 +271,4 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
   - Télécharger un rapport en PDF depuis `/pilotage` pour un rôle CTO_ADMIN (doit réussir sur les 4 rapports) et pour un rôle DAF (doit échouer sur activité/connexions/général, comme en CSV).
   - Utiliser la recherche globale (icône dans la sidebar) avec un compte `RESPONSABLE_POLE` et vérifier qu'aucun utilisateur hors de son pôle n'apparaît dans les résultats.
   - Vérifier en production que les bibliothèques système Chromium (`libnss3`, `libatk-bridge2.0-0`, etc.) sont installées sur le VPS avant le premier déploiement post-export PDF, faute de quoi `puppeteer.launch()` échouera.
+  - Supprimer une notification lue et une notification non lue depuis la cloche `NotificationsBell`, et vérifier qu'elle disparaît de la liste, que le compteur non lus se met à jour si besoin, et qu'elle ne réapparaît pas après rafraîchissement de la page.
