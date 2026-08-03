@@ -653,3 +653,32 @@ Demande : pouvoir supprimer les notifications depuis la cloche `NotificationsBel
 - `[ ]` Vérification manuelle — supprimer une notification lue et une non lue depuis la cloche, vérifier la disparition immédiate et la mise à jour du compteur
 
 //SESSION TERMINEE
+
+## Ajustement — Widget annonces : titre seul cliquable avec détails en modale — 2026-08-03
+
+Demande : dans le widget flottant "Annonces", n'afficher que le titre de chaque annonce, et le rendre cliquable pour ouvrir tous les détails.
+
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — `AnnouncementItem` n'affiche plus l'aperçu du corps du message (`line-clamp-2`), seul le titre reste visible, sous forme de bouton
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — nouveau sous-composant `AnnouncementDetailModal`, réutilisant le composant `Modal` déjà utilisé ailleurs dans l'app (`components/ui/Modal.tsx`), affichant titre, date complète, badge épinglée/unité d'affaires, corps intégral et auteur
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — `AnnouncementWidget` garde en état l'annonce sélectionnée (`useState`) et ouvre la modale au clic sur le titre
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
+- `[ ]` Vérification manuelle — cliquer sur le titre d'une annonce dans le widget flottant et vérifier l'ouverture de la modale avec tous les détails (corps complet, date, épinglage, unité d'affaires, auteur)
+
+### Ajustement — Zone cliquable étendue à toute la ligne — 2026-08-03
+
+Demande complémentaire, même jour : rendre toute la ligne de l'annonce cliquable, pas seulement le texte du titre.
+
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — `AnnouncementItem` transformé en `<button>` pleine largeur englobant le badge épinglée, la date et le titre, au lieu d'un `<button>` limité au seul texte du titre
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
+
+Note : re-déclenchement du hook de synchronisation sans nouveau changement de code — seul `tsconfig.tsbuildinfo` (artefact de build) a été régénéré par la re-vérification `tsc --noEmit` ci-dessus.
+
+### Ajustement — Léger effet de survol sur toute la ligne — 2026-08-03
+
+Demande complémentaire, même jour : ajouter un léger effet de survol visible sur toute la ligne de l'annonce, pas seulement sur le titre.
+
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — `AnnouncementItem` : ajout de `hover:bg-gray-50`, coins arrondis (`rounded-lg`) et transition douce (`transition-colors`) sur le bouton pleine ligne, avec léger padding horizontal compensé par une marge négative pour ne pas décaler l'alignement avec le reste du widget
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`

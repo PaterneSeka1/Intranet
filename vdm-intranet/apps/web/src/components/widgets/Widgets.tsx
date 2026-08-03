@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import type { Announcement } from '@/lib/announcements'
 import { publicHolidaysApi, findHolidayForDate, type PublicHoliday } from '@/lib/public-holidays'
+import { Modal } from '@/components/ui/Modal'
 
 type WeatherData = {
   temperature: number
@@ -122,9 +123,25 @@ function formatAnnouncementDate(value: string): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
 }
 
-function AnnouncementItem({ item }: { item: Announcement }) {
+function formatAnnouncementDateFull(value: string): string {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function AnnouncementItem({ item, onSelect }: { item: Announcement; onSelect: () => void }) {
   return (
-    <div className="border-t border-gray-100 pt-2.5 first:border-t-0 first:pt-0">
+    <button
+      type="button"
+      onClick={onSelect}
+      className="w-full text-left border-t border-gray-100 pt-2.5 pb-2 px-2 -mx-2 first:border-t-0 first:pt-0 rounded-lg transition-colors hover:bg-gray-100 group"
+    >
       <div className="flex items-center gap-2 mb-1">
         {item.isPinned && (
           <span className="text-[10px] font-bold text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full">
@@ -135,13 +152,57 @@ function AnnouncementItem({ item }: { item: Announcement }) {
           {formatAnnouncementDate(item.publishedAt)}
         </span>
       </div>
-      <div className="text-xs font-semibold text-gray-800 line-clamp-1">{item.title}</div>
-      <div className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">{item.body}</div>
-    </div>
+      <div className="text-xs font-semibold text-gray-800 line-clamp-1 group-hover:text-[#F28C38] group-hover:underline">
+        {item.title}
+      </div>
+    </button>
+  )
+}
+
+function AnnouncementDetailModal({
+  item,
+  onClose,
+}: {
+  item: Announcement | null
+  onClose: () => void
+}) {
+  return (
+    <Modal
+      open={!!item}
+      onClose={onClose}
+      title={item?.title ?? ''}
+      subtitle={item ? formatAnnouncementDateFull(item.publishedAt) : undefined}
+    >
+      {item && (
+        <div className="space-y-3">
+          {(item.isPinned || item.businessUnit) && (
+            <div className="flex items-center gap-2">
+              {item.isPinned && (
+                <span className="text-[10px] font-bold text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full">
+                  Épinglée
+                </span>
+              )}
+              {item.businessUnit && (
+                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                  {item.businessUnit.name}
+                </span>
+              )}
+            </div>
+          )}
+          <div className="text-sm text-gray-700 whitespace-pre-wrap">{item.body}</div>
+          {item.createdBy && (
+            <div className="text-[11px] text-gray-400 pt-2 border-t border-gray-100">
+              Publié par {item.createdBy.fullName ?? item.createdBy.username}
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
   )
 }
 
 function AnnouncementWidget({ announcements }: { announcements: Announcement[] }) {
+  const [selected, setSelected] = useState<Announcement | null>(null)
   const pinned = announcements.filter((a) => a.isPinned)
   const regular = announcements.filter((a) => !a.isPinned)
   const items = [...pinned, ...regular]
@@ -165,10 +226,12 @@ function AnnouncementWidget({ announcements }: { announcements: Announcement[] }
       ) : (
         <div className="space-y-2.5 overflow-y-auto pr-1">
           {items.map((item) => (
-            <AnnouncementItem key={item.id} item={item} />
+            <AnnouncementItem key={item.id} item={item} onSelect={() => setSelected(item)} />
           ))}
         </div>
       )}
+
+      <AnnouncementDetailModal item={selected} onClose={() => setSelected(null)} />
     </div>
   )
 }

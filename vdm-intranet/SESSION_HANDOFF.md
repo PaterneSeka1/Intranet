@@ -136,6 +136,17 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Validation : `npx tsc --noEmit -p apps/api/tsconfig.json` OK, `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
 - Non fait : pas de suppression groupée ("tout supprimer") — non demandée, seule la suppression unitaire par notification a été implémentée.
 
+### Ajustement — Widget annonces : titre seul cliquable avec détails en modale (2026-08-03)
+
+- Demande : dans le widget flottant "Annonces", n'afficher que le titre de chaque annonce et le rendre cliquable pour accéder à tous les détails.
+- `Widgets.tsx::AnnouncementItem` n'affiche plus l'aperçu du corps du message ; seul le titre reste visible, sous forme de bouton cliquable.
+- Nouveau sous-composant `AnnouncementDetailModal` (`Widgets.tsx`), qui réutilise le composant générique `Modal` (`components/ui/Modal.tsx`) déjà utilisé ailleurs dans l'app, plutôt que d'introduire un nouveau pattern de modale.
+- La modale affiche le titre, la date complète, le badge épinglée/unité d'affaires, le corps intégral du message et l'auteur (`createdBy`).
+- Aucune page de détail dédiée n'existait pour un usage tous rôles (la page `/annonces` est réservée à `CTO_ADMIN`/`PDG` pour la gestion) ; la modale a donc été préférée à une nouvelle route.
+- Ajustement complémentaire (même jour) : la zone cliquable a été étendue à toute la ligne de l'annonce (badge épinglée + date + titre), pas seulement au texte du titre — `AnnouncementItem` est désormais un `<button>` pleine largeur.
+- Ajustement complémentaire (même jour) : léger effet de survol (`hover:bg-gray-50`, coins arrondis, transition douce) ajouté sur toute la ligne, pas seulement sur le titre.
+- Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
@@ -187,6 +198,7 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
   - Les exports `activité`, `connexions` et `rapport général` sont refusés côté API pour `DAF`.
   - La bannière défilante affiche uniquement les annonces épinglées.
   - Le widget `Annonces` affiche toutes les annonces actives (épinglées en tête) dans une seule liste scrollable, widget plafonné en hauteur (`max-h-[min(60vh,26rem)]`) quel que soit le nombre d'annonces (corrigé le 2026-07-31 — auparavant limité à 3 éléments avec fallback inversé sur les épinglées, puis bloc épinglé non plafonné qui pouvait déborder de l'écran).
+  - Depuis le 2026-08-03, chaque annonce du widget n'affiche plus que son titre (bouton cliquable) ; le clic ouvre une modale (`AnnouncementDetailModal`) avec tous les détails (corps complet, date, épinglage, unité d'affaires, auteur).
 - **Icônes image pour onglets** :
   - Le champ `icon` accepte une image optimisée.
   - Le sélecteur d'icônes des onglets permet d'importer une image locale via le bouton `IMG`.
