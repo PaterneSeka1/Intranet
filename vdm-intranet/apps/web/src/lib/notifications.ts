@@ -1,4 +1,4 @@
-import { API_BASE as API } from './api-base'
+import { apiFetch } from './http'
 
 export type NotificationItem = {
   id: string
@@ -18,17 +18,8 @@ export type NotificationsPage = {
   notifications: NotificationItem[]
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}/api${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { message?: string }).message ?? `Erreur ${res.status}`)
-  }
-  return res.json()
+function req<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiFetch<T>(path, init)
 }
 
 export const notificationsApi = {

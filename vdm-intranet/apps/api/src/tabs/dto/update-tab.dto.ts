@@ -15,9 +15,10 @@ export class UpdateTabDto {
   @MaxLength(300)
   description?: string
 
+  // Cf. create-tab.dto.ts : data URI 128x128 WebP/PNG, ~60 000 caractères suffisent largement.
   @IsOptional()
   @IsString()
-  @MaxLength(100000)
+  @MaxLength(60000)
   icon?: string
 
   @IsOptional()

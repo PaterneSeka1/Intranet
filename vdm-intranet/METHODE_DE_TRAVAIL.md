@@ -26,5 +26,5 @@ Ce document décrit les consignes de travail et les standards de communication �
 
 ## 3. Sécurité et Confidentialité des Données
 
-- **Géolocalisation** : Les données de géolocalisation (coordonnées GPS, adresses GPS, cartes) ne doivent être visibles et accessibles **que** pour l'administrateur (`CTO_ADMIN`), les responsables de BU/Pôle (`RESPONSABLE_BU`, `RESPONSABLE_POLE`) et la direction (`PDG`, `DAF`). Les rôles standards (`CONSULTANT`, `STAGIAIRE`, `PRESTATAIRE`) ne doivent jamais recevoir ou afficher ces informations.
+- **Géolocalisation** : Les données de géolocalisation (coordonnées GPS, adresses GPS, cartes) ne doivent être visibles et accessibles **que** pour l'administrateur (`CTO_ADMIN`), les responsables de BU/Pôle (`RESPONSABLE_BU`, `RESPONSABLE_POLE`) et la direction (`PDG`, `DAF`). Les rôles standards (`EMPLOYE`, `CONSULTANT`, `STAGIAIRE`, `PRESTATAIRE`) ne doivent jamais recevoir ou afficher ces informations.
 - Cette politique d'accès aux données doit être rigoureusement appliquée à la fois côté API (champs mis à `null`) et côté IHM.

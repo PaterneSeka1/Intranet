@@ -226,10 +226,7 @@ export default async function AccueilPage() {
             Mes ressources
           </h2>
           {['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU'].includes(user.role) && (
-            <a
-              href="/onglets"
-              className="text-xs font-semibold text-[#F28C38] hover:underline"
-            >
+            <a href="/onglets" className="text-xs font-semibold text-[#F28C38] hover:underline">
               Gérer les onglets →
             </a>
           )}

@@ -1,7 +1,9 @@
 import { API_BASE } from './api-base'
+import { apiFetch, apiFetchVoid } from './http'
 
 export type SettingPair = { key: string; value: string }
 
+// Lecture publique (page de login, favicon, etc.) : ne doit jamais rediriger/échouer bruyamment.
 export async function fetchSettings(): Promise<SettingPair[]> {
   try {
     const res = await fetch(`${API_BASE}/api/settings`, { cache: 'no-store' })
@@ -12,23 +14,13 @@ export async function fetchSettings(): Promise<SettingPair[]> {
   }
 }
 
-export async function saveSettings(settings: SettingPair[]): Promise<SettingPair[]> {
-  const res = await fetch(`${API_BASE}/api/settings`, {
+export function saveSettings(settings: SettingPair[]): Promise<SettingPair[]> {
+  return apiFetch<SettingPair[]>('/settings', {
     method: 'PATCH',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ settings }),
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { message?: string }).message ?? `Erreur ${res.status}`)
-  }
-  return res.json()
 }
 
-export async function deleteSetting(key: string): Promise<void> {
-  await fetch(`${API_BASE}/api/settings/${key}`, {
-    method: 'DELETE',
-    credentials: 'include',
-  })
+export function deleteSetting(key: string): Promise<void> {
+  return apiFetchVoid(`/settings/${key}`, { method: 'DELETE' })
 }

@@ -1,4 +1,4 @@
-import { API_BASE as API } from './api-base'
+import { apiFetch } from './http'
 
 export type SearchResult = {
   type: 'user' | 'tab' | 'announcement'
@@ -10,12 +10,6 @@ export type SearchResult = {
 }
 
 export const searchApi = {
-  query: async (q: string, signal?: AbortSignal): Promise<SearchResult[]> => {
-    const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`, {
-      credentials: 'include',
-      signal,
-    })
-    if (!res.ok) throw new Error(`Erreur ${res.status}`)
-    return res.json()
-  },
+  query: (q: string, signal?: AbortSignal): Promise<SearchResult[]> =>
+    apiFetch<SearchResult[]>(`/search?q=${encodeURIComponent(q)}`, { signal }),
 }

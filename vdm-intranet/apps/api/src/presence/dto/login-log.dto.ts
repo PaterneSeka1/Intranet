@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, IsUrl, MaxLength, Min, Max } from 'class-validator'
+import { IsNumber, IsOptional, IsString, MaxLength, Min, Max } from 'class-validator'
 
 export class LoginLogDto {
   @IsNumber()
@@ -24,10 +24,8 @@ export class LoginLogDto {
   @IsOptional()
   address?: string
 
-  @IsUrl({ protocols: ['https'], require_tld: false })
-  @MaxLength(500)
-  @IsOptional()
-  mapsUrl?: string
+  // Pas de champ mapsUrl : construit uniquement côté serveur (buildMapsUrl) à partir
+  // de latitude/longitude, jamais fait confiance à une valeur fournie par le client.
 
   @IsString()
   @MaxLength(300)

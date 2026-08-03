@@ -311,7 +311,8 @@ export class PresenceService {
   async recordLogoutLog(userId: string, dto: LoginLogDto, ipAddress: string) {
     const today = getToday()
     const now = new Date()
-    const mapsUrl = dto.mapsUrl ?? buildMapsUrl(dto.latitude, dto.longitude)
+    // mapsUrl toujours construit côté serveur — jamais depuis le client
+    const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
 
     const log = await this.prisma.connectionLog.create({
       data: {
@@ -453,7 +454,7 @@ export class PresenceService {
         await this.prisma.activityLog.create({
           data: {
             userId: createdById,
-            action: 'CREATE',
+            action: 'SCHEDULE_GROUP_CREATED',
             entity: 'ScheduleGroup',
             entityId: group.id,
             details: dto as object,
@@ -472,7 +473,7 @@ export class PresenceService {
       await this.prisma.activityLog.create({
         data: {
           userId: updatedById,
-          action: 'UPDATE',
+          action: 'SCHEDULE_GROUP_UPDATED',
           entity: 'ScheduleGroup',
           entityId: id,
           details: dto as object,
@@ -508,7 +509,7 @@ export class PresenceService {
     await this.prisma.activityLog.create({
       data: {
         userId: deletedById,
-        action: 'DELETE',
+        action: 'SCHEDULE_GROUP_DELETED',
         entity: 'ScheduleGroup',
         entityId: id,
         details: { name: group.name } as object,
@@ -686,14 +687,12 @@ export class PresenceService {
     type: 'LOGIN' | 'LOGOUT',
     date: Date,
     connectedAt: Date,
-    dto: Pick<
-      LoginLogDto,
-      'latitude' | 'longitude' | 'accuracy' | 'address' | 'mapsUrl' | 'userAgent'
-    >,
+    dto: Pick<LoginLogDto, 'latitude' | 'longitude' | 'accuracy' | 'address' | 'userAgent'>,
     ipAddress: string,
     isFirstConnectionOfDay: boolean
   ) {
-    const mapsUrl = dto.mapsUrl ?? buildMapsUrl(dto.latitude, dto.longitude)
+    // mapsUrl toujours construit côté serveur — jamais depuis le client
+    const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
     return this.prisma.connectionLog.create({
       data: {
         userId,
@@ -752,15 +751,6 @@ export class PresenceService {
     presence.departureMapsUrl = null
 
     return presence
-  }
-
-  private async hasPresenceToday(userId: string): Promise<boolean> {
-    const today = getToday()
-    const p = await this.prisma.presence.findUnique({
-      where: { userId_date: { userId, date: today } },
-      select: { id: true },
-    })
-    return p !== null
   }
 }
 

@@ -7,21 +7,10 @@ import { ROLE_LABELS, type User } from '@/types/user'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { presenceApi, type ConnectionLogEntry } from '@/lib/presence'
 import { parseUserAgent } from '@/lib/user-agent'
+import { api } from '@/lib/api'
 
-import { API_BASE as API } from '@/lib/api-base'
-
-async function patchMe(data: Record<string, string>): Promise<User> {
-  const res = await fetch(`${API}/api/users/me`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { message?: string }).message ?? `Erreur ${res.status}`)
-  }
-  return res.json()
+function patchMe(data: Record<string, string>): Promise<User> {
+  return api.users.updateMe(data)
 }
 
 const INPUT =

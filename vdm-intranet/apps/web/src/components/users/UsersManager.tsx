@@ -6,7 +6,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
 import { Modal } from '@/components/ui/Modal'
 import { PasswordInput } from '@/components/ui/PasswordInput'
-import { API_BASE as API } from '@/lib/api-base'
+import { api } from '@/lib/api'
 
 type Bu = { id: string; name: string; code: string }
 type Pole = { id: string; name: string; code: string; businessUnitId: string }
@@ -54,19 +54,6 @@ const EMPTY_FORM: FormData = {
   scheduleGroupId: '',
   individualExpectedArrivalTime: '',
   individualExpectedDepartureTime: '',
-}
-
-async function apiReq<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}/api${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { message?: string }).message ?? `Erreur ${res.status}`)
-  }
-  return res.json()
 }
 
 const ROLE_BADGE: Record<Role, string> = {
@@ -231,19 +218,13 @@ export function UsersManager({
       if (!editing) {
         payload.username = form.username
         payload.password = form.password
-        const created = await apiReq<User>('/users', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        })
+        const created = await api.users.create(payload)
         setUsers((prev) => [created, ...prev])
         setShowForm(false)
         toast.success(`Compte « ${created.username} » créé avec succès.`)
       } else {
         if (form.password) payload.password = form.password
-        const updated = await apiReq<User>(`/users/${editing.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        })
+        const updated = await api.users.update(editing.id, payload)
         setUsers((prev) => prev.map((u) => (u.id === editing.id ? updated : u)))
         setShowForm(false)
         toast.success('Utilisateur mis à jour.')
@@ -261,8 +242,7 @@ export function UsersManager({
       return
     }
     try {
-      const path = u.isActive ? `/users/${u.id}/deactivate` : `/users/${u.id}/activate`
-      const updated = await apiReq<User>(path, { method: 'PATCH' })
+      const updated = u.isActive ? await api.users.deactivate(u.id) : await api.users.activate(u.id)
       setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)))
       toast.info(
         updated.isActive ? `${updated.username} activé.` : `${updated.username} désactivé.`

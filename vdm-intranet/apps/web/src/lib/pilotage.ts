@@ -1,4 +1,4 @@
-import { API_BASE as BASE } from './api-base'
+import { apiFetch } from './http'
 
 export type Summary = {
   date: string
@@ -73,23 +73,8 @@ export type PeriodReport = {
   trend: PeriodReportTrendPoint[]
 }
 
-async function req<T>(path: string): Promise<T> {
-  const controller = new AbortController()
-  const tid = setTimeout(() => controller.abort(), 30_000)
-  let res: Response
-  try {
-    res = await fetch(`${BASE}/api${path}`, { credentials: 'include', signal: controller.signal })
-  } finally {
-    clearTimeout(tid)
-  }
-  if (res.status === 401 || res.status === 403) {
-    if (typeof window !== 'undefined') {
-      window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`
-    }
-    throw new Error('Session expirée.')
-  }
-  if (!res.ok) throw new Error(`Erreur ${res.status}`)
-  return res.json() as Promise<T>
+function req<T>(path: string): Promise<T> {
+  return apiFetch<T>(path)
 }
 
 export const pilotageApi = {

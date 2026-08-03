@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import type { User, Role } from '@/types/user'
 import { LogoutOverlay } from '@/components/auth/LogoutOverlay'
 import { NotificationsBell } from '@/components/notifications/NotificationsBell'
+import { GlobalSearch } from '@/components/search/GlobalSearch'
 
 type MenuItem = { label: string; href: string; icon: string }
 
@@ -31,6 +32,7 @@ const MENUS: Record<Role, MenuItem[]> = {
   ],
   DAF: [
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Utilisateurs BU', href: '/utilisateurs', icon: '👥' },
     { label: 'Onglets DAF', href: '/onglets', icon: '📑' },
     { label: 'Pilotage & rapports', href: '/pilotage#rapports', icon: '📊' },
     { label: 'Présences', href: '/presences', icon: '📅' },
@@ -38,6 +40,7 @@ const MENUS: Record<Role, MenuItem[]> = {
   ],
   RESPONSABLE_BU: [
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Utilisateurs BU', href: '/utilisateurs', icon: '👥' },
     { label: 'Présences BU', href: '/presences', icon: '📅' },
     { label: 'Onglets BU', href: '/onglets', icon: '📑' },
     { label: 'Pilotage BU', href: '/pilotage', icon: '📊' },
@@ -45,6 +48,7 @@ const MENUS: Record<Role, MenuItem[]> = {
   ],
   RESPONSABLE_POLE: [
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
+    { label: 'Utilisateurs Pôle', href: '/utilisateurs', icon: '👥' },
     { label: 'Présences Pôle', href: '/presences', icon: '📅' },
     { label: 'Pilotage Pôle', href: '/pilotage', icon: '📊' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
@@ -86,13 +90,13 @@ export function Sidebar({
       <div className="px-5 py-5 border-b border-white/10">
         <div className="flex items-center gap-3">
           {logo ? (
-            <img src={logo} alt="" className="w-8 h-8 rounded-lg object-contain bg-white shrink-0" />
-          ) : (
             <img
-              src="/icon-192.png"
+              src={logo}
               alt=""
-              className="w-8 h-8 rounded-lg object-cover shrink-0"
+              className="w-8 h-8 rounded-lg object-contain bg-white shrink-0"
             />
+          ) : (
+            <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
           )}
           <div className="flex-1 min-w-0">
             <div className="vdm-sb-text text-sm font-bold leading-tight">{appName}</div>
@@ -102,6 +106,11 @@ export function Sidebar({
             <NotificationsBell dark />
           </div>
         </div>
+      </div>
+
+      {/* Recherche globale (desktop) */}
+      <div className="px-3 pt-4">
+        <GlobalSearch dark />
       </div>
 
       {/* Nav */}

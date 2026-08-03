@@ -105,6 +105,8 @@ export class UsersService {
     if (dto.password) {
       data.passwordHash = await bcrypt.hash(dto.password, 12)
       data.mustChangePassword = true
+      data.failedLoginAttempts = 0
+      data.lockoutUntil = null
       delete data.password
     }
 

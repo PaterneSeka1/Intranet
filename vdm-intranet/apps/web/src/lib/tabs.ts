@@ -1,4 +1,4 @@
-import { API_BASE as BASE } from './api-base'
+import { apiFetch } from './http'
 
 export type Tab = {
   id: string
@@ -34,17 +34,8 @@ export type UpdateTabPayload = Partial<{
   isActive: boolean
 }>
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body?.message ?? `Erreur ${res.status}`)
-  }
-  return res.json() as Promise<T>
+function req<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiFetch<T>(path, init)
 }
 
 export const tabsApi = {

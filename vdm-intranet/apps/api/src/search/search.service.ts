@@ -135,18 +135,20 @@ export class SearchService {
 
     const whereParts: Prisma.AnnouncementWhereInput[] = [
       {
-        isActive: true,
-        publishedAt: { lte: now },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      {
         OR: [
           { title: { contains: q, mode: 'insensitive' } },
           { body: { contains: q, mode: 'insensitive' } },
         ],
       },
     ]
+    // Comme announcements.service.ts::findAll, les admins globaux voient aussi les annonces
+    // inactives/expirées/futures — seuls les autres rôles sont restreints aux annonces actives.
     if (!canSeeAll) {
+      whereParts.push({
+        isActive: true,
+        publishedAt: { lte: now },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      })
       whereParts.push({
         OR: requester.businessUnitId
           ? [{ businessUnitId: null }, { businessUnitId: requester.businessUnitId }]

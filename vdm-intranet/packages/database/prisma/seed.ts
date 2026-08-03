@@ -159,6 +159,12 @@ async function main() {
       groupCode: 'JOUR_0800',
     },
     // Responsables BU
+    // Note gouvernance (contexte_vdm_compact_avec_schema.md) : seule la BU SCI dépend
+    // hiérarchiquement du CTO ("CTO --> SCI", lien plein). Les BU Information, E-Réputation et
+    // Analyses Médiatiques n'ont qu'une coordination opérationnelle du CTO ("-.->", lien pointillé
+    // explicitement non hiérarchique) et aucun autre rattachement hiérarchique n'est documenté :
+    // managerUsername reste donc volontairement absent pour RBU_INFO/RBU_EREP/RBU_ANALYSES plutôt
+    // que d'inventer un rattachement non spécifié par la source de vérité.
     {
       username: 'RBU_INFO',
       firstName: 'Stephen',
@@ -181,6 +187,7 @@ async function main() {
       lastName: 'DOGO',
       role: 'RESPONSABLE_BU',
       buCode: 'SCI',
+      managerUsername: 'CTO',
       groupCode: 'JOUR_0830',
     },
     {
@@ -191,7 +198,7 @@ async function main() {
       buCode: 'ANALYSES',
       groupCode: 'JOUR_0830',
     },
-    // Responsables Pôle
+    // Responsables Pôle — rattachés hiérarchiquement au responsable de leur BU (INFO)
     {
       username: 'POLE_PRESSE_JOUR',
       firstName: 'Jefferson',
@@ -199,6 +206,7 @@ async function main() {
       role: 'RESPONSABLE_POLE',
       buCode: 'INFO',
       poleCode: 'POLE_PRESSE_JOUR',
+      managerUsername: 'RBU_INFO',
       groupCode: 'JOUR_0830',
     },
     {
@@ -208,6 +216,7 @@ async function main() {
       role: 'RESPONSABLE_POLE',
       buCode: 'INFO',
       poleCode: 'POLE_NUIT',
+      managerUsername: 'RBU_INFO',
       groupCode: 'NUIT_2000',
     },
     {
@@ -217,9 +226,10 @@ async function main() {
       role: 'RESPONSABLE_POLE',
       buCode: 'INFO',
       poleCode: 'POLE_TVRADIO',
+      managerUsername: 'RBU_INFO',
       groupCode: 'JOUR_0830',
     },
-    // Consultants INFO
+    // Consultants INFO — rattachés au responsable de leur pôle
     {
       username: 'CONS_PJ_1',
       firstName: 'Consultant',
@@ -227,6 +237,7 @@ async function main() {
       role: 'CONSULTANT',
       buCode: 'INFO',
       poleCode: 'POLE_PRESSE_JOUR',
+      managerUsername: 'POLE_PRESSE_JOUR',
       groupCode: 'JOUR_0900',
     },
     {
@@ -236,6 +247,7 @@ async function main() {
       role: 'CONSULTANT',
       buCode: 'INFO',
       poleCode: 'POLE_NUIT',
+      managerUsername: 'POLE_NUIT',
       groupCode: 'NUIT_2000',
     },
     {
@@ -245,15 +257,17 @@ async function main() {
       role: 'CONSULTANT',
       buCode: 'INFO',
       poleCode: 'POLE_TVRADIO',
+      managerUsername: 'POLE_TVRADIO',
       groupCode: 'JOUR_0900',
     },
-    // EREP
+    // EREP — pas de pôle intermédiaire, équipe rattachée directement au responsable de BU
     {
       username: 'ANGE_KAPET',
       firstName: 'Ange',
       lastName: 'KAPET',
       role: 'EMPLOYE',
       buCode: 'EREP',
+      managerUsername: 'RBU_EREP',
       groupCode: 'JOUR_0900',
     },
     {
@@ -262,15 +276,19 @@ async function main() {
       lastName: 'E-Réputation 1',
       role: 'STAGIAIRE',
       buCode: 'EREP',
+      managerUsername: 'RBU_EREP',
       groupCode: 'JOUR_0900',
     },
-    // SCI
+    // SCI — équipe Qualité & Service Client, rattachée directement au responsable de BU
+    // (pas de rôle RESPONSABLE_POLE dédié pour POLE_QSC)
     {
       username: 'LILIANE_KONAN',
       firstName: 'Liliane',
       lastName: 'KONAN',
       role: 'EMPLOYE',
       buCode: 'SCI',
+      poleCode: 'POLE_QSC',
+      managerUsername: 'RBU_SCI',
       groupCode: 'JOUR_0900',
     },
     {
@@ -280,15 +298,17 @@ async function main() {
       role: 'EMPLOYE',
       buCode: 'SCI',
       poleCode: 'POLE_QSC',
+      managerUsername: 'RBU_SCI',
       groupCode: 'JOUR_0900',
     },
-    // Analyses
+    // Analyses — pas de pôle intermédiaire, équipe rattachée directement au responsable de BU
     {
       username: 'ME_KOUAKOU',
       firstName: 'Marie-Emmanuelle',
       lastName: 'KOUAKOU',
       role: 'EMPLOYE',
       buCode: 'ANALYSES',
+      managerUsername: 'RBU_ANALYSES',
       groupCode: 'JOUR_0900',
     },
     {
@@ -297,6 +317,7 @@ async function main() {
       lastName: 'TANO',
       role: 'EMPLOYE',
       buCode: 'ANALYSES',
+      managerUsername: 'RBU_ANALYSES',
       groupCode: 'JOUR_0900',
     },
     {
@@ -305,9 +326,12 @@ async function main() {
       lastName: 'AMAN',
       role: 'EMPLOYE',
       buCode: 'ANALYSES',
+      managerUsername: 'RBU_ANALYSES',
       groupCode: 'JOUR_0900',
     },
-    // DT
+    // DT — pas de responsable de BU dédié distinct du CTO (qui dirige la Direction Technique) ;
+    // Glenn/Boldcode est "Lead IA & développement" mais son rôle PRESTATAIRE n'est pas éligible
+    // comme manager direct (select applicatif restreint aux rôles de direction/responsabilité).
     {
       username: 'STAG_TECH_1',
       firstName: 'Stagiaire',
@@ -315,6 +339,7 @@ async function main() {
       role: 'STAGIAIRE',
       buCode: 'DT',
       poleCode: 'POLE_IA_DEV',
+      managerUsername: 'CTO',
       groupCode: 'JOUR_0900',
     },
     {
@@ -324,6 +349,7 @@ async function main() {
       role: 'PRESTATAIRE',
       buCode: 'DT',
       poleCode: 'POLE_IA_DEV',
+      managerUsername: 'CTO',
       individualExpectedArrivalTime: '10:00',
     },
   ]

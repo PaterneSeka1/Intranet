@@ -12,6 +12,9 @@ type ScheduleGroup = {
   expectedDepartureTime: string | null
 }
 
+// CAN_VIEW reflète CAN_VIEW_USERS côté API (users.controller.ts) : DAF/RESPONSABLE_BU/RESPONSABLE_POLE
+// ont un vrai accès en lecture scopé à leur périmètre (users.service.ts::scopeWhere), pas une simple
+// coquille frontend — seul le lien de navigation Sidebar manquait (corrigé séparément).
 const CAN_VIEW = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE']
 const CAN_MANAGE = ['CTO_ADMIN', 'PDG']
 

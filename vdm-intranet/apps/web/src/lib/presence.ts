@@ -1,6 +1,6 @@
 'use client'
 
-import { API_BASE as BASE } from './api-base'
+import { apiFetch } from './http'
 
 export type PresenceStatus = 'PRESENT' | 'ABSENT' | 'LATE'
 
@@ -122,37 +122,8 @@ export interface ConnectionLogEntry {
   isFirstConnectionOfDay: boolean
 }
 
-async function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
-  const controller = new AbortController()
-  const tid = setTimeout(() => controller.abort(), 30_000)
-  let res: Response
-  try {
-    res = await fetch(`${BASE}/api/presence${path}`, {
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
-      signal: controller.signal,
-      ...init,
-    })
-  } finally {
-    clearTimeout(tid)
-  }
-  if (res.status === 401 || res.status === 403) {
-    if (typeof window !== 'undefined') {
-      window.location.href = `/login?from=${encodeURIComponent(window.location.pathname)}`
-    }
-    throw new Error('Session expirée.')
-  }
-  if (!res.ok) {
-    let msg = 'Erreur serveur'
-    try {
-      const body = await res.json()
-      msg = body.message ?? msg
-    } catch {
-      /* ignore */
-    }
-    throw new Error(msg)
-  }
-  return res.json() as Promise<T>
+function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiFetch<T>(`/presence${path}`, init)
 }
 
 export const presenceApi = {

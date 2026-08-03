@@ -141,7 +141,7 @@ Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` d
 - **Actions annonces** : les actions par annonce sont regroupées dans un select `Actions à effectuer`
 - **Annonces ciblées** : les utilisateurs voient les annonces globales et celles de leur BU uniquement
 - **Bannière annonces** : affiche seulement les annonces actives épinglées
-- **Widget annonces** : affiche les annonces actives non épinglées, avec fallback sur les épinglées
+- **Widget annonces** : affiche toutes les annonces actives (épinglées en tête) dans une liste unique scrollable plafonnée en hauteur ; chaque ligne n'affiche que le titre, cliquable, et ouvre une modale avec les détails complets
 - **Actualisation annonces** : Socket.IO signale les changements et le client recharge l'API authentifiée
 - **Manager direct** : seuls `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` et `RESPONSABLE_POLE` sont proposés comme managers directs ; ce rattachement hiérarchique ne remplace pas le périmètre BU utilisé pour les onglets
 

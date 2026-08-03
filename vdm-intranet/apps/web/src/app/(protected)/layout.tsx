@@ -62,7 +62,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         <header className="bg-white border-b border-gray-100 px-6 h-14 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             {logo ? (
-              <img src={logo} alt="" className="w-7 h-7 rounded-lg object-contain bg-white shrink-0" />
+              <img
+                src={logo}
+                alt=""
+                className="w-7 h-7 rounded-lg object-contain bg-white shrink-0"
+              />
             ) : (
               <img
                 src="/icon-192.png"

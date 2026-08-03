@@ -14,6 +14,7 @@ export type {
   Notification,
   Role,
   PresenceStatus,
+  ConnectionLogType,
   LogAction,
   NotificationType,
 } from '@prisma/client'

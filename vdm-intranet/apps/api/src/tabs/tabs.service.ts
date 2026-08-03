@@ -279,6 +279,24 @@ export class TabsService {
     const tab = await this.findTabOrFail(id)
     this.assertCanManage(requester, tab.businessUnitId)
 
+    if (dto.url && dto.url !== tab.url) {
+      // Même contrôle manuel que create() : @@unique([businessUnitId, url]) ignore les NULL,
+      // donc deux onglets globaux ne peuvent pas être départagés par la contrainte DB seule.
+      if (tab.businessUnitId === null) {
+        const existing = await this.prisma.portalTab.findFirst({
+          where: { businessUnitId: null, url: dto.url, NOT: { id } },
+        })
+        if (existing) throw new BadRequestException('Cet URL existe déjà dans les onglets globaux.')
+      } else {
+        const existing = await this.prisma.portalTab.findUnique({
+          where: { businessUnitId_url: { businessUnitId: tab.businessUnitId, url: dto.url } },
+        })
+        if (existing && existing.id !== id) {
+          throw new BadRequestException('Cet URL existe déjà pour cette BU.')
+        }
+      }
+    }
+
     const action =
       dto.isActive === true
         ? LogAction.TAB_ENABLED
@@ -297,6 +315,8 @@ export class TabsService {
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'P2025')
         throw new NotFoundException('Onglet introuvable.')
+      if ((err as { code?: string }).code === 'P2002')
+        throw new BadRequestException('Cet URL existe déjà pour cette BU.')
       throw err
     }
   }
