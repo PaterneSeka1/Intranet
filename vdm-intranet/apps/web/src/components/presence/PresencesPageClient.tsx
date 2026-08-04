@@ -59,6 +59,7 @@ export function PresencesPageClient({
 
   const present = rows.filter((r) => r.status === 'PRESENT').length
   const late = rows.filter((r) => r.status === 'LATE').length
+  const onLeave = rows.filter((r) => r.status === 'EN_CONGE').length
   const absent = rows.filter((r) => r.status === 'ABSENT').length
 
   function navigate(newDate: string) {
@@ -122,7 +123,7 @@ export function PresencesPageClient({
       )}
 
       {/* Compteurs */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div className="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
           <div className="text-2xl font-bold text-green-700">{present}</div>
           <div className="text-xs text-green-600 font-semibold mt-0.5">Présents</div>
@@ -130,6 +131,10 @@ export function PresencesPageClient({
         <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 text-center">
           <div className="text-2xl font-bold text-orange-700">{late}</div>
           <div className="text-xs text-orange-600 font-semibold mt-0.5">En retard</div>
+        </div>
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
+          <div className="text-2xl font-bold text-blue-700">{onLeave}</div>
+          <div className="text-xs text-blue-600 font-semibold mt-0.5">En congé</div>
         </div>
         <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 text-center">
           <div className="text-2xl font-bold text-gray-500">{absent}</div>

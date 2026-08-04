@@ -5,6 +5,7 @@ export type Summary = {
   totalActive: number
   present: number
   late: number
+  onLeave: number
   absent: number
   presenceRate: number
   mandatesToday: number
@@ -17,6 +18,7 @@ export type PresenceByBu = {
   total: number
   present: number
   late: number
+  onLeave: number
   absent: number
 }
 
@@ -58,6 +60,7 @@ export type PeriodReportBu = {
   totalUserDays: number
   present: number
   late: number
+  onLeave: number
   absent: number
   presenceRate: number
 }

@@ -19,6 +19,8 @@ import {
   CAN_VIEW_PRESENCE_BU_SCOPE,
 } from '../common/permissions'
 import { NotificationsService } from '../notifications/notifications.service'
+import { LeaveSyncService, type ActiveLeave } from '../leaves/leave-sync.service'
+import { matchLeaveToUser, leaveTypeLabel } from '../leaves/leave-match.util'
 
 type Requester = {
   id: string
@@ -30,6 +32,7 @@ type Requester = {
 const USER_SUMMARY = {
   id: true,
   username: true,
+  email: true,
   firstName: true,
   lastName: true,
   fullName: true,
@@ -63,6 +66,8 @@ function buildMapsUrl(lat?: number | null, lng?: number | null): string | null {
   return `https://maps.google.com/?q=${lat},${lng}`
 }
 
+type LeaveInfo = { typeLabel: string; startDate: string; endDate: string } | null
+
 type GeolocatedPresence = {
   latitude: number | null
   longitude: number | null
@@ -81,7 +86,8 @@ export class PresenceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly schedule: PresenceScheduleService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly leaveSync: LeaveSyncService
   ) {}
 
   // ----------------------------------------------------------------
@@ -102,7 +108,20 @@ export class PresenceService {
 
     if (presence) this.redactPresenceForRole(presence, role)
 
-    return { presence, scheduleSource, date: today }
+    let onLeave: LeaveInfo = null
+    if (!presence) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true, email: true },
+      })
+      if (user) {
+        const activeLeaves = await this.leaveSync.getActiveLeaves(today)
+        const leave = activeLeaves.find((l) => matchLeaveToUser(l, user))
+        onLeave = this.toLeaveInfo(leave)
+      }
+    }
+
+    return { presence, scheduleSource, date: today, onLeave }
   }
 
   // ----------------------------------------------------------------
@@ -120,7 +139,7 @@ export class PresenceService {
     }
     const scope = this.buildUserScope(requester)
 
-    const [users, presences, mandates] = await Promise.all([
+    const [users, presences, mandates, activeLeaves] = await Promise.all([
       this.prisma.user.findMany({
         where: { isActive: true, ...scope },
         select: USER_SUMMARY,
@@ -132,6 +151,7 @@ export class PresenceService {
       this.prisma.dailyMandate.findMany({
         where: { date: today, user: { isActive: true, ...scope } },
       }),
+      this.leaveSync.getActiveLeaves(today),
     ])
 
     for (const presence of presences) this.redactPresenceForRole(presence, requester.role)
@@ -142,6 +162,7 @@ export class PresenceService {
     return users.map((user) => {
       const presence = presenceMap.get(user.id) ?? null
       const mandate = mandateMap.get(user.id) ?? null
+      const leave = presence ? undefined : activeLeaves.find((l) => matchLeaveToUser(l, user))
 
       // Heure attendue : mandat > groupe > individuel
       let expectedArrivalTime: string | null = null
@@ -160,7 +181,8 @@ export class PresenceService {
       return {
         user,
         presence,
-        status: presence?.status ?? 'ABSENT',
+        status: presence?.status ?? (leave ? 'EN_CONGE' : 'ABSENT'),
+        leave: this.toLeaveInfo(leave),
         expectedArrivalTime: presence?.expectedArrivalTime ?? expectedArrivalTime,
         scheduleSource,
       }
@@ -734,6 +756,15 @@ export class PresenceService {
       return target.poleId === requester.poleId
     }
     return false
+  }
+
+  private toLeaveInfo(leave?: ActiveLeave): LeaveInfo {
+    if (!leave) return null
+    return {
+      typeLabel: leaveTypeLabel(leave.type),
+      startDate: leave.startDate,
+      endDate: leave.endDate,
+    }
   }
 
   private redactPresenceForRole<T extends GeolocatedPresence>(presence: T, role?: Role): T {

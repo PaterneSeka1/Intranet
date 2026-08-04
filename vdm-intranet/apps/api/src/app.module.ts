@@ -16,6 +16,7 @@ import { SettingsModule } from './settings/settings.module'
 import { PublicHolidaysModule } from './public-holidays/public-holidays.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { SearchModule } from './search/search.module'
+import { LeavesModule } from './leaves/leaves.module'
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { SearchModule } from './search/search.module'
     PublicHolidaysModule,
     NotificationsModule,
     SearchModule,
+    LeavesModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

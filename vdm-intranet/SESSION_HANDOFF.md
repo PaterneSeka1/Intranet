@@ -147,6 +147,20 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Ajustement complémentaire (même jour) : léger effet de survol (`hover:bg-gray-50`, coins arrondis, transition douce) ajouté sur toute la ligne, pas seulement sur le titre.
 - Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
 
+### Nouvelle demande réalisée — Intégration Congés : statut EN_CONGE & widget "Employés en congé" (2026-08-04)
+
+- Demande : un employé en congé approuvé (app externe VEDEM/CONGE, `/Users/macbookpro/VEDEM/CONGE`, Next.js/Prisma/MongoDB séparée de ce repo) ne doit plus être marqué "Absent" dans l'Intranet ; ajouter un widget "Employés en congé" visible par toute l'entreprise.
+- Décisions actées avec l'utilisateur avant implémentation : rapprochement d'identité par `matricule` (Congé) == `username` (login Intranet), email en repli ; widget placé sur `/accueil` uniquement (visible par tous les rôles, y compris accueil) ; autorisation explicite de modifier le repo VEDEM/CONGE.
+- Côté CONGE : nouvel endpoint `GET /api/leaves/active` (`app/api/leaves/active/route.ts`, jour unique ou plage `from`/`to`), protégé par secret partagé `INTRANET_SYNC_SECRET` — sur le même modèle que l'endpoint cron `auto-approve-overdue` déjà existant.
+- Côté vdm-intranet : nouveau module `apps/api/src/leaves/` — `LeaveSyncService` (client HTTP vers CONGE, cache 60s, dégradation silencieuse si non configuré), `leave-match.util.ts` (matching + labels FR des types de congé), endpoint public `GET /leaves/on-leave/today` pour le widget.
+- `presence.service.ts` et `pilotage.service.ts` calculent désormais un statut synthétique `EN_CONGE` partout où `ABSENT` était déduit (jamais persisté en DB, même principe que `ABSENT` lui-même) : `getTodayAllPresences`, `getTodayPresence`, `getSummary`, `getPresenceByBu`, `getPeriodReport`.
+- Frontend : nouveau composant `EmployeesOnLeaveCard.tsx` sur `/accueil` ; badge/compteur "En congé" sur `/presences` ; KPI + barre "En congé" sur `/pilotage`.
+- **Décision de confidentialité notable** : le widget public (`/leaves/on-leave/today`) n'expose jamais le *type* de congé — CONGE a des catégories de santé sensibles (maladie, menstruel, maternité/paternité) qui ne doivent pas être diffusées à toute l'entreprise. Le type n'apparaît que dans les vues déjà réservées aux managers (`/presence/today/all`) ou à l'intéressé lui-même (`/presence/today`).
+- Tests réels effectués : API démarrée en mode dev, base reseedée, faux serveur HTTP local simulant l'endpoint CONGE. Confirmé par `curl` le cas par défaut (intégration non configurée → comportement inchangé) et le cas positif (congé simulé → `EN_CONGE` correct sur toutes les vues, compteurs Pilotage ajustés, y compris le rapport hebdomadaire par plage de dates). Base et mot de passe de test restaurés après coup.
+- **Non complété** : vérification visuelle dans un vrai navigateur — l'outil de navigateur MCP (Docker/Playwright) s'est interrompu en cours de session après plusieurs contournements réseau nécessaires (accès à l'hôte depuis le conteneur, CORS, attribut `Domain` du cookie de session). Seule la donnée servie par l'API a été vérifiée, pas le rendu final des composants.
+- **Reste à faire par l'utilisateur** : définir `CONGE_API_URL`/`CONGE_API_SECRET` (vdm-intranet) et `INTRANET_SYNC_SECRET` (VEDEM/CONGE, même valeur) en environnement réel — tant qu'ils sont vides, l'intégration reste désactivée sans erreur.
+- `TACHE.md` mis à jour avec le détail complet de cette session.
+
 ### Audit complet du dépôt & corrections (2026-08-03)
 
 - Demande : analyser l'intégralité du dépôt (backend, frontend, base de données, documentation) pour relever toute incohérence/incompréhension, puis tout corriger.

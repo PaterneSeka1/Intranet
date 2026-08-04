@@ -12,12 +12,14 @@ const STATUS_BADGE: Record<string, string> = {
   PRESENT: 'bg-green-100 text-green-700',
   LATE: 'bg-orange-100 text-orange-700',
   ABSENT: 'bg-gray-100 text-gray-400',
+  EN_CONGE: 'bg-blue-100 text-blue-700',
 }
 
 const STATUS_LABEL: Record<string, string> = {
   PRESENT: 'Présent',
   LATE: 'En retard',
   ABSENT: 'Absent',
+  EN_CONGE: 'En congé',
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -195,6 +197,11 @@ export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) 
       sortValue: (r) => STATUS_LABEL[r.status] ?? r.status,
       render: (r) => (
         <span
+          title={
+            r.leave
+              ? `${r.leave.typeLabel} — du ${r.leave.startDate.slice(0, 10)} au ${r.leave.endDate.slice(0, 10)}`
+              : undefined
+          }
           className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap ${STATUS_BADGE[r.status]}`}
         >
           {STATUS_LABEL[r.status]}

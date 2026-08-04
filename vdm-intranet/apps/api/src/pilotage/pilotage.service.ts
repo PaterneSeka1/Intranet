@@ -2,6 +2,8 @@ import { ForbiddenException, Injectable } from '@nestjs/common'
 import { LogAction, PresenceStatus, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { PublicHolidaysService } from '../public-holidays/public-holidays.service'
+import { LeaveSyncService } from '../leaves/leave-sync.service'
+import { matchLeaveToUser, isLeaveActiveOnDay } from '../leaves/leave-match.util'
 import {
   CAN_VIEW_PILOTAGE,
   CAN_VIEW_PILOTAGE_GLOBAL,
@@ -64,7 +66,8 @@ function getMonthRange(d: Date): { start: Date; end: Date } {
 export class PilotageService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly publicHolidays: PublicHolidaysService
+    private readonly publicHolidays: PublicHolidaysService,
+    private readonly leaveSync: LeaveSyncService
   ) {}
 
   private assertAllowed(requester: Requester) {
@@ -90,28 +93,38 @@ export class PilotageService {
     const today = getToday()
     const userWhere = this.buildUserWhere(requester)
 
-    const [totalActive, presences, mandates, holiday] = await Promise.all([
-      this.prisma.user.count({ where: userWhere }),
+    const [users, presences, mandates, holiday, activeLeaves] = await Promise.all([
+      this.prisma.user.findMany({
+        where: userWhere,
+        select: { id: true, username: true, email: true },
+      }),
       this.prisma.presence.findMany({
         where: {
           date: today,
           user: userWhere,
         },
-        select: { status: true },
+        select: { userId: true, status: true },
       }),
       this.prisma.dailyMandate.count({ where: { date: today, user: userWhere } }),
       this.publicHolidays.isHoliday(today),
+      this.leaveSync.getActiveLeaves(today),
     ])
 
+    const totalActive = users.length
     const present = presences.filter((p) => p.status === PresenceStatus.PRESENT).length
     const late = presences.filter((p) => p.status === PresenceStatus.LATE).length
-    const absent = totalActive - present - late
+    const presentUserIds = new Set(presences.map((p) => p.userId))
+    const onLeave = users.filter(
+      (u) => !presentUserIds.has(u.id) && activeLeaves.some((l) => matchLeaveToUser(l, u))
+    ).length
+    const absent = totalActive - present - late - onLeave
 
     return {
       date: today,
       totalActive,
       present,
       late,
+      onLeave,
       absent,
       presenceRate: totalActive > 0 ? Math.round(((present + late) / totalActive) * 100) : 0,
       mandatesToday: mandates,
@@ -126,19 +139,23 @@ export class PilotageService {
     const today = getToday()
     const userWhere = this.buildUserWhere(requester)
 
-    const users = await this.prisma.user.findMany({
-      where: userWhere,
-      select: {
-        id: true,
-        businessUnitId: true,
-        businessUnit: { select: { id: true, name: true, code: true } },
-      },
-    })
-
-    const presences = await this.prisma.presence.findMany({
-      where: { date: today, user: userWhere },
-      select: { userId: true, status: true },
-    })
+    const [users, presences, activeLeaves] = await Promise.all([
+      this.prisma.user.findMany({
+        where: userWhere,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          businessUnitId: true,
+          businessUnit: { select: { id: true, name: true, code: true } },
+        },
+      }),
+      this.prisma.presence.findMany({
+        where: { date: today, user: userWhere },
+        select: { userId: true, status: true },
+      }),
+      this.leaveSync.getActiveLeaves(today),
+    ])
 
     const presenceMap = new Map(presences.map((p) => [p.userId, p.status]))
 
@@ -151,6 +168,7 @@ export class PilotageService {
         total: number
         present: number
         late: number
+        onLeave: number
         absent: number
       }
     >()
@@ -166,6 +184,7 @@ export class PilotageService {
           total: 0,
           present: 0,
           late: 0,
+          onLeave: 0,
           absent: 0,
         })
       }
@@ -174,6 +193,7 @@ export class PilotageService {
       const status = presenceMap.get(user.id)
       if (status === PresenceStatus.PRESENT) row.present++
       else if (status === PresenceStatus.LATE) row.late++
+      else if (activeLeaves.some((l) => matchLeaveToUser(l, user))) row.onLeave++
       else row.absent++
     }
 
@@ -193,6 +213,8 @@ export class PilotageService {
       where: userWhere,
       select: {
         id: true,
+        username: true,
+        email: true,
         businessUnitId: true,
         businessUnit: { select: { id: true, name: true, code: true } },
       },
@@ -202,13 +224,20 @@ export class PilotageService {
       return { period, from: toIso(start), to: toIso(end), byBu: [], trend: [] }
     }
 
-    const presences = await this.prisma.presence.findMany({
-      where: { date: { gte: start, lte: effectiveEnd }, user: userWhere },
-      select: { userId: true, date: true, status: true },
-    })
+    const [presences, activeLeaves] = await Promise.all([
+      this.prisma.presence.findMany({
+        where: { date: { gte: start, lte: effectiveEnd }, user: userWhere },
+        select: { userId: true, date: true, status: true },
+      }),
+      this.leaveSync.getActiveLeavesInRange(start, effectiveEnd),
+    ])
 
     const presenceIndex = new Map<string, PresenceStatus>()
     for (const p of presences) presenceIndex.set(`${p.userId}|${toIso(p.date)}`, p.status)
+
+    const userLeaves = new Map(
+      users.map((u) => [u.id, activeLeaves.filter((l) => matchLeaveToUser(l, u))])
+    )
 
     const workingDays: Date[] = []
     for (let d = new Date(start); d <= effectiveEnd; d.setUTCDate(d.getUTCDate() + 1)) {
@@ -223,6 +252,7 @@ export class PilotageService {
       totalUserDays: number
       present: number
       late: number
+      onLeave: number
       absent: number
     }
     const buAggMap = new Map<string, BuAgg>()
@@ -246,6 +276,7 @@ export class PilotageService {
             totalUserDays: 0,
             present: 0,
             late: 0,
+            onLeave: 0,
             absent: 0,
           })
         }
@@ -253,8 +284,10 @@ export class PilotageService {
         agg.totalUserDays++
 
         const status = presenceIndex.get(`${user.id}|${dayIso}`)
+        const leavesForUser = userLeaves.get(user.id)
         if (status === PresenceStatus.PRESENT) agg.present++
         else if (status === PresenceStatus.LATE) agg.late++
+        else if (leavesForUser?.some((l) => isLeaveActiveOnDay(l, day))) agg.onLeave++
         else agg.absent++
 
         if (!dayTrend.has(user.businessUnit.code)) {

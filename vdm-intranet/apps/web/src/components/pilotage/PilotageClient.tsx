@@ -72,7 +72,7 @@ const ACTION_LABELS: Record<string, string> = {
   SCHEDULE_GROUP_DELETED: 'Groupe horaire supprimé',
 }
 
-const PRESENCE_COLORS = { present: '#22c55e', late: '#F28C38', absent: '#e5e7eb' }
+const PRESENCE_COLORS = { present: '#22c55e', late: '#F28C38', onLeave: '#3b82f6', absent: '#e5e7eb' }
 const PIE_COLORS = [
   '#F28C38',
   '#22c55e',
@@ -295,6 +295,7 @@ export function PilotageClient({ role }: Props) {
     name: b.buCode,
     Présent: b.present,
     Retard: b.late,
+    'En congé': b.onLeave,
     Absent: b.absent,
   }))
   const availableReports = role === 'DAF' ? REPORTS.filter((r) => r.key === 'presence') : REPORTS
@@ -335,7 +336,7 @@ export function PilotageClient({ role }: Props) {
 
       {/* ── KPIs ── */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <KpiCard
             label="Employés actifs"
             value={summary.totalActive}
@@ -353,6 +354,12 @@ export function PilotageClient({ role }: Props) {
             value={summary.late}
             accentClass="bg-[#F28C38]"
             valueClass="text-[#F28C38]"
+          />
+          <KpiCard
+            label="En congé"
+            value={summary.onLeave}
+            accentClass="bg-blue-400"
+            valueClass="text-blue-600"
           />
           <KpiCard
             label="Absents"
@@ -503,6 +510,7 @@ export function PilotageClient({ role }: Props) {
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="Présent" fill={PRESENCE_COLORS.present} radius={[3, 3, 0, 0]} />
               <Bar dataKey="Retard" fill={PRESENCE_COLORS.late} radius={[3, 3, 0, 0]} />
+              <Bar dataKey="En congé" fill={PRESENCE_COLORS.onLeave} radius={[3, 3, 0, 0]} />
               <Bar dataKey="Absent" fill={PRESENCE_COLORS.absent} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

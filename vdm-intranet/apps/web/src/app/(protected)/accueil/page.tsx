@@ -2,19 +2,23 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab } from '@/lib/tabs'
+import type { OnLeaveTodayResult } from '@/lib/leaves'
 import { EndDayButton } from '@/components/presence/EndDayButton'
+import { EmployeesOnLeaveCard } from '@/components/presence/EmployeesOnLeaveCard'
 import { ACCUEIL_ONLY_ROLES, ROLE_LABELS } from '@/types/user'
 
 const STATUS_STYLE: Record<string, string> = {
   PRESENT: 'bg-green-100 text-green-700',
   LATE: 'bg-orange-100 text-orange-700',
   ABSENT: 'bg-gray-100 text-gray-500',
+  EN_CONGE: 'bg-blue-100 text-blue-700',
 }
 
 const STATUS_LABEL: Record<string, string> = {
   PRESENT: 'Présent',
   LATE: 'En retard',
   ABSENT: 'Non enregistré',
+  EN_CONGE: 'En congé',
 }
 
 const DEFAULT_STATUS_STYLE = 'bg-gray-100 text-gray-500'
@@ -69,15 +73,16 @@ export default async function AccueilPage() {
 
   const showGeolocation = !ACCUEIL_ONLY_ROLES.includes(user.role)
 
-  const [presenceData, allTabs] = await Promise.all([
+  const [presenceData, allTabs, onLeaveData] = await Promise.all([
     serverFetch<TodayPresenceResult>('/presence/today'),
     serverFetch<Tab[]>(
       user.businessUnit ? `/tabs?businessUnitId=${user.businessUnit.id}` : '/tabs'
     ),
+    serverFetch<OnLeaveTodayResult>('/leaves/on-leave/today'),
   ])
 
   const presence = presenceData?.presence ?? null
-  const status = presence?.status ?? 'ABSENT'
+  const status = presence?.status ?? (presenceData?.onLeave ? 'EN_CONGE' : 'ABSENT')
   const activeTabs = (allTabs ?? []).filter((t) => t.isActive)
   const displayName = user.firstName || user.fullName || user.username
 
@@ -215,6 +220,9 @@ export default async function AccueilPage() {
           </div>
         )}
       </div>
+
+      {/* Employés en congé — visible par tous */}
+      <EmployeesOnLeaveCard employees={onLeaveData?.employees ?? []} />
 
       {/* Onglets de la BU */}
       <section>

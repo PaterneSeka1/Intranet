@@ -2,7 +2,13 @@
 
 import { apiFetch } from './http'
 
-export type PresenceStatus = 'PRESENT' | 'ABSENT' | 'LATE'
+export type PresenceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'EN_CONGE'
+
+export interface LeaveInfo {
+  typeLabel: string
+  startDate: string
+  endDate: string
+}
 
 export interface Presence {
   id: string
@@ -40,6 +46,7 @@ export interface TodayPresenceResult {
   presence: Presence | null
   scheduleSource: ScheduleSource
   date: string
+  onLeave: LeaveInfo | null
 }
 
 export interface PresenceRow {
@@ -64,6 +71,7 @@ export interface PresenceRow {
   }
   presence: Presence | null
   status: PresenceStatus
+  leave: LeaveInfo | null
   expectedArrivalTime: string | null
   scheduleSource: string
 }
