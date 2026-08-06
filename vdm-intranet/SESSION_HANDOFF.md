@@ -251,6 +251,7 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Composant `GlobalSearch` et module backend `search` non touchés — `GlobalSearch` reste monté dans `MobileSidebarToggle` (header mobile), seule l'occurrence desktop de la Sidebar est supprimée.
 - Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
 - `TACHE.md` mis à jour avec cet ajustement.
+- Note : `apps/web/tsconfig.tsbuildinfo` régénéré par ce `tsc --noEmit` (artefact de build, sans changement fonctionnel) — même changement que ci-dessus, pas une nouvelle modification.
 
 ### Fonctionnalités Réalisées
 
