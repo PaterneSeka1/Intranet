@@ -31,6 +31,7 @@ const SAFE_SELECT = {
   scheduleGroupId: true,
   individualExpectedArrivalTime: true,
   individualExpectedDepartureTime: true,
+  workingDays: true,
   businessUnit: { select: { id: true, name: true, code: true } },
   pole: { select: { id: true, name: true, code: true } },
   manager: { select: { id: true, username: true, fullName: true } },
@@ -78,6 +79,9 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(dto.password, 12)
     const fullName = [dto.firstName, dto.lastName].filter(Boolean).join(' ')
     const { password, ...rest } = dto
+    if (rest.workingDays !== undefined) {
+      rest.workingDays = this.normalizeWorkingDays(rest.workingDays)
+    }
     try {
       return await this.prisma.user.create({
         data: { ...rest, passwordHash, fullName, mustChangePassword: true },
@@ -101,6 +105,10 @@ export class UsersService {
 
     const data: Record<string, unknown> = { ...dto }
     delete data.currentPassword
+
+    if (dto.workingDays !== undefined) {
+      data.workingDays = this.normalizeWorkingDays(dto.workingDays)
+    }
 
     if (dto.password) {
       data.passwordHash = await bcrypt.hash(dto.password, 12)
@@ -202,6 +210,10 @@ export class UsersService {
         throw new NotFoundException('Utilisateur introuvable.')
       throw err
     }
+  }
+
+  private normalizeWorkingDays(days: number[]): number[] {
+    return Array.from(new Set(days)).sort((a, b) => a - b)
   }
 
   private scopeWhere(requester: Requester) {

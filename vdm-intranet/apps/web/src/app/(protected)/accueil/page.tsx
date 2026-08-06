@@ -10,6 +10,8 @@ const STATUS_STYLE: Record<string, string> = {
   LATE: 'bg-orange-100 text-orange-700',
   ABSENT: 'bg-gray-100 text-gray-500',
   EN_CONGE: 'bg-blue-100 text-blue-700',
+  REPOS: 'bg-indigo-100 text-indigo-500',
+  EN_ATTENTE: 'bg-amber-100 text-amber-600',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -17,6 +19,8 @@ const STATUS_LABEL: Record<string, string> = {
   LATE: 'En retard',
   ABSENT: 'Non enregistré',
   EN_CONGE: 'En congé',
+  REPOS: 'Repos',
+  EN_ATTENTE: 'En attente',
 }
 
 const DEFAULT_STATUS_STYLE = 'bg-gray-100 text-gray-500'
@@ -79,7 +83,10 @@ export default async function AccueilPage() {
   ])
 
   const presence = presenceData?.presence ?? null
-  const status = presence?.status ?? (presenceData?.onLeave ? 'EN_CONGE' : 'ABSENT')
+  // Le statut (y compris "pas encore arrivé"/"repos") est calculé côté API, qui seule connaît le
+  // planning (mandat/groupe/individuel) et les jours non travaillés (week-end/férié) — ne jamais
+  // retomber sur "ABSENT" par défaut ici, sous peine de re-marquer absent avant l'heure attendue.
+  const status = presenceData?.status ?? 'ABSENT'
   const activeTabs = (allTabs ?? []).filter((t) => t.isActive)
   const displayName = user.firstName || user.fullName || user.username
 

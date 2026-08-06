@@ -97,6 +97,7 @@ export default async function PresencesPage({ searchParams }: Props) {
       date={date}
       canMandate={canMandate}
       currentUserId={user.id}
+      currentUserRole={user.role}
       holidays={holidays}
     />
   )

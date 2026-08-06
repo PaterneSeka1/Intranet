@@ -14,6 +14,7 @@
     "dev:api": "npm run dev --workspace=apps/api",
     "build:web": "npm run build --workspace=apps/web",
     "build:api": "npm run build --workspace=apps/api",
+    "test:api": "npm run test --workspace=apps/api",
     "format": "prettier --write \"**/*.{ts,tsx,json,yaml,md}\" --ignore-path .gitignore",
     "db:generate": "npm run db:generate --workspace=packages/database",
     "db:migrate": "npm run db:migrate --workspace=packages/database",

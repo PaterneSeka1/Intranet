@@ -2,7 +2,10 @@
 
 import { apiFetch } from './http'
 
-export type PresenceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'EN_CONGE'
+// REPOS et EN_ATTENTE sont calculés côté API à la volée (jamais persistés) : REPOS = pas le jour
+// de travail de l'employé (week-end/férié sans mandat, ou aucun planning défini), EN_ATTENTE =
+// jour de travail mais heure d'arrivée attendue pas encore dépassée.
+export type PresenceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'EN_CONGE' | 'REPOS' | 'EN_ATTENTE'
 
 export interface LeaveInfo {
   typeLabel: string
@@ -47,6 +50,7 @@ export interface TodayPresenceResult {
   scheduleSource: ScheduleSource
   date: string
   onLeave: LeaveInfo | null
+  status: PresenceStatus | null
 }
 
 export interface PresenceRow {
@@ -68,6 +72,7 @@ export interface PresenceRow {
     } | null
     individualExpectedArrivalTime: string | null
     individualExpectedDepartureTime: string | null
+    workingDays: number[]
   }
   presence: Presence | null
   status: PresenceStatus
@@ -95,6 +100,8 @@ export interface DailyMandate {
   userId: string
   date: string
   expectedArrivalTime: string
+  expectedDepartureTime: string | null
+  isNightShift: boolean | null
   reason: string | null
   createdById: string
   user: {
@@ -105,6 +112,23 @@ export interface DailyMandate {
     businessUnit: { name: string } | null
   }
   createdBy: { id: string; username: string; fullName: string | null }
+}
+
+export interface MandatePayload {
+  userId: string
+  date: string
+  expectedArrivalTime: string
+  expectedDepartureTime?: string
+  isNightShift?: boolean
+  reason?: string
+}
+
+export interface BulkMandateDay {
+  date: string
+  expectedArrivalTime: string
+  expectedDepartureTime?: string
+  isNightShift?: boolean
+  reason?: string
 }
 
 export interface FirstLoginPayload {
@@ -147,12 +171,14 @@ export const presenceApi = {
     presenceReq<Presence>('/end-day', { method: 'POST', body: JSON.stringify(data) }),
   scheduleGroups: () => presenceReq<ScheduleGroup[]>('/schedule-groups'),
   mandates: () => presenceReq<DailyMandate[]>('/mandates'),
-  createMandate: (data: {
-    userId: string
-    date: string
-    expectedArrivalTime: string
-    reason?: string
-  }) => presenceReq<DailyMandate>('/mandates', { method: 'POST', body: JSON.stringify(data) }),
+  createMandate: (data: MandatePayload) =>
+    presenceReq<DailyMandate>('/mandates', { method: 'POST', body: JSON.stringify(data) }),
+  bulkCreateMandates: (data: { userId: string; days: BulkMandateDay[] }) =>
+    presenceReq<DailyMandate[]>('/mandates/bulk', { method: 'POST', body: JSON.stringify(data) }),
+  mandatesRange: (params: { userId: string; from: string; to: string }) => {
+    const qs = new URLSearchParams(params).toString()
+    return presenceReq<DailyMandate[]>(`/mandates?${qs}`)
+  },
   deleteMandate: (id: string) =>
     presenceReq<{ deleted: boolean }>(`/mandates/${id}`, { method: 'DELETE' }),
   myConnections: (limit = 20) =>

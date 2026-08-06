@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common'
 import { LogAction, PresenceStatus, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { PublicHolidaysService } from '../public-holidays/public-holidays.service'
+import { PresenceScheduleService } from '../presence/presence.schedule.service'
 import { LeaveSyncService } from '../leaves/leave-sync.service'
 import { matchLeaveToUser, isLeaveActiveOnDay } from '../leaves/leave-match.util'
 import {
@@ -9,6 +10,7 @@ import {
   CAN_VIEW_PILOTAGE_GLOBAL,
   CAN_VIEW_PILOTAGE_BU_SCOPE,
 } from '../common/permissions'
+import { isRecurringWorkDay } from '../common/working-days.util'
 
 type Requester = {
   id: string
@@ -26,11 +28,6 @@ function getDaysAgo(n: number): Date {
   const d = getToday()
   d.setUTCDate(d.getUTCDate() - n)
   return d
-}
-
-function isWeekendDate(d: Date): boolean {
-  const day = d.getUTCDay()
-  return day === 0 || day === 6
 }
 
 function toIso(d: Date): string {
@@ -67,7 +64,8 @@ export class PilotageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly publicHolidays: PublicHolidaysService,
-    private readonly leaveSync: LeaveSyncService
+    private readonly leaveSync: LeaveSyncService,
+    private readonly schedule: PresenceScheduleService
   ) {}
 
   private assertAllowed(requester: Requester) {
@@ -91,12 +89,20 @@ export class PilotageService {
     this.assertAllowed(requester)
 
     const today = getToday()
+    const now = new Date()
     const userWhere = this.buildUserWhere(requester)
 
     const [users, presences, mandates, holiday, activeLeaves] = await Promise.all([
       this.prisma.user.findMany({
         where: userWhere,
-        select: { id: true, username: true, email: true },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          individualExpectedArrivalTime: true,
+          workingDays: true,
+          scheduleGroup: { select: { expectedArrivalTime: true, isNightShift: true } },
+        },
       }),
       this.prisma.presence.findMany({
         where: {
@@ -105,19 +111,65 @@ export class PilotageService {
         },
         select: { userId: true, status: true },
       }),
-      this.prisma.dailyMandate.count({ where: { date: today, user: userWhere } }),
+      this.prisma.dailyMandate.findMany({
+        where: { date: today, user: userWhere },
+        select: { userId: true, expectedArrivalTime: true, isNightShift: true },
+      }),
       this.publicHolidays.isHoliday(today),
       this.leaveSync.getActiveLeaves(today),
     ])
 
     const totalActive = users.length
-    const present = presences.filter((p) => p.status === PresenceStatus.PRESENT).length
-    const late = presences.filter((p) => p.status === PresenceStatus.LATE).length
-    const presentUserIds = new Set(presences.map((p) => p.userId))
-    const onLeave = users.filter(
-      (u) => !presentUserIds.has(u.id) && activeLeaves.some((l) => matchLeaveToUser(l, u))
-    ).length
-    const absent = totalActive - present - late - onLeave
+    const presenceMap = new Map(presences.map((p) => [p.userId, p.status]))
+    const mandateMap = new Map(mandates.map((m) => [m.userId, m]))
+
+    let present = 0
+    let late = 0
+    let onLeave = 0
+    let dayOff = 0
+    let pending = 0
+    let absent = 0
+
+    for (const user of users) {
+      const status = presenceMap.get(user.id)
+      if (status === PresenceStatus.PRESENT) {
+        present++
+        continue
+      }
+      if (status === PresenceStatus.LATE) {
+        late++
+        continue
+      }
+      if (status) continue // statut persisté imprévu — ne pas retomber dans les compteurs ci-dessous
+
+      if (activeLeaves.some((l) => matchLeaveToUser(l, user))) {
+        onLeave++
+        continue
+      }
+
+      const mandate = mandateMap.get(user.id)
+      const isNonWorkingDefault = !isRecurringWorkDay(user.workingDays, today) || holiday.isHoliday
+      // Un mandat est une affectation explicite : il prime toujours sur le motif récurrent/férié par défaut.
+      const isWorkDay =
+        !!mandate ||
+        (!isNonWorkingDefault && (!!user.scheduleGroup || !!user.individualExpectedArrivalTime))
+      if (!isWorkDay) {
+        dayOff++
+        continue
+      }
+
+      const expectedTime =
+        mandate?.expectedArrivalTime ??
+        user.scheduleGroup?.expectedArrivalTime ??
+        user.individualExpectedArrivalTime ??
+        null
+      const isNightShift = mandate?.isNightShift ?? user.scheduleGroup?.isNightShift ?? false
+      const overdue = expectedTime
+        ? this.schedule.isArrivalOverdue(expectedTime, now, isNightShift)
+        : true
+      if (overdue) absent++
+      else pending++
+    }
 
     return {
       date: today,
@@ -125,9 +177,11 @@ export class PilotageService {
       present,
       late,
       onLeave,
+      dayOff,
+      pending,
       absent,
       presenceRate: totalActive > 0 ? Math.round(((present + late) / totalActive) * 100) : 0,
-      mandatesToday: mandates,
+      mandatesToday: mandates.length,
       isPublicHoliday: holiday.isHoliday,
       publicHolidayLabel: holiday.label,
     }
@@ -137,9 +191,10 @@ export class PilotageService {
     this.assertAllowed(requester)
 
     const today = getToday()
+    const now = new Date()
     const userWhere = this.buildUserWhere(requester)
 
-    const [users, presences, activeLeaves] = await Promise.all([
+    const [users, presences, mandates, holiday, activeLeaves] = await Promise.all([
       this.prisma.user.findMany({
         where: userWhere,
         select: {
@@ -148,16 +203,25 @@ export class PilotageService {
           email: true,
           businessUnitId: true,
           businessUnit: { select: { id: true, name: true, code: true } },
+          individualExpectedArrivalTime: true,
+          workingDays: true,
+          scheduleGroup: { select: { expectedArrivalTime: true, isNightShift: true } },
         },
       }),
       this.prisma.presence.findMany({
         where: { date: today, user: userWhere },
         select: { userId: true, status: true },
       }),
+      this.prisma.dailyMandate.findMany({
+        where: { date: today, user: userWhere },
+        select: { userId: true, expectedArrivalTime: true, isNightShift: true },
+      }),
+      this.publicHolidays.isHoliday(today),
       this.leaveSync.getActiveLeaves(today),
     ])
 
     const presenceMap = new Map(presences.map((p) => [p.userId, p.status]))
+    const mandateMap = new Map(mandates.map((m) => [m.userId, m]))
 
     const buMap = new Map<
       string,
@@ -169,6 +233,10 @@ export class PilotageService {
         present: number
         late: number
         onLeave: number
+        // Non comptés dans "absent" : pas le jour de travail (dayOff) ou heure pas encore dépassée
+        // (pending). Non affichés dans le graphique par BU, exposés pour cohérence avec `total`.
+        dayOff: number
+        pending: number
         absent: number
       }
     >()
@@ -185,16 +253,50 @@ export class PilotageService {
           present: 0,
           late: 0,
           onLeave: 0,
+          dayOff: 0,
+          pending: 0,
           absent: 0,
         })
       }
       const row = buMap.get(key)!
       row.total++
       const status = presenceMap.get(user.id)
-      if (status === PresenceStatus.PRESENT) row.present++
-      else if (status === PresenceStatus.LATE) row.late++
-      else if (activeLeaves.some((l) => matchLeaveToUser(l, user))) row.onLeave++
-      else row.absent++
+      if (status === PresenceStatus.PRESENT) {
+        row.present++
+        continue
+      }
+      if (status === PresenceStatus.LATE) {
+        row.late++
+        continue
+      }
+      if (status) continue
+
+      if (activeLeaves.some((l) => matchLeaveToUser(l, user))) {
+        row.onLeave++
+        continue
+      }
+
+      const mandate = mandateMap.get(user.id)
+      const isNonWorkingDefault = !isRecurringWorkDay(user.workingDays, today) || holiday.isHoliday
+      const isWorkDay =
+        !!mandate ||
+        (!isNonWorkingDefault && (!!user.scheduleGroup || !!user.individualExpectedArrivalTime))
+      if (!isWorkDay) {
+        row.dayOff++
+        continue
+      }
+
+      const expectedTime =
+        mandate?.expectedArrivalTime ??
+        user.scheduleGroup?.expectedArrivalTime ??
+        user.individualExpectedArrivalTime ??
+        null
+      const isNightShift = mandate?.isNightShift ?? user.scheduleGroup?.isNightShift ?? false
+      const overdue = expectedTime
+        ? this.schedule.isArrivalOverdue(expectedTime, now, isNightShift)
+        : true
+      if (overdue) row.absent++
+      else row.pending++
     }
 
     return Array.from(buMap.values()).sort((a, b) => a.buName.localeCompare(b.buName))
@@ -239,9 +341,13 @@ export class PilotageService {
       users.map((u) => [u.id, activeLeaves.filter((l) => matchLeaveToUser(l, u))])
     )
 
+    // Note : ce rapport agrégé par BU utilise encore le motif par défaut (Lun-Ven), pas le motif
+    // propre à chaque employé — cf. plan "Jours de travail récurrents" pour le détail du choix.
+    // Restructurer cette boucle (jour global → utilisateurs) pour un calcul pleinement per-employé
+    // reste à faire séparément si besoin.
     const workingDays: Date[] = []
     for (let d = new Date(start); d <= effectiveEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-      if (!isWeekendDate(d)) workingDays.push(new Date(d))
+      if (isRecurringWorkDay(undefined, d)) workingDays.push(new Date(d))
     }
 
     type BuAgg = {

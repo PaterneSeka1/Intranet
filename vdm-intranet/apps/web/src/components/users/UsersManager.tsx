@@ -39,6 +39,7 @@ type FormData = {
   scheduleGroupId: string
   individualExpectedArrivalTime: string
   individualExpectedDepartureTime: string
+  workingDays: number[]
 }
 
 const EMPTY_FORM: FormData = {
@@ -54,7 +55,18 @@ const EMPTY_FORM: FormData = {
   scheduleGroupId: '',
   individualExpectedArrivalTime: '',
   individualExpectedDepartureTime: '',
+  workingDays: [1, 2, 3, 4, 5],
 }
+
+const WEEKDAY_OPTIONS: { label: string; value: number }[] = [
+  { label: 'Lun', value: 1 },
+  { label: 'Mar', value: 2 },
+  { label: 'Mer', value: 3 },
+  { label: 'Jeu', value: 4 },
+  { label: 'Ven', value: 5 },
+  { label: 'Sam', value: 6 },
+  { label: 'Dim', value: 0 },
+]
 
 const ROLE_BADGE: Record<Role, string> = {
   CTO_ADMIN: 'bg-red-100 text-red-700',
@@ -143,6 +155,15 @@ export function UsersManager({
     setForm((prev) => ({ ...prev, ...patch }))
   }
 
+  function toggleWorkingDay(day: number) {
+    setForm((prev) => ({
+      ...prev,
+      workingDays: prev.workingDays.includes(day)
+        ? prev.workingDays.filter((d) => d !== day)
+        : [...prev.workingDays, day].sort((a, b) => a - b),
+    }))
+  }
+
   const manageableRoles =
     currentUserRole === 'PDG'
       ? ALL_ROLES.filter((role) => !PROTECTED_ADMIN_ROLES.includes(role))
@@ -184,6 +205,7 @@ export function UsersManager({
       scheduleGroupId: u.scheduleGroupId ?? '',
       individualExpectedArrivalTime: u.individualExpectedArrivalTime ?? '',
       individualExpectedDepartureTime: u.individualExpectedDepartureTime ?? '',
+      workingDays: u.workingDays ?? [1, 2, 3, 4, 5],
     })
     setError('')
     setShowForm(true)
@@ -214,6 +236,7 @@ export function UsersManager({
         scheduleGroupId: form.scheduleGroupId || null,
         individualExpectedArrivalTime: form.individualExpectedArrivalTime || null,
         individualExpectedDepartureTime: form.individualExpectedDepartureTime || null,
+        workingDays: form.workingDays,
       }
       if (!editing) {
         payload.username = form.username
@@ -637,6 +660,37 @@ export function UsersManager({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Jours de travail récurrents */}
+          <div className="space-y-3">
+            <SectionHeader icon="📅" title="Jours de travail récurrents" />
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAY_OPTIONS.map((wd) => {
+                const active = form.workingDays.includes(wd.value)
+                return (
+                  <button
+                    key={wd.value}
+                    type="button"
+                    onClick={() => toggleWorkingDay(wd.value)}
+                    className={[
+                      'w-12 py-2 rounded-xl text-xs font-bold border transition-colors',
+                      active
+                        ? 'border-[#F28C38] bg-[#F28C38]/10 text-[#F28C38]'
+                        : 'border-gray-200 text-gray-400 hover:border-gray-300',
+                    ].join(' ')}
+                  >
+                    {wd.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Jours travaillés chaque semaine par défaut — un jour non coché devient « Repos » et
+              n&apos;est plus compté absent. Les exceptions ponctuelles (rotation, mois
+              particulier…) se gèrent depuis Emploi du temps. Tout décocher si le planning de cet
+              employé est entièrement défini par mandats.
+            </p>
           </div>
 
           {error && (

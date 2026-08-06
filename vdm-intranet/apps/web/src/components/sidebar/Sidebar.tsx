@@ -15,6 +15,7 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
     { label: 'Utilisateurs', href: '/utilisateurs', icon: '👥' },
     { label: 'Présences', href: '/presences', icon: '📅' },
+    { label: 'Emploi du temps', href: '/presences/planning', icon: '🗓️' },
     { label: 'Onglets', href: '/onglets', icon: '📑' },
     { label: 'Annonces', href: '/annonces', icon: '📢' },
     { label: 'Pilotage', href: '/pilotage', icon: '📊' },
@@ -28,6 +29,7 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: 'Onglets', href: '/onglets', icon: '📑' },
     { label: 'Pilotage', href: '/pilotage', icon: '📊' },
     { label: 'Présences', href: '/presences', icon: '📅' },
+    { label: 'Emploi du temps', href: '/presences/planning', icon: '🗓️' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
   ],
   DAF: [
@@ -36,12 +38,14 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: 'Onglets DAF', href: '/onglets', icon: '📑' },
     { label: 'Pilotage & rapports', href: '/pilotage#rapports', icon: '📊' },
     { label: 'Présences', href: '/presences', icon: '📅' },
+    { label: 'Emploi du temps BU', href: '/presences/planning', icon: '🗓️' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
   ],
   RESPONSABLE_BU: [
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
     { label: 'Utilisateurs BU', href: '/utilisateurs', icon: '👥' },
     { label: 'Présences BU', href: '/presences', icon: '📅' },
+    { label: 'Emploi du temps BU', href: '/presences/planning', icon: '🗓️' },
     { label: 'Onglets BU', href: '/onglets', icon: '📑' },
     { label: 'Pilotage BU', href: '/pilotage', icon: '📊' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
@@ -50,6 +54,7 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: 'Accueil', href: '/accueil', icon: '🏠' },
     { label: 'Utilisateurs Pôle', href: '/utilisateurs', icon: '👥' },
     { label: 'Présences Pôle', href: '/presences', icon: '📅' },
+    { label: 'Emploi du temps Pôle', href: '/presences/planning', icon: '🗓️' },
     { label: 'Pilotage Pôle', href: '/pilotage', icon: '📊' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
   ],
@@ -115,24 +120,33 @@ export function Sidebar({
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {items.map((item) => {
-          const hrefPath = item.href.split('#')[0]
-          const active = pathname === hrefPath || pathname.startsWith(hrefPath + '/')
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              style={active ? { background: 'var(--vdm-sidebar-active)' } : undefined}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                active ? 'vdm-sb-text font-semibold' : 'vdm-sb-link vdm-sb-text-dim'
-              }`}
-            >
-              <span className="text-base">{item.icon}</span>
-              {item.label}
-            </Link>
-          )
-        })}
+        {/* Un seul item actif à la fois : le chemin le plus spécifique gagne (ex: "Emploi du
+            temps" /presences/planning ne doit pas aussi allumer "Présences" /presences). */}
+        {(() => {
+          const matches = items
+            .map((item) => item.href.split('#')[0])
+            .filter((hrefPath) => pathname === hrefPath || pathname.startsWith(hrefPath + '/'))
+          const activeHrefPath = matches.sort((a, b) => b.length - a.length)[0]
+
+          return items.map((item) => {
+            const hrefPath = item.href.split('#')[0]
+            const active = hrefPath === activeHrefPath
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                style={active ? { background: 'var(--vdm-sidebar-active)' } : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                  active ? 'vdm-sb-text font-semibold' : 'vdm-sb-link vdm-sb-text-dim'
+                }`}
+              >
+                <span className="text-base">{item.icon}</span>
+                {item.label}
+              </Link>
+            )
+          })
+        })()}
       </nav>
 
       {/* User + profil + logout */}

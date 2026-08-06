@@ -6,6 +6,11 @@ export type Summary = {
   present: number
   late: number
   onLeave: number
+  // Non comptés dans `absent` : pas le jour de travail de l'employé (week-end/férié sans mandat,
+  // ou aucun planning défini) pour `dayOff`, heure d'arrivée attendue pas encore dépassée pour
+  // `pending`.
+  dayOff: number
+  pending: number
   absent: number
   presenceRate: number
   mandatesToday: number
@@ -19,6 +24,8 @@ export type PresenceByBu = {
   present: number
   late: number
   onLeave: number
+  dayOff: number
+  pending: number
   absent: number
 }
 

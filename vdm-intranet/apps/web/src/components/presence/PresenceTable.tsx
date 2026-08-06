@@ -13,6 +13,8 @@ const STATUS_BADGE: Record<string, string> = {
   LATE: 'bg-orange-100 text-orange-700',
   ABSENT: 'bg-gray-100 text-gray-400',
   EN_CONGE: 'bg-blue-100 text-blue-700',
+  REPOS: 'bg-indigo-50 text-indigo-500',
+  EN_ATTENTE: 'bg-amber-50 text-amber-600',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -20,6 +22,8 @@ const STATUS_LABEL: Record<string, string> = {
   LATE: 'En retard',
   ABSENT: 'Absent',
   EN_CONGE: 'En congé',
+  REPOS: 'Repos',
+  EN_ATTENTE: 'En attente',
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -47,10 +51,11 @@ interface Props {
   rows: PresenceRow[]
   canMandate: boolean
   currentUserId: string
+  currentUserRole?: string
   date?: string
 }
 
-export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) {
+export function PresenceTable({ rows, canMandate, currentUserId, currentUserRole, date }: Props) {
   const router = useRouter()
   const [mandateForm, setMandateForm] = useState<MandateForm | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -295,17 +300,21 @@ export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) 
         defaultSort={{ key: 'status', dir: 'asc' }}
         actions={
           canMandate
-            ? (r) => (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openMandate(r)
-                  }}
-                  className="text-xs text-gray-500 hover:text-[#F28C38] border border-gray-200 hover:border-[#F28C38] px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap"
-                >
-                  Mandater
-                </button>
-              )
+            ? (r) => {
+                // Le CTO_ADMIN ne peut jamais gérer l'emploi du temps du PDG — seul le PDG le peut.
+                if (currentUserRole === 'CTO_ADMIN' && r.user.role === 'PDG') return null
+                return (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openMandate(r)
+                    }}
+                    className="text-xs text-gray-500 hover:text-[#F28C38] border border-gray-200 hover:border-[#F28C38] px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    Mandater
+                  </button>
+                )
+              }
             : undefined
         }
       />

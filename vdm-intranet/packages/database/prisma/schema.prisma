@@ -136,6 +136,10 @@ model User {
   scheduleGroupId                 String?
   individualExpectedArrivalTime   String?
   individualExpectedDepartureTime String?
+  // Motif hebdomadaire récurrent (convention Date.getUTCDay() : 0=Dimanche…6=Samedi). Un tableau
+  // vide est valide : signifie que le planning de l'employé est entièrement défini par mandats
+  // (ex: rotation Pôle TV/Radio, sans jour fixe).
+  workingDays                     Int[]     @default([1, 2, 3, 4, 5])
   isActive                        Boolean   @default(true)
   mustChangePassword              Boolean   @default(false)
   failedLoginAttempts             Int       @default(0)
@@ -229,7 +233,7 @@ model ConnectionLog {
   isFirstConnectionOfDay Boolean           @default(false)
   createdAt              DateTime          @default(now())
 
-  user            User        @relation(fields: [userId], references: [id])
+  user             User       @relation(fields: [userId], references: [id])
   sourcedPresences Presence[] @relation("PresenceSourceConnectionLog")
 
   @@index([userId, date, type])
@@ -241,14 +245,16 @@ model ConnectionLog {
 // ============================================================
 
 model DailyMandate {
-  id                  String   @id @default(cuid())
-  userId              String
-  date                DateTime @db.Date
-  expectedArrivalTime String
-  reason              String?
-  createdById         String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  userId                String
+  date                  DateTime @db.Date
+  expectedArrivalTime   String
+  expectedDepartureTime String? // Heure de départ dérogatoire pour ce jour (ex: rotation nuit/week-end)
+  isNightShift          Boolean? // Override explicite du flag nuit du groupe pour ce jour (null = hérite du groupe)
+  reason                String?
+  createdById           String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   user      User @relation("MandateSubject", fields: [userId], references: [id])
   createdBy User @relation("MandateCreator", fields: [createdById], references: [id])

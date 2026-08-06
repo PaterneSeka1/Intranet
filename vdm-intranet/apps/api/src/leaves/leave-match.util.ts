@@ -6,7 +6,8 @@ export type MatchableUser = { username: string; email?: string | null }
 /// sur le login (username) Intranet ; l'email sert de repli si le matricule ne matche pas.
 export function matchLeaveToUser(leave: ActiveLeave, user: MatchableUser): boolean {
   if (leave.matricule && leave.matricule.toLowerCase() === user.username.toLowerCase()) return true
-  if (leave.email && user.email && leave.email.toLowerCase() === user.email.toLowerCase()) return true
+  if (leave.email && user.email && leave.email.toLowerCase() === user.email.toLowerCase())
+    return true
   return false
 }
 

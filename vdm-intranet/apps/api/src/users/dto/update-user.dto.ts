@@ -1,10 +1,15 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsEmail,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator'
 import { ApiPropertyOptional } from '@nestjs/swagger'
@@ -33,6 +38,19 @@ export class UpdateUserDto {
   @Matches(/^\d{2}:\d{2}$/)
   @IsOptional()
   individualExpectedDepartureTime?: string
+  @ApiPropertyOptional({
+    type: [Number],
+    example: [1, 2, 3, 4, 5],
+    description:
+      'Motif hebdomadaire récurrent (0=Dimanche…6=Samedi). Tableau vide = planning entièrement défini par mandats.',
+  })
+  @IsArray()
+  @IsOptional()
+  @ArrayMaxSize(7)
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  workingDays?: number[]
   @ApiPropertyOptional()
   @IsString()
   @MinLength(8)

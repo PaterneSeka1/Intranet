@@ -20,6 +20,7 @@ import { LoginLogDto } from './dto/login-log.dto'
 import { EndDayDto } from './dto/end-day.dto'
 import { Role } from '@prisma/client'
 import { CreateMandateDto } from './dto/create-mandate.dto'
+import { BulkCreateMandateDto } from './dto/bulk-create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
 import { CAN_MANAGE_MANDATES, CAN_MANAGE_SCHEDULE_GROUPS } from '../common/permissions'
@@ -116,14 +117,26 @@ export class PresenceController {
   // ----------------------------------------------------------------
 
   @Get('mandates')
-  getMandates(@CurrentUser() user: AuthUser, @Query('date') date?: string) {
-    return this.presenceService.getMandates(user, date)
+  getMandates(
+    @CurrentUser() user: AuthUser,
+    @Query('date') date?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('userId') userId?: string
+  ) {
+    return this.presenceService.getMandates(user, { date, from, to, userId })
   }
 
   @Post('mandates')
   createMandate(@CurrentUser() user: AuthUser, @Body() dto: CreateMandateDto) {
     if (!CAN_MANAGE_MANDATES.includes(user.role)) throw new ForbiddenException()
     return this.presenceService.createMandate(dto, user)
+  }
+
+  @Post('mandates/bulk')
+  bulkCreateMandates(@CurrentUser() user: AuthUser, @Body() dto: BulkCreateMandateDto) {
+    if (!CAN_MANAGE_MANDATES.includes(user.role)) throw new ForbiddenException()
+    return this.presenceService.bulkCreateMandates(dto, user)
   }
 
   @Delete('mandates/:id')

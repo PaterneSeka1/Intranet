@@ -25,7 +25,7 @@ export class PresenceScheduleService {
         scheduleGroup: { select: { expectedArrivalTime: true, isNightShift: true } },
         mandates: {
           where: { date },
-          select: { expectedArrivalTime: true },
+          select: { expectedArrivalTime: true, isNightShift: true },
           take: 1,
         },
       },
@@ -33,10 +33,12 @@ export class PresenceScheduleService {
     if (!user) return { time: null, source: 'none', isNightShift: false }
 
     if (user.mandates.length > 0) {
+      // `??` et non `||` : un mandat qui fixe isNightShift=false doit primer sur un groupe de nuit
+      // (ex: mandat "week-end" désactivant explicitement le mode nuit du groupe par défaut).
       return {
         time: user.mandates[0].expectedArrivalTime,
         source: 'mandate',
-        isNightShift: user.scheduleGroup?.isNightShift ?? false,
+        isNightShift: user.mandates[0].isNightShift ?? user.scheduleGroup?.isNightShift ?? false,
       }
     }
 
@@ -61,9 +63,25 @@ export class PresenceScheduleService {
       select: {
         individualExpectedDepartureTime: true,
         scheduleGroup: { select: { expectedDepartureTime: true, isNightShift: true } },
+        mandates: {
+          where: { date },
+          select: { expectedDepartureTime: true, isNightShift: true },
+          take: 1,
+        },
       },
     })
     if (!user) return { time: null, source: 'none', isNightShift: false }
+
+    // Un mandat sans heure de départ (créé via le formulaire simple, arrivée seule) ne doit pas
+    // bloquer la résolution : on retombe sur le groupe/individuel comme si aucun mandat n'existait.
+    const mandate = user.mandates[0]
+    if (mandate?.expectedDepartureTime) {
+      return {
+        time: mandate.expectedDepartureTime,
+        source: 'mandate',
+        isNightShift: mandate.isNightShift ?? user.scheduleGroup?.isNightShift ?? false,
+      }
+    }
 
     if (user.scheduleGroup?.expectedDepartureTime) {
       return {
@@ -117,6 +135,16 @@ export class PresenceScheduleService {
       status: delay > tolerance ? 'LATE' : 'PRESENT',
       delayMinutes: delay > 0 ? delay : null,
     }
+  }
+
+  /**
+   * Vrai uniquement si l'heure attendue + tolérance est déjà dépassée par rapport à `now` — seul
+   * moment où une absence est réelle. Avant ce seuil, l'employé n'a simplement "pas encore" pointé
+   * (ex: heure attendue 09:00, il est 08:40 → pas overdue, ne doit jamais être affiché "Absent").
+   */
+  isArrivalOverdue(expectedTime: string, now: Date, isNightShift = false): boolean {
+    const tolerance = parseInt(this.config.get('PRESENCE_LATE_TOLERANCE_MINUTES') ?? '0', 10)
+    return this.calculateDelayMinutes(expectedTime, now, isNightShift) > tolerance
   }
 
   // Écart signé par rapport à l'heure de départ attendue : positif = parti plus tard, négatif = parti plus tôt.

@@ -72,7 +72,12 @@ const ACTION_LABELS: Record<string, string> = {
   SCHEDULE_GROUP_DELETED: 'Groupe horaire supprimé',
 }
 
-const PRESENCE_COLORS = { present: '#22c55e', late: '#F28C38', onLeave: '#3b82f6', absent: '#e5e7eb' }
+const PRESENCE_COLORS = {
+  present: '#22c55e',
+  late: '#F28C38',
+  onLeave: '#3b82f6',
+  absent: '#e5e7eb',
+}
 const PIE_COLORS = [
   '#F28C38',
   '#22c55e',
@@ -336,7 +341,7 @@ export function PilotageClient({ role }: Props) {
 
       {/* ── KPIs ── */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
           <KpiCard
             label="Employés actifs"
             value={summary.totalActive}
@@ -360,6 +365,12 @@ export function PilotageClient({ role }: Props) {
             value={summary.onLeave}
             accentClass="bg-blue-400"
             valueClass="text-blue-600"
+          />
+          <KpiCard
+            label="Repos / en attente"
+            value={summary.dayOff + summary.pending}
+            accentClass="bg-indigo-300"
+            valueClass="text-indigo-500"
           />
           <KpiCard
             label="Absents"

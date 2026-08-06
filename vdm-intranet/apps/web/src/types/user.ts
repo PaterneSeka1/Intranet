@@ -39,6 +39,7 @@ export interface User {
   scheduleGroupId?: string | null
   individualExpectedArrivalTime?: string | null
   individualExpectedDepartureTime?: string | null
+  workingDays?: number[]
 }
 
 export const ROLE_LABELS: Record<Role, string> = {

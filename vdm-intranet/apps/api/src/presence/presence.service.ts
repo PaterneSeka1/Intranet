@@ -5,11 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { PresenceScheduleService } from './presence.schedule.service'
+import { PresenceScheduleService, type ScheduleSource } from './presence.schedule.service'
+import { PublicHolidaysService } from '../public-holidays/public-holidays.service'
 import { FirstLoginDto } from './dto/first-login.dto'
 import { LoginLogDto } from './dto/login-log.dto'
 import { EndDayDto } from './dto/end-day.dto'
 import { CreateMandateDto } from './dto/create-mandate.dto'
+import { BulkCreateMandateDto } from './dto/bulk-create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
 import { NotificationType, Role } from '@prisma/client'
@@ -21,6 +23,7 @@ import {
 import { NotificationsService } from '../notifications/notifications.service'
 import { LeaveSyncService, type ActiveLeave } from '../leaves/leave-sync.service'
 import { matchLeaveToUser, leaveTypeLabel } from '../leaves/leave-match.util'
+import { isRecurringWorkDay } from '../common/working-days.util'
 
 type Requester = {
   id: string
@@ -43,6 +46,7 @@ const USER_SUMMARY = {
   scheduleGroupId: true,
   individualExpectedArrivalTime: true,
   individualExpectedDepartureTime: true,
+  workingDays: true,
   businessUnit: { select: { id: true, name: true, code: true } },
   pole: { select: { id: true, name: true, code: true } },
   scheduleGroup: {
@@ -68,6 +72,11 @@ function buildMapsUrl(lat?: number | null, lng?: number | null): string | null {
 
 type LeaveInfo = { typeLabel: string; startDate: string; endDate: string } | null
 
+// Statuts calculés à la volée, jamais persistés en DB (même principe que EN_CONGE) :
+// REPOS = pas le jour de travail de l'employé (week-end/férié sans mandat, ou aucun planning
+// défini) ; EN_ATTENTE = jour de travail mais heure attendue pas encore dépassée.
+type SyntheticStatus = 'EN_CONGE' | 'REPOS' | 'EN_ATTENTE' | 'ABSENT'
+
 type GeolocatedPresence = {
   latitude: number | null
   longitude: number | null
@@ -87,7 +96,8 @@ export class PresenceService {
     private readonly prisma: PrismaService,
     private readonly schedule: PresenceScheduleService,
     private readonly notifications: NotificationsService,
-    private readonly leaveSync: LeaveSyncService
+    private readonly leaveSync: LeaveSyncService,
+    private readonly publicHolidays: PublicHolidaysService
   ) {}
 
   // ----------------------------------------------------------------
@@ -96,6 +106,7 @@ export class PresenceService {
 
   async getTodayPresence(userId: string, role?: Role) {
     const today = getToday()
+    const now = new Date()
     const presence = await this.prisma.presence.findUnique({
       where: { userId_date: { userId, date: today } },
     })
@@ -109,19 +120,33 @@ export class PresenceService {
     if (presence) this.redactPresenceForRole(presence, role)
 
     let onLeave: LeaveInfo = null
+    let computedStatus: SyntheticStatus | null = null
     if (!presence) {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { username: true, email: true },
+        select: { username: true, email: true, workingDays: true },
       })
       if (user) {
         const activeLeaves = await this.leaveSync.getActiveLeaves(today)
         const leave = activeLeaves.find((l) => matchLeaveToUser(l, user))
         onLeave = this.toLeaveInfo(leave)
       }
+      const isNonWorkingDefault = await this.isNonWorkingDay(today, user?.workingDays)
+      computedStatus = this.computeAbsenceStatus({
+        scheduleSource,
+        isNonWorkingDefault,
+        onLeave: !!onLeave,
+        now,
+      })
     }
 
-    return { presence, scheduleSource, date: today, onLeave }
+    return {
+      presence,
+      scheduleSource,
+      date: today,
+      onLeave,
+      status: presence?.status ?? computedStatus,
+    }
   }
 
   // ----------------------------------------------------------------
@@ -138,8 +163,14 @@ export class PresenceService {
       today = getToday()
     }
     const scope = this.buildUserScope(requester)
+    const realToday = getToday()
+    const now = new Date()
+    // La date consultée peut être passée/future (navigation par date sur /presences) : le calcul
+    // "pas encore arrivé" ne vaut que pour aujourd'hui, cf. computeAbsenceStatus/overdueOverride.
+    const isPastDate = today.getTime() < realToday.getTime()
+    const isFutureDate = today.getTime() > realToday.getTime()
 
-    const [users, presences, mandates, activeLeaves] = await Promise.all([
+    const [users, presences, mandates, holiday, activeLeaves] = await Promise.all([
       this.prisma.user.findMany({
         where: { isActive: true, ...scope },
         select: USER_SUMMARY,
@@ -151,6 +182,7 @@ export class PresenceService {
       this.prisma.dailyMandate.findMany({
         where: { date: today, user: { isActive: true, ...scope } },
       }),
+      this.publicHolidays.isHoliday(today),
       this.leaveSync.getActiveLeaves(today),
     ])
 
@@ -163,25 +195,39 @@ export class PresenceService {
       const presence = presenceMap.get(user.id) ?? null
       const mandate = mandateMap.get(user.id) ?? null
       const leave = presence ? undefined : activeLeaves.find((l) => matchLeaveToUser(l, user))
+      const isNonWorkingDefault = !isRecurringWorkDay(user.workingDays, today) || holiday.isHoliday
 
       // Heure attendue : mandat > groupe > individuel
       let expectedArrivalTime: string | null = null
-      let scheduleSource = 'none'
+      let scheduleSource: ScheduleSource['source'] = 'none'
+      let isNightShift = false
       if (mandate) {
         expectedArrivalTime = mandate.expectedArrivalTime
         scheduleSource = 'mandate'
+        isNightShift = mandate.isNightShift ?? user.scheduleGroup?.isNightShift ?? false
       } else if (user.scheduleGroup) {
         expectedArrivalTime = user.scheduleGroup.expectedArrivalTime
         scheduleSource = 'group'
+        isNightShift = user.scheduleGroup.isNightShift
       } else if (user.individualExpectedArrivalTime) {
         expectedArrivalTime = user.individualExpectedArrivalTime
         scheduleSource = 'individual'
       }
 
+      const status =
+        presence?.status ??
+        this.computeAbsenceStatus({
+          scheduleSource: { source: scheduleSource, time: expectedArrivalTime, isNightShift },
+          isNonWorkingDefault,
+          onLeave: !!leave,
+          now,
+          overdueOverride: isPastDate ? true : isFutureDate ? false : undefined,
+        })
+
       return {
         user,
         presence,
-        status: presence?.status ?? (leave ? 'EN_CONGE' : 'ABSENT'),
+        status,
         leave: this.toLeaveInfo(leave),
         expectedArrivalTime: presence?.expectedArrivalTime ?? expectedArrivalTime,
         scheduleSource,
@@ -578,8 +624,18 @@ export class PresenceService {
   // Mandats
   // ----------------------------------------------------------------
 
-  async getMandates(requester: Requester, dateStr?: string) {
+  async getMandates(
+    requester: Requester,
+    params: { date?: string; from?: string; to?: string; userId?: string } = {}
+  ) {
+    const { date: dateStr, from, to, userId } = params
     const scope = this.buildUserScope(requester)
+    // Le filtre userId s'applique en AND du scope (jamais en remplacement) : un responsable ne
+    // doit jamais pouvoir élargir son périmètre de lecture en passant l'id d'un tiers en query.
+    const userWhere: Record<string, unknown> = userId
+      ? { isActive: true, AND: [scope, { id: userId }] }
+      : { isActive: true, ...scope }
+
     const include = {
       user: {
         select: {
@@ -597,9 +653,25 @@ export class PresenceService {
       const [y, m, d] = dateStr.split('-').map(Number)
       const exactDate = new Date(Date.UTC(y, m - 1, d))
       return this.prisma.dailyMandate.findMany({
-        where: { user: { isActive: true, ...scope }, date: exactDate },
+        where: { user: userWhere, date: exactDate },
         include,
         orderBy: [{ createdAt: 'desc' }],
+      })
+    }
+
+    if (from && to && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+      const [fy, fm, fd] = from.split('-').map(Number)
+      const [ty, tm, td] = to.split('-').map(Number)
+      return this.prisma.dailyMandate.findMany({
+        where: {
+          user: userWhere,
+          date: {
+            gte: new Date(Date.UTC(fy, fm - 1, fd)),
+            lte: new Date(Date.UTC(ty, tm - 1, td)),
+          },
+        },
+        include,
+        orderBy: [{ date: 'asc' }],
       })
     }
 
@@ -607,7 +679,7 @@ export class PresenceService {
     since.setUTCDate(since.getUTCDate() - 30)
     since.setUTCHours(0, 0, 0, 0)
     return this.prisma.dailyMandate.findMany({
-      where: { user: { isActive: true, ...scope }, date: { gte: since } },
+      where: { user: userWhere, date: { gte: since } },
       include,
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
       take: 100,
@@ -617,7 +689,7 @@ export class PresenceService {
   async createMandate(dto: CreateMandateDto, requester: Requester) {
     const target = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-      select: { id: true, businessUnitId: true, poleId: true, isActive: true },
+      select: { id: true, role: true, businessUnitId: true, poleId: true, isActive: true },
     })
     if (!target || !target.isActive)
       throw new NotFoundException('Utilisateur introuvable ou inactif')
@@ -630,11 +702,18 @@ export class PresenceService {
 
     const mandate = await this.prisma.dailyMandate.upsert({
       where: { userId_date: { userId: dto.userId, date } },
-      update: { expectedArrivalTime: dto.expectedArrivalTime, reason: dto.reason },
+      update: {
+        expectedArrivalTime: dto.expectedArrivalTime,
+        expectedDepartureTime: dto.expectedDepartureTime,
+        isNightShift: dto.isNightShift,
+        reason: dto.reason,
+      },
       create: {
         userId: dto.userId,
         date,
         expectedArrivalTime: dto.expectedArrivalTime,
+        expectedDepartureTime: dto.expectedDepartureTime,
+        isNightShift: dto.isNightShift,
         reason: dto.reason,
         createdById: requester.id,
       },
@@ -660,6 +739,74 @@ export class PresenceService {
     return mandate
   }
 
+  /**
+   * Crée/met à jour en masse les mandats d'UN employé sur plusieurs dates (ex: peindre un mois
+   * entier de rotation jour/nuit/week-end depuis le calendrier de planification). Chaque jour est
+   * upserté sur [userId, date] : rejouer ce payload sur un mois déjà partiellement rempli remplace
+   * les mandats existants aux dates concernées, sans erreur de contrainte unique. Le tout est posé
+   * dans une seule transaction SQL : soit tous les jours sont enregistrés, soit aucun.
+   */
+  async bulkCreateMandates(dto: BulkCreateMandateDto, requester: Requester) {
+    const target = await this.prisma.user.findUnique({
+      where: { id: dto.userId },
+      select: { id: true, role: true, businessUnitId: true, poleId: true, isActive: true },
+    })
+    if (!target || !target.isActive)
+      throw new NotFoundException('Utilisateur introuvable ou inactif')
+
+    if (!this.canMandateUser(requester, target)) {
+      throw new ForbiddenException('Vous ne pouvez pas mandater cet utilisateur')
+    }
+
+    const dates = dto.days.map((d) => d.date)
+    if (new Set(dates).size !== dates.length) {
+      throw new BadRequestException('Le payload contient des dates en double.')
+    }
+
+    const mandates = await this.prisma.$transaction(
+      dto.days.map((day) => {
+        const date = new Date(day.date + 'T00:00:00.000Z')
+        return this.prisma.dailyMandate.upsert({
+          where: { userId_date: { userId: dto.userId, date } },
+          update: {
+            expectedArrivalTime: day.expectedArrivalTime,
+            expectedDepartureTime: day.expectedDepartureTime,
+            isNightShift: day.isNightShift,
+            reason: day.reason,
+          },
+          create: {
+            userId: dto.userId,
+            date,
+            expectedArrivalTime: day.expectedArrivalTime,
+            expectedDepartureTime: day.expectedDepartureTime,
+            isNightShift: day.isNightShift,
+            reason: day.reason,
+            createdById: requester.id,
+          },
+        })
+      })
+    )
+
+    await this.prisma.activityLog.create({
+      data: {
+        userId: requester.id,
+        action: 'CREATE',
+        entity: 'DailyMandate',
+        entityId: target.id,
+        details: { bulk: true, count: mandates.length, dates } as object,
+      },
+    })
+
+    await this.notifications.notifyUser(target.id, {
+      type: NotificationType.MANDATE_ASSIGNED,
+      title: 'Planning mensuel mis à jour',
+      body: `${mandates.length} jour(s) planifié(s) ou modifié(s).`,
+      link: '/presences',
+    })
+
+    return mandates
+  }
+
   async deleteMandate(id: string, requester: Requester) {
     const mandate = await this.prisma.dailyMandate.findUnique({
       where: { id },
@@ -667,17 +814,17 @@ export class PresenceService {
         id: true,
         userId: true,
         createdById: true,
-        user: { select: { businessUnitId: true, poleId: true } },
+        user: { select: { role: true, businessUnitId: true, poleId: true } },
       },
     })
     if (!mandate) throw new NotFoundException('Mandat introuvable')
 
+    // Le repli « créateur du mandat » ne doit jamais permettre de contourner la règle CTO/PDG
+    // (ex. mandat créé avant l'introduction de cette règle) : la restriction est donc appliquée en
+    // tête, avant même de considérer `createdById`.
     const canDelete =
-      CAN_VIEW_PRESENCE_GLOBAL.includes(requester.role) ||
-      mandate.createdById === requester.id ||
-      (CAN_VIEW_PRESENCE_BU_SCOPE.includes(requester.role) &&
-        mandate.user.businessUnitId === requester.businessUnitId) ||
-      (requester.role === Role.RESPONSABLE_POLE && mandate.user.poleId === requester.poleId)
+      !(requester.role === Role.CTO_ADMIN && mandate.user.role === Role.PDG) &&
+      (this.canMandateUser(requester, mandate.user) || mandate.createdById === requester.id)
 
     if (!canDelete) throw new ForbiddenException('Vous ne pouvez pas supprimer ce mandat')
 
@@ -746,8 +893,12 @@ export class PresenceService {
 
   private canMandateUser(
     requester: Requester,
-    target: { businessUnitId?: string | null; poleId?: string | null }
+    target: { role: Role; businessUnitId?: string | null; poleId?: string | null }
   ): boolean {
+    // Règle absolue : le CTO_ADMIN ne peut jamais gérer l'emploi du temps du PDG — seul le PDG
+    // lui-même le peut. Vérifiée avant toute autre règle pour ne jamais être contournée (ex. par
+    // le repli createdById dans deleteMandate).
+    if (requester.role === Role.CTO_ADMIN && target.role === Role.PDG) return false
     if (CAN_VIEW_PRESENCE_GLOBAL.includes(requester.role)) return true
     if (CAN_VIEW_PRESENCE_BU_SCOPE.includes(requester.role) && requester.businessUnitId) {
       return target.businessUnitId === requester.businessUnitId
@@ -756,6 +907,45 @@ export class PresenceService {
       return target.poleId === requester.poleId
     }
     return false
+  }
+
+  /**
+   * Statut "aujourd'hui" quand aucune Presence n'a été enregistrée. Un employé n'est jamais
+   * ABSENT tant que (1) c'est réellement son jour de travail ET (2) son heure d'arrivée attendue
+   * (+ tolérance) est dépassée. `overdueOverride` permet à l'appelant de trancher (1) directement
+   * pour une date passée (journée forcément terminée → true) ou future (jamais encore due → false)
+   * sans reproduire le calcul horaire, qui n'a de sens que pour la date du jour réel.
+   */
+  private computeAbsenceStatus(params: {
+    scheduleSource: Pick<ScheduleSource, 'source' | 'time' | 'isNightShift'>
+    isNonWorkingDefault: boolean
+    onLeave: boolean
+    now: Date
+    overdueOverride?: boolean
+  }): SyntheticStatus {
+    const { scheduleSource, isNonWorkingDefault, onLeave, now, overdueOverride } = params
+    if (onLeave) return 'EN_CONGE'
+
+    // Un mandat est une affectation explicite : il prime toujours sur le week-end/férié par défaut.
+    const isWorkDay =
+      scheduleSource.source === 'mandate' ||
+      (scheduleSource.source !== 'none' && !isNonWorkingDefault)
+    if (!isWorkDay) return 'REPOS'
+
+    const overdue =
+      overdueOverride !== undefined
+        ? overdueOverride
+        : scheduleSource.time
+          ? this.schedule.isArrivalOverdue(scheduleSource.time, now, scheduleSource.isNightShift)
+          : true
+
+    return overdue ? 'ABSENT' : 'EN_ATTENTE'
+  }
+
+  private async isNonWorkingDay(date: Date, workingDays?: number[] | null): Promise<boolean> {
+    if (!isRecurringWorkDay(workingDays, date)) return true
+    const { isHoliday } = await this.publicHolidays.isHoliday(date)
+    return isHoliday
   }
 
   private toLeaveInfo(leave?: ActiveLeave): LeaveInfo {
