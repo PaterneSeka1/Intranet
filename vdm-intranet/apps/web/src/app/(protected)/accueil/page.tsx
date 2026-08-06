@@ -2,9 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab } from '@/lib/tabs'
-import type { OnLeaveTodayResult } from '@/lib/leaves'
 import { EndDayButton } from '@/components/presence/EndDayButton'
-import { EmployeesOnLeaveCard } from '@/components/presence/EmployeesOnLeaveCard'
 import { ACCUEIL_ONLY_ROLES, ROLE_LABELS } from '@/types/user'
 
 const STATUS_STYLE: Record<string, string> = {
@@ -73,12 +71,11 @@ export default async function AccueilPage() {
 
   const showGeolocation = !ACCUEIL_ONLY_ROLES.includes(user.role)
 
-  const [presenceData, allTabs, onLeaveData] = await Promise.all([
+  const [presenceData, allTabs] = await Promise.all([
     serverFetch<TodayPresenceResult>('/presence/today'),
     serverFetch<Tab[]>(
       user.businessUnit ? `/tabs?businessUnitId=${user.businessUnit.id}` : '/tabs'
     ),
-    serverFetch<OnLeaveTodayResult>('/leaves/on-leave/today'),
   ])
 
   const presence = presenceData?.presence ?? null
@@ -220,9 +217,6 @@ export default async function AccueilPage() {
           </div>
         )}
       </div>
-
-      {/* Employés en congé — visible par tous */}
-      <EmployeesOnLeaveCard employees={onLeaveData?.employees ?? []} />
 
       {/* Onglets de la BU */}
       <section>

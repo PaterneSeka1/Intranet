@@ -735,3 +735,26 @@ Demande : un employé en congé approuvé ne doit plus être marqué "Absent" ; 
 - `npm run build:api` : OK.
 - `npm run build:web` : OK.
 - Contexte détaillé et contrat d'intégration consignés en mémoire (`reference_conge_app.md`) pour les futures sessions.
+
+//SESSION TERMINEE
+
+## Ajustement — Widget "Employés en congé" déplacé de l'accueil vers un widget flottant global — 2026-08-06
+
+Demande : le widget "Employés en congé" (ajouté le 2026-08-04, sur `/accueil` uniquement) ne doit plus être sur la page accueil. Clarifié avec l'utilisateur (choix explicite parmi plusieurs options proposées) : le transformer en widget flottant global — visible sur toutes les pages protégées, comme Annonces/Horloge/Calendrier/Météo — plutôt qu'une nouvelle page dédiée ou un doublon en plus de la carte existante.
+
+- `[x]` [MODIFY] [accueil/page.tsx](<file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/app/(protected)/accueil/page.tsx>) — retrait de la carte `EmployeesOnLeaveCard` et du fetch `/leaves/on-leave/today` associé, devenus inutiles sur cette page
+- `[x]` [DELETE] [EmployeesOnLeaveCard.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/presence/EmployeesOnLeaveCard.tsx) — composant inline devenu orphelin, plus aucune référence dans le repo
+- `[x]` [MODIFY] [Widgets.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/widgets/Widgets.tsx) — nouveau widget flottant "Congés" (clé `leave`), même conventions que les widgets existants (toggle indépendant dans la barre de bascules, visibilité persistée en `localStorage`, style glassmorphism `CARD`) ; données récupérées côté client via `leavesApi.onLeaveToday()` (existant, non modifié), sans exposer le type de congé ni l'email (restriction déjà en place côté API, cf. session du 2026-08-04)
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK ; `npx prettier --write` puis `--check` sur les fichiers modifiés : OK
+- `[ ]` Vérification manuelle navigateur non effectuée — pas de contrôle visuel réel du rendu du nouveau widget flottant (même limite que la session du 2026-08-04)
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`
+
+### Audit ajustement widget congés — 2026-08-06
+
+- Le widget est désormais monté globalement via `Widgets.tsx` (rendu par `LiveAnnouncements`, monté dans les deux branches de `(protected)/layout.tsx`) — visible sur toutes les pages protégées, tous rôles, comme les autres widgets flottants ; la page accueil ne l'affiche plus.
+- Aucun changement backend ni base de données : réutilise `GET /leaves/on-leave/today` et `leavesApi.onLeaveToday()` tels quels.
+- `npx tsc --noEmit -p apps/web/tsconfig.json` : OK.
+- `npm run format` (Prettier) : OK — a reformaté `Widgets.tsx` après l'ajout du widget.
+- ESLint non exécutable dans cet environnement (`next lint` demande une configuration interactive absente du repo) — préexistant, sans rapport avec ce changement.
+
+//SESSION TERMINEE

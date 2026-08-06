@@ -173,6 +173,18 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Non appliqué à la base locale : la migration corrective n'a pas été exécutée (pas d'accès PostgreSQL dans cet environnement) ; certaines de ses instructions (renommage/ajout de colonnes déjà présentes via `db push`) échoueraient si rejouées telles quelles sur la base actuelle — à adapter avant tout `migrate deploy` réel, ou à réserver à une base neuve.
 - Validation : `npx tsc --noEmit` (api/web/database), `npm run build:api`, `npm run build:web` (après nettoyage `.next`), `npx prisma validate`, `npm run db:generate`, `npm run format` : OK.
 
+### Ajustement — Widget "Employés en congé" déplacé de l'accueil vers un widget flottant global (2026-08-06)
+
+- Demande : le widget "Employés en congé" (ajouté le 2026-08-04 sur `/accueil` uniquement) ne doit plus être sur la page accueil.
+- Clarifié avec l'utilisateur (choix explicite parmi plusieurs options) : le transformer en widget flottant global — visible sur toutes les pages protégées, comme Annonces/Horloge/Calendrier/Météo — plutôt qu'une nouvelle page dédiée ou un doublon.
+- `accueil/page.tsx` : retrait de la carte `EmployeesOnLeaveCard` et du fetch `/leaves/on-leave/today` associé, devenus inutiles sur cette page.
+- `EmployeesOnLeaveCard.tsx` supprimé (composant inline devenu orphelin, plus aucune référence dans le repo).
+- `Widgets.tsx` : nouveau widget flottant "Congés" (clé `leave`, toggle indépendant dans la barre de bascules, visibilité persistée en `localStorage` comme les autres), données récupérées côté client via `leavesApi.onLeaveToday()` (existant, non modifié) — aucun changement backend ni base de données, aucune exposition du type de congé ou de l'email (restriction déjà en place côté API depuis la session du 2026-08-04).
+- Le widget est monté globalement via `LiveAnnouncements` (rendu dans les deux branches de `(protected)/layout.tsx`), donc visible pour tous les rôles sur toutes les pages protégées, pas seulement l'accueil.
+- Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK, `npx prettier --write` puis `--check` sur `Widgets.tsx`/`accueil/page.tsx` OK.
+- **Non fait** : vérification visuelle réelle du rendu du nouveau widget flottant dans un navigateur (même limite que la session du 2026-08-04 — pas d'outil navigateur disponible dans cet environnement).
+- `TACHE.md` mis à jour avec le détail de cet ajustement.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
@@ -268,6 +280,7 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Validation 7 nouvelles fonctionnalités (2026-07-28) : `tsc --noEmit` après chaque chantier, `npm run format`, `npm run build:api`, `npm run build:web` (build final) : OK. `npm install puppeteer --workspace=apps/api` : OK (Chromium téléchargé avec succès, ~300 Mo, dans `~/.cache/puppeteer`).
 - Tests réels effectués en démarrant l'API en mode dev (`npm run dev:api`) avec des comptes seedés (mot de passe changé temporairement pour lever `mustChangePassword`, base reseedée après tests) : handshake Socket.IO `/notifications` (rejet non authentifié, réception temps réel confirmée), génération des 4 PDF, parité de permissions DAF CSV/PDF, scope de la recherche globale par rôle.
 - Audit complet & corrections (2026-08-03) : `npx tsc --noEmit -p apps/api/tsconfig.json`, `npx tsc --noEmit -p apps/web/tsconfig.json --incremental false`, `npx tsc --noEmit -p packages/database/tsconfig.json`, `npx prisma validate`, `npm run db:generate`, `npm run build:api`, `rm -rf apps/web/.next` puis `npm run build:web`, `npm run format` : OK. Pas d'accès PostgreSQL dans cet environnement : migration corrective, `db push` et `db:seed` non exécutés (à faire hors sandbox avant de considérer les correctifs base de données/seed comme appliqués).
+- Widget congés déplacé en widget flottant global (2026-08-06) : `npx tsc --noEmit -p apps/web/tsconfig.json`, `npx prettier --check` sur les fichiers modifiés : OK. ESLint non exécutable dans cet environnement (`next lint` demande une configuration interactive absente du repo — préexistant, sans rapport avec ce changement).
 
 ### Notes d'Environnement
 
@@ -317,3 +330,4 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
   - Modifier l'URL d'un onglet global existant vers une URL déjà utilisée par un autre onglet global, et vérifier qu'une erreur claire ("Cet URL existe déjà dans les onglets globaux.") est renvoyée au lieu d'une création silencieuse de doublon.
   - Provoquer un verrouillage de compte (5 échecs de connexion), puis faire réinitialiser son mot de passe par un CTO_ADMIN/PDG, et vérifier que le compte peut se reconnecter immédiatement (sans attendre l'expiration des 15 minutes de verrouillage).
   - Naviguer sur l'ensemble des pages protégées avec chaque rôle et vérifier qu'une session expirée redirige systématiquement vers `/login` (401), sans jamais le faire sur un refus applicatif (403) qui doit rester affiché sur place.
+  - Vérifier que le widget flottant "Congés" apparaît bien sur des pages autres que l'accueil (ex. `/presences`, `/pilotage`), qu'il liste correctement les employés en congé du jour, que son bouton de bascule fonctionne et persiste après rafraîchissement, et que la page accueil ne l'affiche plus.

@@ -3,6 +3,8 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import type { Announcement } from '@/lib/announcements'
 import { publicHolidaysApi, findHolidayForDate, type PublicHoliday } from '@/lib/public-holidays'
+import { leavesApi, type EmployeeOnLeave } from '@/lib/leaves'
+import { ROLE_LABELS } from '@/types/user'
 import { Modal } from '@/components/ui/Modal'
 
 type WeatherData = {
@@ -52,11 +54,12 @@ const MONTHS_SHORT = [
   'DÉC',
 ]
 
-const WIDGET_KEYS = ['announcements', 'clock', 'calendar', 'weather'] as const
+const WIDGET_KEYS = ['announcements', 'leave', 'clock', 'calendar', 'weather'] as const
 type WidgetKey = (typeof WIDGET_KEYS)[number]
 
 const WIDGET_LABELS: Record<WidgetKey, string> = {
   announcements: 'Annonces',
+  leave: 'Congés',
   clock: 'Horloge',
   calendar: 'Calendrier',
   weather: 'Météo',
@@ -64,6 +67,7 @@ const WIDGET_LABELS: Record<WidgetKey, string> = {
 
 const DEFAULT_WIDGET_VISIBILITY: Record<WidgetKey, boolean> = {
   announcements: true,
+  leave: true,
   clock: true,
   calendar: true,
   weather: true,
@@ -236,6 +240,60 @@ function AnnouncementWidget({ announcements }: { announcements: Announcement[] }
   )
 }
 
+function fmtLeaveDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+}
+
+function LeaveWidget({ employees }: { employees: EmployeeOnLeave[] }) {
+  return (
+    <div className={`${CARD} w-80 p-4 pointer-events-auto flex flex-col max-h-[min(60vh,26rem)]`}>
+      <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
+        <div>
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            Congés
+          </div>
+          <div className="text-sm font-semibold text-gray-900">
+            Employés en congé aujourd&apos;hui
+          </div>
+        </div>
+        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 shrink-0">
+          {employees.length}
+        </span>
+      </div>
+
+      {employees.length === 0 ? (
+        <div className="text-xs text-gray-400 py-2">Aucun employé en congé aujourd&apos;hui.</div>
+      ) : (
+        <div className="space-y-2.5 overflow-y-auto pr-1">
+          {employees.map((e) => (
+            <div
+              key={e.id}
+              className="flex items-center gap-2.5 border-t border-gray-100 pt-2.5 first:border-t-0 first:pt-0"
+            >
+              <span className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0">
+                {(e.fullName ?? e.username).charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-gray-800 truncate">
+                  {e.fullName ?? e.username}
+                </div>
+                <div className="text-[10px] text-gray-400 truncate">
+                  {ROLE_LABELS[e.role as keyof typeof ROLE_LABELS] ?? e.role}
+                  {e.businessUnit ? ` · ${e.businessUnit.name}` : ''}
+                </div>
+              </div>
+              <div className="text-[10px] text-blue-600 font-medium shrink-0 text-right">
+                {fmtLeaveDate(e.startDate)}–{fmtLeaveDate(e.endDate)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Isolated clock — only this component re-renders every second
 function ClockWidget() {
   const [time, setTime] = useState<Date | null>(null)
@@ -271,6 +329,7 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
   const [weatherError, setWeatherError] = useState(false)
   const [visible, setVisible] = useState<Record<WidgetKey, boolean>>(DEFAULT_WIDGET_VISIBILITY)
   const [holidays, setHolidays] = useState<PublicHoliday[]>([])
+  const [onLeave, setOnLeave] = useState<EmployeeOnLeave[]>([])
 
   useLayoutEffect(() => {
     try {
@@ -297,6 +356,15 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
       })
       .catch(() => {
         /* widget calendrier reste utilisable sans jours fériés */
+      })
+  }, [])
+
+  useEffect(() => {
+    leavesApi
+      .onLeaveToday()
+      .then((data) => setOnLeave(data?.employees ?? []))
+      .catch(() => {
+        /* widget congés reste masquable si l'appel échoue */
       })
   }, [])
 
@@ -369,6 +437,8 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
       </div>
 
       {visible.announcements && <AnnouncementWidget announcements={announcements} />}
+
+      {visible.leave && <LeaveWidget employees={onLeave} />}
 
       {/* ── Cartes widgets ── */}
       {timeWidgetsVisible && (
