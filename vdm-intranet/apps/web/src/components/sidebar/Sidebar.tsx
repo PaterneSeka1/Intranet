@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 import type { User, Role } from '@/types/user'
 import { LogoutOverlay } from '@/components/auth/LogoutOverlay'
 import { NotificationsBell } from '@/components/notifications/NotificationsBell'
-import { GlobalSearch } from '@/components/search/GlobalSearch'
 
 type MenuItem = { label: string; href: string; icon: string }
 
@@ -111,11 +110,6 @@ export function Sidebar({
             <NotificationsBell dark />
           </div>
         </div>
-      </div>
-
-      {/* Recherche globale (desktop) */}
-      <div className="px-3 pt-4">
-        <GlobalSearch dark />
       </div>
 
       {/* Nav */}

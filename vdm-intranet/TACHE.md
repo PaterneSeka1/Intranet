@@ -870,3 +870,17 @@ Demande : pouvoir marquer, à la création d'un employé (et modifiable ensuite)
 - `git diff --check` : OK.
 
 //SESSION TERMINEE
+
+## Ajustement — Retrait de la barre de recherche globale dans la Sidebar — 2026-08-06
+
+Demande : retirer complètement la barre de recherche de la Sidebar.
+
+- `[x]` [MODIFY] [Sidebar.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/sidebar/Sidebar.tsx) — suppression du bloc `<GlobalSearch dark />` (section "Recherche globale (desktop)") et de son import ; aucune autre modification.
+- `[x]` Validation — `npx tsc --noEmit -p apps/web/tsconfig.json` : OK.
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`.
+
+### Audit retrait barre de recherche Sidebar — 2026-08-06
+
+- Le composant `GlobalSearch` et le module backend `search` ne sont pas touchés : `GlobalSearch` reste monté dans `MobileSidebarToggle.tsx` (header mobile), seule l'occurrence desktop de la Sidebar est supprimée.
+- Changement purement suppressif sans impact fonctionnel côté API.
+- `npx tsc --noEmit -p apps/web/tsconfig.json` : OK.

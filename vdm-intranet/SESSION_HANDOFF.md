@@ -244,6 +244,14 @@ Tests end-to-end réels effectués (API démarrée en mode dev, comptes seedés,
 - Non fait : vérification visuelle réelle dans un navigateur (même limite que les sessions précédentes — pas d'outil navigateur disponible dans cet environnement).
 - `TACHE.md` mis à jour avec le détail complet de cette demande.
 
+### Ajustement — Retrait de la barre de recherche globale dans la Sidebar (2026-08-06)
+
+- Demande : retirer complètement la barre de recherche de la Sidebar.
+- `Sidebar.tsx` : suppression du bloc de rendu `<GlobalSearch dark />` (section "Recherche globale (desktop)") et de son import ; aucune autre modification.
+- Composant `GlobalSearch` et module backend `search` non touchés — `GlobalSearch` reste monté dans `MobileSidebarToggle` (header mobile), seule l'occurrence desktop de la Sidebar est supprimée.
+- Validation : `npx tsc --noEmit -p apps/web/tsconfig.json` OK.
+- `TACHE.md` mis à jour avec cet ajustement.
+
 ### Fonctionnalités Réalisées
 
 - **Sécurité login** :
