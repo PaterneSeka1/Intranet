@@ -819,12 +819,14 @@ export class PresenceService {
     })
     if (!mandate) throw new NotFoundException('Mandat introuvable')
 
-    // Le repli « créateur du mandat » ne doit jamais permettre de contourner la règle CTO/PDG
-    // (ex. mandat créé avant l'introduction de cette règle) : la restriction est donc appliquée en
-    // tête, avant même de considérer `createdById`.
+    // Le repli « créateur du mandat » ne doit jamais permettre de contourner la règle CTO/PDG ni
+    // la règle d'auto-mandat (ex. mandat créé avant l'introduction de ces règles) : les deux
+    // restrictions sont donc appliquées en tête, avant même de considérer `createdById`.
     const canDelete =
       !(requester.role === Role.CTO_ADMIN && mandate.user.role === Role.PDG) &&
-      (this.canMandateUser(requester, mandate.user) || mandate.createdById === requester.id)
+      !(requester.id === mandate.userId && requester.role !== Role.PDG) &&
+      (this.canMandateUser(requester, { ...mandate.user, id: mandate.userId }) ||
+        mandate.createdById === requester.id)
 
     if (!canDelete) throw new ForbiddenException('Vous ne pouvez pas supprimer ce mandat')
 
@@ -893,12 +895,19 @@ export class PresenceService {
 
   private canMandateUser(
     requester: Requester,
-    target: { role: Role; businessUnitId?: string | null; poleId?: string | null }
+    target: { id: string; role: Role; businessUnitId?: string | null; poleId?: string | null }
   ): boolean {
     // Règle absolue : le CTO_ADMIN ne peut jamais gérer l'emploi du temps du PDG — seul le PDG
     // lui-même le peut. Vérifiée avant toute autre règle pour ne jamais être contournée (ex. par
     // le repli createdById dans deleteMandate).
     if (requester.role === Role.CTO_ADMIN && target.role === Role.PDG) return false
+
+    // Un responsable (CTO_ADMIN, DAF, RESPONSABLE_BU, RESPONSABLE_POLE) ne doit jamais définir
+    // lui-même son propre planning — seul le PDG, au sommet de la hiérarchie et sans supérieur
+    // pour le mandater, peut se mandater lui-même. Vérifiée avant les règles de portée pour ne
+    // jamais être contournée.
+    if (requester.id === target.id && requester.role !== Role.PDG) return false
+
     if (CAN_VIEW_PRESENCE_GLOBAL.includes(requester.role)) return true
     if (CAN_VIEW_PRESENCE_BU_SCOPE.includes(requester.role) && requester.businessUnitId) {
       return target.businessUnitId === requester.businessUnitId

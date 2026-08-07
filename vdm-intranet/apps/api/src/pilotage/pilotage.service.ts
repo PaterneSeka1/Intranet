@@ -319,6 +319,9 @@ export class PilotageService {
         email: true,
         businessUnitId: true,
         businessUnit: { select: { id: true, name: true, code: true } },
+        workingDays: true,
+        scheduleGroupId: true,
+        individualExpectedArrivalTime: true,
       },
     })
 
@@ -326,29 +329,27 @@ export class PilotageService {
       return { period, from: toIso(start), to: toIso(end), byBu: [], trend: [] }
     }
 
-    const [presences, activeLeaves] = await Promise.all([
+    const [presences, activeLeaves, mandates, holidays] = await Promise.all([
       this.prisma.presence.findMany({
         where: { date: { gte: start, lte: effectiveEnd }, user: userWhere },
         select: { userId: true, date: true, status: true },
       }),
       this.leaveSync.getActiveLeavesInRange(start, effectiveEnd),
+      this.prisma.dailyMandate.findMany({
+        where: { date: { gte: start, lte: effectiveEnd }, user: userWhere },
+        select: { userId: true, date: true },
+      }),
+      this.publicHolidays.getHolidaysInRange(start, effectiveEnd),
     ])
 
     const presenceIndex = new Map<string, PresenceStatus>()
     for (const p of presences) presenceIndex.set(`${p.userId}|${toIso(p.date)}`, p.status)
 
+    const mandateSet = new Set(mandates.map((m) => `${m.userId}|${toIso(m.date)}`))
+
     const userLeaves = new Map(
       users.map((u) => [u.id, activeLeaves.filter((l) => matchLeaveToUser(l, u))])
     )
-
-    // Note : ce rapport agrégé par BU utilise encore le motif par défaut (Lun-Ven), pas le motif
-    // propre à chaque employé — cf. plan "Jours de travail récurrents" pour le détail du choix.
-    // Restructurer cette boucle (jour global → utilisateurs) pour un calcul pleinement per-employé
-    // reste à faire séparément si besoin.
-    const workingDays: Date[] = []
-    for (let d = new Date(start); d <= effectiveEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-      if (isRecurringWorkDay(undefined, d)) workingDays.push(new Date(d))
-    }
 
     type BuAgg = {
       buId: string
@@ -362,31 +363,45 @@ export class PilotageService {
       absent: number
     }
     const buAggMap = new Map<string, BuAgg>()
+    const buWorkingDaySets = new Map<string, Set<string>>()
     const trendMap = new Map<string, Map<string, { present: number; total: number }>>()
 
-    for (const day of workingDays) {
+    // Un jour ne compte pour un utilisateur que s'il fait partie de son propre motif hebdomadaire
+    // récurrent (`workingDays`) — ou qu'un mandat explicite l'affecte ce jour-là, même hors motif ou
+    // jour férié (le mandat prime toujours). Un jour hors périmètre de l'utilisateur (repos) n'est
+    // ni compté en "absent" ni inclus dans son taux, même principe que les KPI "aujourd'hui"
+    // (getSummary/getPresenceByBu, statuts REPOS/dayOff) — mais appliqué jour par jour sur la plage.
+    for (let d = new Date(start); d <= effectiveEnd; d.setUTCDate(d.getUTCDate() + 1)) {
+      const day = new Date(d)
       const dayIso = toIso(day)
-      const dayTrend = new Map<string, { present: number; total: number }>()
-      trendMap.set(dayIso, dayTrend)
+      const isHolidayDay = holidays.has(dayIso)
 
       for (const user of users) {
         if (!user.businessUnitId || !user.businessUnit) continue
-        const buId = user.businessUnitId
 
+        const hasMandate = mandateSet.has(`${user.id}|${dayIso}`)
+        const isNonWorkingDefault = !isRecurringWorkDay(user.workingDays, day) || isHolidayDay
+        const hasScheduleSource = !!user.scheduleGroupId || !!user.individualExpectedArrivalTime
+        const isWorkDay = hasMandate || (!isNonWorkingDefault && hasScheduleSource)
+        if (!isWorkDay) continue
+
+        const buId = user.businessUnitId
         if (!buAggMap.has(buId)) {
           buAggMap.set(buId, {
             buId,
             buName: user.businessUnit.name,
             buCode: user.businessUnit.code,
-            workingDays: workingDays.length,
+            workingDays: 0,
             totalUserDays: 0,
             present: 0,
             late: 0,
             onLeave: 0,
             absent: 0,
           })
+          buWorkingDaySets.set(buId, new Set())
         }
         const agg = buAggMap.get(buId)!
+        buWorkingDaySets.get(buId)!.add(dayIso)
         agg.totalUserDays++
 
         const status = presenceIndex.get(`${user.id}|${dayIso}`)
@@ -396,6 +411,8 @@ export class PilotageService {
         else if (leavesForUser?.some((l) => isLeaveActiveOnDay(l, day))) agg.onLeave++
         else agg.absent++
 
+        if (!trendMap.has(dayIso)) trendMap.set(dayIso, new Map())
+        const dayTrend = trendMap.get(dayIso)!
         if (!dayTrend.has(user.businessUnit.code)) {
           dayTrend.set(user.businessUnit.code, { present: 0, total: 0 })
         }
@@ -403,6 +420,13 @@ export class PilotageService {
         t.total++
         if (status === PresenceStatus.PRESENT || status === PresenceStatus.LATE) t.present++
       }
+    }
+
+    // `workingDays` par BU redevient un décompte per-BU (nombre de jours distincts où au moins un
+    // utilisateur de cette BU avait ce jour en motif de travail), plutôt qu'un compte global unique
+    // désormais dénué de sens puisque chaque utilisateur peut avoir un motif différent.
+    for (const [buId, agg] of buAggMap) {
+      agg.workingDays = buWorkingDaySets.get(buId)?.size ?? 0
     }
 
     const byBu = Array.from(buAggMap.values())

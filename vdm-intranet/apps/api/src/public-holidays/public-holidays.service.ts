@@ -36,6 +36,21 @@ export class PublicHolidaysService {
     return { isHoliday: !!match, label: match?.label ?? null }
   }
 
+  /**
+   * Jours fériés d'une plage [from, to], sous forme de Map indexée par date ISO (YYYY-MM-DD).
+   * Un seul aller-retour DB (table de taille négligeable), utilisé par les rapports de période
+   * pour éviter un appel `isHoliday` par jour de la plage.
+   */
+  async getHolidaysInRange(from: Date, to: Date): Promise<Map<string, string | null>> {
+    const holidays = await this.prisma.publicHoliday.findMany()
+    const map = new Map<string, string | null>()
+    for (let d = new Date(from); d <= to; d.setUTCDate(d.getUTCDate() + 1)) {
+      const match = holidays.find((h) => matchesDate(h, d))
+      if (match) map.set(d.toISOString().split('T')[0], match.label)
+    }
+    return map
+  }
+
   create(dto: CreatePublicHolidayDto) {
     return this.prisma.publicHoliday.create({
       data: {

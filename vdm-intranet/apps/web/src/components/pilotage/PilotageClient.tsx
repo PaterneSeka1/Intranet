@@ -27,12 +27,12 @@ import { PeriodReportSection } from '@/components/pilotage/PeriodReportSection'
 import { toast } from '@/lib/toast'
 
 import {
-  downloadCsvBlob,
+  downloadExcelBlob,
   triggerDownload,
   getMonthStart,
   getToday,
   type DateRange,
-} from '@/lib/csv-export'
+} from '@/lib/excel-export'
 import { downloadPdfBlob } from '@/lib/pdf-export'
 
 type ReportKey = 'presence' | 'activity' | 'connections' | 'general'
@@ -105,7 +105,7 @@ const REPORTS: ReportConfig[] = [
     label: 'Présences / absences',
     description: 'Statuts de présence, retards et absences des employés.',
     icon: '📅',
-    filename: 'presences.csv',
+    filename: 'presences.xlsx',
     hasDateRange: true,
   },
   {
@@ -113,7 +113,7 @@ const REPORTS: ReportConfig[] = [
     label: "Journal d'activité",
     description: 'Actions effectuées dans le portail (créations, modifications, exports).',
     icon: '📋',
-    filename: 'activite.csv',
+    filename: 'activite.xlsx',
     hasDateRange: true,
   },
   {
@@ -121,7 +121,7 @@ const REPORTS: ReportConfig[] = [
     label: 'Connexions',
     description: 'Historique des connexions avec adresses IP et géolocalisation.',
     icon: '🔌',
-    filename: 'connexions.csv',
+    filename: 'connexions.xlsx',
     hasDateRange: true,
   },
   {
@@ -129,8 +129,8 @@ const REPORTS: ReportConfig[] = [
     label: 'Rapport général',
     description: 'Vue consolidée : utilisateurs actifs, BU, groupes horaires et statistiques.',
     icon: '📊',
-    filename: 'rapport-general.csv',
-    hasDateRange: false,
+    filename: 'rapport-general.xlsx',
+    hasDateRange: true,
   },
 ]
 
@@ -164,7 +164,7 @@ export function PilotageClient({ role }: Props) {
     presence: { from: getMonthStart(), to: getToday() },
     activity: { from: getMonthStart(), to: getToday() },
     connections: { from: getMonthStart(), to: getToday() },
-    general: { from: '', to: '' },
+    general: { from: getMonthStart(), to: getToday() },
   })
 
   useEffect(() => {
@@ -242,7 +242,7 @@ export function PilotageClient({ role }: Props) {
     }
     setExportLoading(report.key)
     try {
-      const blob = await downloadCsvBlob(
+      const blob = await downloadExcelBlob(
         report.key,
         report.hasDateRange && from ? from : undefined,
         report.hasDateRange && to ? to : undefined
@@ -269,7 +269,7 @@ export function PilotageClient({ role }: Props) {
         report.hasDateRange && from ? from : undefined,
         report.hasDateRange && to ? to : undefined
       )
-      triggerDownload(blob, report.filename.replace('.csv', '.pdf'))
+      triggerDownload(blob, report.filename.replace('.xlsx', '.pdf'))
       toast.success(`Rapport « ${report.label} » téléchargé (PDF).`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement.')
@@ -400,7 +400,7 @@ export function PilotageClient({ role }: Props) {
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
               Extraction de données
             </p>
-            <h3 className="text-sm font-semibold text-gray-800">Exports CSV</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Exports Excel &amp; PDF</h3>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {availableReports.map((report) => (
@@ -476,7 +476,7 @@ export function PilotageClient({ role }: Props) {
                       </>
                     ) : (
                       <>
-                        <span className="text-sm leading-none">↓</span>CSV
+                        <span className="text-sm leading-none">↓</span>Excel
                       </>
                     )}
                   </button>

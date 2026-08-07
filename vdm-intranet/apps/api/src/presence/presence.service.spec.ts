@@ -203,6 +203,90 @@ describe('PresenceService — mandats', () => {
     })
   })
 
+  describe('Règle absolue — un responsable ne définit jamais lui-même son propre planning', () => {
+    it('refuse bulkCreateMandates quand un RESPONSABLE_BU se cible lui-même', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'r1',
+        role: Role.RESPONSABLE_BU,
+        businessUnitId: 'buA',
+        poleId: null,
+        isActive: true,
+      })
+
+      await expect(
+        service.bulkCreateMandates(
+          { userId: 'r1', days: [{ date: '2026-08-10', expectedArrivalTime: '09:00' }] },
+          responsableBuA
+        )
+      ).rejects.toThrow(ForbiddenException)
+      expect(prisma.dailyMandate.upsert).not.toHaveBeenCalled()
+    })
+
+    it('refuse createMandate quand un CTO_ADMIN se cible lui-même', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'cto1',
+        role: Role.CTO_ADMIN,
+        businessUnitId: null,
+        poleId: null,
+        isActive: true,
+      })
+
+      await expect(
+        service.createMandate(
+          { userId: 'cto1', date: '2026-08-10', expectedArrivalTime: '09:00' },
+          ctoAdmin
+        )
+      ).rejects.toThrow(ForbiddenException)
+      expect(prisma.dailyMandate.upsert).not.toHaveBeenCalled()
+    })
+
+    it('autorise en revanche le PDG à définir son propre planning', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'pdg1',
+        role: Role.PDG,
+        businessUnitId: null,
+        poleId: null,
+        isActive: true,
+      })
+
+      const result = await service.bulkCreateMandates(
+        { userId: 'pdg1', days: [{ date: '2026-08-10', expectedArrivalTime: '09:00' }] },
+        pdg
+      )
+
+      expect(result).toHaveLength(1)
+      expect(prisma.dailyMandate.upsert).toHaveBeenCalledTimes(1)
+    })
+
+    it("refuse deleteMandate à un RESPONSABLE_BU sur son propre mandat, même s'il en est le créateur (repli createdById inopérant)", async () => {
+      prisma.dailyMandate.findUnique.mockResolvedValue({
+        id: 'm3',
+        userId: 'r1',
+        createdById: 'r1', // simule un mandat créé avant l'introduction de cette règle
+        user: { role: Role.RESPONSABLE_BU, businessUnitId: 'buA', poleId: null },
+      })
+
+      await expect(service.deleteMandate('m3', responsableBuA)).rejects.toThrow(
+        ForbiddenException
+      )
+      expect(prisma.dailyMandate.delete).not.toHaveBeenCalled()
+    })
+
+    it('autorise en revanche le PDG à supprimer son propre mandat', async () => {
+      prisma.dailyMandate.findUnique.mockResolvedValue({
+        id: 'm4',
+        userId: 'pdg1',
+        createdById: 'pdg1',
+        user: { role: Role.PDG, businessUnitId: null, poleId: null },
+      })
+
+      const result = await service.deleteMandate('m4', pdg)
+
+      expect(result).toEqual({ deleted: true })
+      expect(prisma.dailyMandate.delete).toHaveBeenCalledWith({ where: { id: 'm4' } })
+    })
+  })
+
   describe('getMandates — filtre userId composé en AND du scope', () => {
     it("n'élargit jamais le périmètre d'un responsable BU même si un userId hors périmètre est passé", async () => {
       prisma.dailyMandate.findMany.mockResolvedValue([])

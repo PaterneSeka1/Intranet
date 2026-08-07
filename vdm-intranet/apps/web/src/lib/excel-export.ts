@@ -23,7 +23,7 @@ export function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function downloadCsvBlob(key: string, from?: string, to?: string): Promise<Blob> {
+export function downloadExcelBlob(key: string, from?: string, to?: string): Promise<Blob> {
   const params = new URLSearchParams()
   if (from) params.set('from', from)
   if (to) params.set('to', to)

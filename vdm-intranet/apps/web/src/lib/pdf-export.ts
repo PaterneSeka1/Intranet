@@ -1,5 +1,5 @@
 import { apiFetchBlob } from './http'
-import { triggerDownload } from './csv-export'
+import { triggerDownload } from './excel-export'
 
 export { triggerDownload }
 

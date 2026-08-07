@@ -884,3 +884,88 @@ Demande : retirer complètement la barre de recherche de la Sidebar.
 - Le composant `GlobalSearch` et le module backend `search` ne sont pas touchés : `GlobalSearch` reste monté dans `MobileSidebarToggle.tsx` (header mobile), seule l'occurrence desktop de la Sidebar est supprimée.
 - Changement purement suppressif sans impact fonctionnel côté API.
 - `npx tsc --noEmit -p apps/web/tsconfig.json` : OK.
+
+//SESSION TERMINEE
+
+## Ajustement — Interdiction de l'auto-mandat pour les responsables — 2026-08-06
+
+Demande : les responsables ne doivent pas pouvoir définir eux-mêmes leur propre emploi du temps, à l'exception du PDG.
+
+- `[x]` [MODIFY] [presence.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/presence/presence.service.ts) — `canMandateUser` refuse désormais toute auto-cible (`requester.id === target.id`) pour tout rôle autre que `PDG`, vérifiée avant les règles de portée BU/Pôle existantes (donc avant `CAN_VIEW_PRESENCE_GLOBAL`/`CAN_VIEW_PRESENCE_BU_SCOPE`/`RESPONSABLE_POLE`) — s'applique à `CTO_ADMIN`, `DAF`, `RESPONSABLE_BU`, `RESPONSABLE_POLE`. Signature étendue avec `target.id`. `deleteMandate` ferme le repli `createdById` pour ce cas, sur le même principe que la règle CTO_ADMIN/PDG déjà en place.
+- `[x]` [MODIFY] [presences/planning/page.tsx](<file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/app/(protected)/presences/planning/page.tsx>) — l'utilisateur courant est retiré de la liste des employés sélectionnables dans le calendrier mensuel, sauf s'il est PDG (règle fusionnée avec le filtre CTO_ADMIN→PDG déjà en place).
+- `[x]` [MODIFY] [MandatesManager.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/presence/MandatesManager.tsx) — même filtre sur le sélecteur du formulaire "Nouveau mandat" ; bouton "Supprimer" masqué sur les mandats de l'utilisateur courant, sauf PDG.
+- `[x]` [NEW] Tests — [presence.service.spec.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/presence/presence.service.spec.ts) : 5 tests ajoutés (`createMandate`/`bulkCreateMandates`/`deleteMandate` refusés pour un responsable ciblant lui-même, même en tant que créateur du mandat ; PDG explicitement autorisé à se mandater/se supprimer lui-même).
+- `[x]` Validation — `npx tsc --noEmit -p apps/api/tsconfig.json` : OK. `npx tsc --noEmit -p apps/web/tsconfig.json` : OK. `npx jest` (`apps/api`) : 48/48 tests OK (43 préexistants + 5 nouveaux).
+- `[x]` Documentation — mise à jour de `TACHE.md`/`SESSION_HANDOFF.md`.
+
+### Audit interdiction auto-mandat — 2026-08-06
+
+- Le repli `createdById` de `deleteMandate` aurait pu contourner la nouvelle règle pour un mandat auto-créé avant son introduction (ex. un `RESPONSABLE_BU` s'étant déjà mandaté lui-même) — fermé explicitement en tête de fonction, même schéma que la règle CTO_ADMIN/PDG existante.
+- Aucune régression sur les règles de portée existantes : un responsable garde intégralement ses droits de mandat sur les employés de son périmètre, seule l'auto-cible est désormais refusée.
+- `npx tsc --noEmit -p apps/api/tsconfig.json` : OK.
+- `npx tsc --noEmit -p apps/web/tsconfig.json` : OK.
+- `npx jest` (`apps/api`) : 48/48 tests OK (43 préexistants + 5 nouveaux).
+
+## Correctif — Pilotage & Rapports non adaptés au motif de travail propre à chaque utilisateur — 2026-08-06
+
+Demande : corriger Pilotage et Rapports pour qu'ils s'adaptent au motif de travail (`workingDays`), aux mandats et aux congés propres à chaque utilisateur, au lieu d'un motif global Lundi-Vendredi appliqué à tout le monde — dette explicitement documentée comme "hors périmètre" lors du correctif "Absence marquée trop tôt / hors jour de travail" du même jour.
+
+- `[x]` [MODIFY] [pilotage.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/pilotage/pilotage.service.ts) — `getPeriodReport` (rapport hebdo/mensuel par BU de `/pilotage`) : la liste unique de "jours ouvrés" (Lun-Ven global) est remplacée par un calcul jour × utilisateur — motif `workingDays` propre à chaque employé, jour férié, et mandat explicite (toujours prioritaire, y compris hors motif/jour férié). Un jour hors périmètre de l'utilisateur (repos) n'est plus compté ni dans son total ni en "absent". Le champ `workingDays` par BU redevient un décompte de jours distincts effectivement travaillés par au moins un utilisateur de cette BU (son ancienne sémantique globale n'avait plus de sens per-utilisateur).
+- `[x]` [MODIFY] [public-holidays.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/public-holidays/public-holidays.service.ts) — nouvelle méthode `getHolidaysInRange(from, to)` (un seul aller-retour DB, `Map` indexée par date ISO), pour éviter un appel `isHoliday` par jour dans la boucle de `getPeriodReport`.
+- `[x]` [MODIFY] [reports.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.service.ts) — `getGeneralData`/`generalCsv` ("Rapport général") : le fallback naïf `pres ? statut : 'Absent'` (ignorait motif de travail, mandat, congé, heure attendue) est remplacé par le même calcul de statut que `/pilotage::getSummary` (présence enregistrée > congé actif > mandat/motif de travail > heure attendue dépassée), avec les mêmes libellés `REPOS`/`EN_ATTENTE`/`EN_CONGE` que `/presences`. Nouvelles dépendances injectées : `PresenceScheduleService`, `PublicHolidaysService`, `LeaveSyncService`.
+- `[x]` [MODIFY] [reports-pdf.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports-pdf.service.ts) — `generalHtml` (PDF "Rapport général") consomme désormais le même statut pré-calculé que le CSV, au lieu de dupliquer son propre fallback `'Absent'`.
+- `[x]` [MODIFY] [reports.module.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.module.ts) — imports `PresenceModule`/`PublicHolidaysModule`/`LeavesModule` ajoutés, même principe que `PilotageModule`.
+- `[x]` Validation — `npx tsc --noEmit -p apps/api/tsconfig.json` OK, `npx tsc --noEmit -p apps/web/tsconfig.json` OK, `npx jest` (`apps/api`) 48/48 OK (aucun test existant cassé), `npm run build:api` OK, `rm -rf apps/web/.next` puis `npm run build:web` OK, `npx prettier --check` sur les 5 fichiers modifiés OK.
+- `[x]` Documentation — `TACHE.md`/`SESSION_HANDOFF.md` mis à jour.
+
+### Audit Pilotage & Rapports par utilisateur — 2026-08-06
+
+- Aucun changement de contrat API : les types `PeriodReport`/`PeriodReportBu` (frontend, `lib/pilotage.ts`) et les colonnes CSV/PDF du rapport général restent identiques — seul le calcul sous-jacent change.
+- Aucune régression sur les permissions : `assertAllowed`/`buildUserWhere` de `pilotage.service.ts` et `reports.service.ts` non modifiés (DAF toujours limitée au rapport présence, scoping BU/Pôle inchangé).
+- Non fait (hors périmètre explicite de cette demande) : le rapport de période (`getPeriodReport`) ne recalcule pas la logique "pas encore arrivé ≠ absent" pour le jour courant s'il est inclus dans la plage (`effectiveEnd === today`) — un jour non terminé peut donc encore afficher "absent" prématurément dans le rapport hebdo/mensuel en cours, limitation préexistante non liée à l'adaptation par utilisateur demandée ici, à traiter séparément si besoin.
+- Pas de migration Prisma ni de changement de schéma requis (tous les champs utilisés — `workingDays`, `scheduleGroupId`, `individualExpectedArrivalTime` — existaient déjà).
+
+## Nouvelle fonctionnalité — Synthèse par personne (absences, retards, minutes) dans le rapport de présences — 2026-08-06
+
+Demande : le rapport doit contenir le nombre total d'absences par personne, le nombre de jours de retard et le nombre de minutes de retard par personne. Décision actée avec l'utilisateur (question posée explicitement) : ajouter cette synthèse par personne **en plus** du détail jour par jour déjà présent dans le "Rapport de présences" (CSV et PDF), sans le remplacer ni créer un rapport séparé.
+
+- `[x]` [NEW] [reports.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.service.ts) — nouvelle méthode `getPresenceSummaryRows(requester, dateFrom?, dateTo?)` : calcule par personne, sur la période, `absences`, `lateDays` et `lateMinutesTotal`. L'absence n'étant jamais persistée en DB (seuls `PRESENT`/`LATE` le sont), elle est recalculée jour par jour avec exactement la même règle que `getSummary`/`getPeriodReport` (motif `workingDays` propre à l'utilisateur, mandat explicite toujours prioritaire même hors motif/férié, jour férié, congé actif exclu du décompte) — y compris la règle "pas encore arrivé ≠ absent" pour le jour courant (`PresenceScheduleService.isArrivalOverdue`), un jour strictement passé étant lui directement compté absent sans vérification d'heure. `lateDays`/`lateMinutesTotal` proviennent uniquement des `Presence` réellement enregistrées en `LATE` sur la période.
+- `[x]` [MODIFY] [reports.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.service.ts) — `presenceCsv` ajoute désormais un premier tableau "Utilisateur / Nom complet / Rôle / BU / Pôle / Absences / Jours de retard / Minutes de retard (total)" avant le détail journalier existant (même pattern de concaténation multi-tableaux que `generalCsv`).
+- `[x]` [MODIFY] [reports-pdf.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports-pdf.service.ts) — `presencePdf`/`presenceHtml` ajoutent la même synthèse par personne en tête du PDF "Rapport de présences", avant le tableau détaillé jour par jour.
+- `[x]` [NEW] Tests — [reports.service.spec.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.service.spec.ts) (nouveau fichier, premier test du module `reports`) : 10 tests couvrant retard/minutes cumulées depuis une présence enregistrée, exclusion "repos" (hors motif, sans mandat), mandat explicite qui rend un jour hors motif comptable, exclusion congé, exclusion jour férié, "pas encore arrivé" du jour courant (avant/après heure attendue), et jour strictement passé directement absent.
+- `[x]` Validation — `npx tsc --noEmit -p apps/api/tsconfig.json` OK, `npx tsc --noEmit -p apps/web/tsconfig.json` OK, `npx jest` (`apps/api`) 58/58 OK (48 préexistants + 10 nouveaux), `npm run build:api` OK, `rm -rf apps/web/.next` puis `npm run build:web` OK, `npx prettier --check` OK, `git diff --check` OK.
+- `[x]` Documentation — `TACHE.md`/`SESSION_HANDOFF.md` mis à jour.
+
+### Audit synthèse par personne — 2026-08-06
+
+- Aucun changement de contrat pour les autres rapports (Activité, Connexions, Général) ni pour `/pilotage` — seul le "Rapport de présences" (CSV + PDF) est enrichi.
+- Aucune régression de permissions : `getPresenceSummaryRows` réutilise `assertAllowed(requester, 'presence')`/`buildUserWhere(requester, 'presence')`, identiques à `getPresenceRows` (DAF conserve l'accès complet au périmètre personnel, limité au rapport présence).
+- Non fait (hors périmètre) : pas de tri/filtre dédié sur le tableau de synthèse (ex. trier par nombre d'absences décroissant) — les lignes suivent le même ordre que la liste utilisateurs (`role` puis `lastName`), non demandé explicitement.
+
+## Rapports : export Excel natif, refonte visuelle PDF & période sur le Rapport général — 2026-08-06
+
+Demande : améliorer la mise en page des fichiers exportés et du rapport PDF, et pouvoir choisir une période d'exportation. Décisions actées avec l'utilisateur (question posée explicitement, 3 choix) : ajouter la période au "Rapport général" (jusqu'ici figé sur "aujourd'hui") plutôt que le laisser en instantané ; refonte visuelle complète des PDF (pas de simple ajustement) ; passage des CSV en Excel natif `.xlsx` (pas un CSV amélioré).
+
+- `[x]` [MODIFY] [reports.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.service.ts) — extraction du calcul d'assiduité de `getPresenceSummaryRows` dans une méthode privée partagée `computeAttendanceSummaries(users, userWhere, start, end)` ; `getGeneralData` accepte désormais `dateFrom`/`dateTo` (défaut : aujourd'hui, comportement inchangé si absents) et renvoie en plus `absences`/`lateDays`/`lateMinutesTotal` par utilisateur sur la période choisie ; `connectionsCount` (comptées sur la période) remplace `connectionsToday` (comptées sur le seul jour courant). Nouvelle méthode publique `periodLabel(dateFrom?, dateTo?, fallbackNote?)` (libellé de période pour l'en-tête des exports), réutilisée par les deux services d'export. Les méthodes de construction CSV (`toCsv`, `presenceCsv`/`activityCsv`/`connectionsCsv`/`generalCsv`) sont retirées d'ici et reconstruites dans `reports-excel.service.ts`, même principe que `ReportsPdfService` qui ne construisait déjà que sa propre sortie.
+- `[x]` [NEW] [reports-excel.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports-excel.service.ts) — génère de vrais classeurs `.xlsx` (dépendance `exceljs`) pour les 4 rapports : bandeau de marque (logo, titre, période), en-tête de tableau coloré, volet gelé + filtre automatique sous l'en-tête, lignes zébrées, alignement numérique à droite, note de pied de page.
+- `[x]` [MODIFY] [reports-pdf.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports-pdf.service.ts) — refonte complète du gabarit commun (`renderShell`) : bandeau logo + titre + période, cartes de statistiques clés par rapport (ex. absences cumulées, connexions sur la période), tableaux avec en-tête répété à chaque page (`page-break-inside: avoid`), pied de page avec numérotation et mention "usage interne". `generalPdf` accepte désormais `dateFrom`/`dateTo`.
+- `[x]` [NEW] [assets/logo.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/assets/logo.ts) — logo `logo_entreprise.png` redimensionné (420px de large) et encodé en base64, intégré directement au bundle TypeScript (évite de dépendre d'un fichier statique copié au build, `nest build` ne copiant pas les assets non-TS par défaut).
+- `[x]` [MODIFY] [reports.controller.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.controller.ts) — les 4 routes CSV (`/reports/presence`, `/activity`, `/connections`, `/general`) renvoient désormais un `.xlsx` (`Content-Type` `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) ; `/reports/general` et `/reports/general/pdf` acceptent maintenant `from`/`to`, comme les 3 autres rapports.
+- `[x]` [MODIFY] [reports.module.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/reports/reports.module.ts) — nouveau provider `ReportsExcelService`.
+- `[x]` [MODIFY] [PilotageClient.tsx](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/components/pilotage/PilotageClient.tsx) — le "Rapport général" a désormais un sélecteur de dates (`hasDateRange: true`, comme les 3 autres rapports, défaut mois en cours) ; boutons renommés "Excel" ; noms de fichiers en `.xlsx`.
+- `[x]` [NEW] [lib/excel-export.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/web/src/lib/excel-export.ts) — remplace `lib/csv-export.ts` (supprimé) ; `downloadExcelBlob` au lieu de `downloadCsvBlob`.
+- `[x]` [MODIFY] [package.json](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/package.json) racine — `overrides` ajouté (`"@types/node": "^22.0.0"`) après un conflit de types `Buffer` détecté au type-check : `@fast-csv/format`/`@fast-csv/parse` (dépendances transitives d'`exceljs`) embarquaient chacune leur propre `@types/node@14` imbriqué, en conflit avec le `@types/node@22` du monorepo. `node_modules`/`package-lock.json` régénérés entièrement pour dédupliquer.
+- `[x]` Validation — `npx jest` (`apps/api`) 58/58 OK (aucune régression, dont les 10 tests de `getPresenceSummaryRows` inchangés). `npm run type-check --workspace=apps/api` OK. `npm run build:api` OK. `npm run type-check --workspace=apps/web` OK. `npm run build:web` OK.
+- `[x]` Documentation — `TACHE.md`/`SESSION_HANDOFF.md` mis à jour.
+- `[ ]` Non fait — vérification visuelle réelle du rendu Excel/PDF dans un tableur/lecteur PDF (pas d'outil de rendu visuel disponible dans cet environnement) ; seule la génération sans erreur et la structure du contenu ont été vérifiées.
+
+### Audit rapports Excel/PDF & période — 2026-08-06
+
+- Aucun changement de permissions : `assertAllowed`/`buildUserWhere` non touchés, la restriction DAF (rapport présence uniquement) s'applique identiquement aux nouvelles routes Excel.
+- Le cast `LOGO_BUFFER as any` dans `reports-excel.service.ts::buildSheet` (paramètre `buffer` de `workbook.addImage`) est un contournement de typage isolé (incompatibilité entre TypeScript 5.5 et le `Buffer` générique de `@types/node` 22 dans les `.d.ts` d'`exceljs`), sans impact runtime — un vrai `Buffer` est passé dans tous les cas.
+- Le champ `connectionsToday` du rapport général est renommé `connectionsCount` (compte désormais les connexions sur la période choisie, pas uniquement le jour courant) — aucun autre consommateur dans le repo (vérifié par recherche globale).
+- `npx jest` (`apps/api`) : 58/58 tests OK.
+- `npm run type-check --workspace=apps/api` : OK.
+- `npm run build:api` : OK.
+- `npm run type-check --workspace=apps/web` : OK.
+- `npm run build:web` : OK.
