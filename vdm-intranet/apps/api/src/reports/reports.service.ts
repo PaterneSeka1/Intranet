@@ -92,6 +92,39 @@ export class ReportsService {
     return { id: requester.id }
   }
 
+  /**
+   * Libellé lisible de l'emploi du temps "de référence" d'un utilisateur (groupe horaire, sinon
+   * horaire individuel, sinon aucun horaire déclaré) — pour que les rapports agrégés (Synthèse,
+   * Vue d'ensemble) montrent explicitement que chaque personne a son propre horaire attendu. Les
+   * mandats ponctuels (jour par jour) ne sont volontairement pas repris ici : cette valeur est un
+   * repère de base, le détail jour par jour relève du planning, pas d'un rapport agrégé.
+   */
+  formatScheduleLabel(user: {
+    scheduleGroup: {
+      name: string
+      expectedArrivalTime: string
+      expectedDepartureTime?: string | null
+      isNightShift: boolean
+    } | null
+    individualExpectedArrivalTime: string | null
+    individualExpectedDepartureTime?: string | null
+  }): string {
+    if (user.scheduleGroup) {
+      const { name, expectedArrivalTime, expectedDepartureTime, isNightShift } = user.scheduleGroup
+      const range = expectedDepartureTime
+        ? `${expectedArrivalTime}–${expectedDepartureTime}`
+        : expectedArrivalTime
+      return `${name ?? 'Groupe horaire'} (${range})${isNightShift ? ' · Nuit' : ''}`
+    }
+    if (user.individualExpectedArrivalTime) {
+      const range = user.individualExpectedDepartureTime
+        ? `${user.individualExpectedArrivalTime}–${user.individualExpectedDepartureTime}`
+        : user.individualExpectedArrivalTime
+      return `Individuel (${range})`
+    }
+    return 'Non défini'
+  }
+
   fmtDate(d: Date | string | null | undefined): string {
     if (!d) return ''
     const dt = new Date(d)
@@ -307,8 +340,16 @@ export class ReportsService {
         businessUnit: { select: { name: true } },
         pole: { select: { name: true } },
         workingDays: true,
-        scheduleGroup: { select: { expectedArrivalTime: true, isNightShift: true } },
+        scheduleGroup: {
+          select: {
+            name: true,
+            expectedArrivalTime: true,
+            expectedDepartureTime: true,
+            isNightShift: true,
+          },
+        },
         individualExpectedArrivalTime: true,
+        individualExpectedDepartureTime: true,
       },
       orderBy: [{ role: 'asc' }, { lastName: 'asc' }],
       take: 5000,
@@ -322,6 +363,7 @@ export class ReportsService {
       role: u.role,
       businessUnitName: u.businessUnit?.name ?? '',
       poleName: u.pole?.name ?? '',
+      scheduleLabel: this.formatScheduleLabel(u),
       ...summaries.get(u.id)!,
     }))
   }
@@ -430,9 +472,15 @@ export class ReportsService {
             pole: { select: { name: true } },
             workingDays: true,
             scheduleGroup: {
-              select: { name: true, expectedArrivalTime: true, isNightShift: true },
+              select: {
+                name: true,
+                expectedArrivalTime: true,
+                expectedDepartureTime: true,
+                isNightShift: true,
+              },
             },
             individualExpectedArrivalTime: true,
+            individualExpectedDepartureTime: true,
             lastLoginAt: true,
           },
           orderBy: [{ role: 'asc' }, { lastName: 'asc' }],
@@ -494,6 +542,7 @@ export class ReportsService {
 
     const usersWithStatusAndPeriod = usersWithStatus.map((u) => ({
       ...u,
+      scheduleLabel: this.formatScheduleLabel(u),
       ...periodSummaries.get(u.id)!,
     }))
 

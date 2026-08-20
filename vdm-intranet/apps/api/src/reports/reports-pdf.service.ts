@@ -224,17 +224,27 @@ export class ReportsPdfService {
     ])
 
     const summaryTable = this.table(
-      ['Utilisateur', 'Rôle', 'BU', 'Pôle', 'Absences', 'Jours de retard', 'Minutes de retard'],
+      [
+        'Utilisateur',
+        'Rôle',
+        'BU',
+        'Pôle',
+        'Emploi du temps',
+        'Absences',
+        'Jours de retard',
+        'Minutes de retard',
+      ],
       summaryRows.map((r) => [
         r.fullName ?? r.username,
         r.role,
         r.businessUnitName,
         r.poleName,
+        r.scheduleLabel,
         r.absences,
         r.lateDays,
         r.lateMinutesTotal,
       ]),
-      { numericCols: [4, 5, 6] }
+      { numericCols: [5, 6, 7] }
     )
 
     const detailTable = this.table(
@@ -324,6 +334,7 @@ export class ReportsPdfService {
       u.role,
       u.businessUnit?.name ?? '',
       u.pole?.name ?? '',
+      u.scheduleLabel,
       u.statusLabel,
       u.absences,
       u.lateDays,
@@ -341,6 +352,7 @@ export class ReportsPdfService {
             'Rôle',
             'BU',
             'Pôle',
+            'Emploi du temps',
             "Présence aujourd'hui",
             'Absences (période)',
             'Retards (période)',
@@ -348,7 +360,7 @@ export class ReportsPdfService {
             'Dernière connexion',
           ],
           rows,
-          { numericCols: [5, 6, 7] }
+          { numericCols: [6, 7, 8] }
         )
       )
 
