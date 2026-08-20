@@ -969,3 +969,14 @@ Demande : améliorer la mise en page des fichiers exportés et du rapport PDF, e
 - `npm run build:api` : OK.
 - `npm run type-check --workspace=apps/web` : OK.
 - `npm run build:web` : OK.
+
+## Fix — Blocage bloquant à la première connexion (géolocalisation vs changement de mot de passe obligatoire) — 2026-08-20
+
+Demande : un utilisateur en première connexion (ou après réinitialisation de mot de passe par un admin) reste bloqué au lieu de pouvoir se connecter.
+
+- `[x]` Reproduit la cause : tout compte avec `mustChangePassword = true` et aucune présence enregistrée aujourd'hui déclenche `requiresFirstLoginGeolocation = true` (`auth.service.ts::login`). `LoginClient.tsx::handleSubmit` donne priorité à la géolocalisation (choix acté le 2026-07-29, cf. section ci-dessus « Mon historique » vide) et appelle `POST /presence/first-login` **avant** de laisser passer le changement de mot de passe.
+- `[x]` Identifié que `POST /presence/first-login` n'a jamais été ajouté à la liste blanche `PASSWORD_CHANGE_ALLOWED_ROUTES` de [jwt-auth.guard.ts](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/api/src/common/guards/jwt-auth.guard.ts) (ajoutée le 2026-07-26, avant le correctif du 2026-07-29) : le garde renvoie donc `403 Forbidden` sur cet appel tant que `mustChangePassword` est vrai. `GeoLocationScreen.tsx` affiche alors l'erreur serveur sans échappatoire (seulement « Réessayer » ou « Se déconnecter »), et comme la présence du jour n'est jamais créée, le blocage persiste à chaque tentative de reconnexion, pas seulement le jour même — régression jamais refermée depuis le 2026-07-29 (case « Vérification manuelle » restée non cochée dans la section correspondante).
+- `[x]` [MODIFY] [jwt-auth.guard.ts](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/api/src/common/guards/jwt-auth.guard.ts) — ajout de `'POST /presence/first-login'` à `PASSWORD_CHANGE_ALLOWED_ROUTES`, cohérent avec le choix produit déjà fait (géolocalisation prioritaire sur le changement de mot de passe obligatoire).
+- `[ ]` Validation — `npm`/`node` indisponibles dans cet environnement d'édition (poste sans PATH configuré) : le changement n'a **pas** pu être type-checké/buildé ici. Relire attentivement le diff avant merge et lancer `npm run type-check --workspace=apps/api` puis `npm run build:api` sur un poste où l'environnement Node est disponible.
+- `[ ]` Non rétro-compatible : les comptes déjà bloqués avant ce correctif doivent simplement se reconnecter (aucune donnée corrompue à réparer, la présence du jour sera créée normalement au prochain login).
+- `[ ]` Vérification manuelle — se connecter avec un compte fraîchement créé/réinitialisé (`mustChangePassword = true`, aucune présence aujourd'hui) et vérifier que l'écran de géolocalisation aboutit (pas de 403), puis que le changement de mot de passe obligatoire s'affiche ensuite normalement sur `/mon-profil`.

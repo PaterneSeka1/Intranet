@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { presenceApi } from '@/lib/presence'
@@ -78,7 +78,14 @@ const EMPTY_DRAFT = {
 export function PlanningCalendar({ users, scheduleGroups }: Props) {
   const now = new Date()
   const [selectedBuId, setSelectedBuId] = useState('')
-  const [selectedUserId, setSelectedUserId] = useState(users[0]?.id ?? '')
+  // Sélection multiple : le modèle de créneau est appliqué à tous les employés cochés en une
+  // fois. Le premier de la sélection (dans l'ordre de la liste) sert de référence pour afficher
+  // le calendrier (jours travaillés, mandats existants, modèles pertinents).
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
+    () => new Set(users[0] ? [users[0].id] : [])
+  )
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
   const [year, setYear] = useState(now.getUTCFullYear())
   const [month, setMonth] = useState(now.getUTCMonth())
 
@@ -105,10 +112,11 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
   const [draft, setDraft] = useState(EMPTY_DRAFT)
   const [applying, setApplying] = useState(false)
 
-  const selectedUser = useMemo(
-    () => users.find((u) => u.id === selectedUserId) ?? null,
-    [users, selectedUserId]
+  const selectedUsers = useMemo(
+    () => users.filter((u) => selectedUserIds.has(u.id)),
+    [users, selectedUserIds]
   )
+  const selectedUser = selectedUsers[0] ?? null
 
   const cells = useMemo(() => buildMonthCells(year, month), [year, month])
 
@@ -126,7 +134,8 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
   }, [mandates])
 
   const loadMandates = useCallback(async () => {
-    if (!selectedUserId) {
+    const userId = selectedUser?.id
+    if (!userId) {
       setMandates([])
       return
     }
@@ -134,27 +143,66 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
     try {
       const from = isoDate(year, month, 1)
       const to = isoDate(year, month, daysInMonth(year, month))
-      const data = await presenceApi.mandatesRange({ userId: selectedUserId, from, to })
+      const data = await presenceApi.mandatesRange({ userId, from, to })
       setMandates(data)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors du chargement du planning.')
     } finally {
       setLoading(false)
     }
-  }, [selectedUserId, year, month])
+  }, [selectedUser, year, month])
 
   useEffect(() => {
     loadMandates()
     setSelectedDates(new Set())
   }, [loadMandates])
 
+  // Ferme le sélecteur d'employés au clic en dehors, ou à l'échap (même pattern que
+  // NotificationsBell).
+  useEffect(() => {
+    if (!pickerOpen) return
+    function handleClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false)
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setPickerOpen(false)
+    }
+    window.addEventListener('mousedown', handleClick)
+    window.addEventListener('keydown', handleKey)
+    return () => {
+      window.removeEventListener('mousedown', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [pickerOpen])
+
   function handleBuChange(buId: string) {
     setSelectedBuId(buId)
-    // Si l'employé sélectionné n'appartient pas à la BU choisie, on force une nouvelle sélection
-    // plutôt que de garder un employé caché du filtre en cours.
-    const stillValid =
-      !buId || users.some((u) => u.id === selectedUserId && u.businessUnit?.id === buId)
-    if (!stillValid) setSelectedUserId('')
+    if (!buId) return
+    // Les employés sélectionnés hors de la BU choisie sont retirés plutôt que gardés cachés
+    // derrière le filtre en cours.
+    setSelectedUserIds((prev) => {
+      const next = new Set(
+        Array.from(prev).filter((id) =>
+          users.some((u) => u.id === id && u.businessUnit?.id === buId)
+        )
+      )
+      return next
+    })
+  }
+
+  function toggleUserSelection(id: string) {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAllUsers() {
+    const allIds = usersInSelectedBu.map((u) => u.id)
+    const allSelected = allIds.every((id) => selectedUserIds.has(id))
+    setSelectedUserIds(allSelected ? new Set() : new Set(allIds))
   }
 
   function changeMonth(delta: number) {
@@ -205,25 +253,43 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
   }
 
   async function handleApply() {
-    if (!selectedUserId || selectedDates.size === 0 || !draft.expectedArrivalTime) return
+    const userIds = Array.from(selectedUserIds)
+    if (userIds.length === 0 || selectedDates.size === 0 || !draft.expectedArrivalTime) return
     setApplying(true)
-    try {
-      const days = Array.from(selectedDates).map((date) => ({
-        date,
-        expectedArrivalTime: draft.expectedArrivalTime,
-        expectedDepartureTime: draft.expectedDepartureTime || undefined,
-        isNightShift: draft.isNightShift || undefined,
-        reason: draft.reason || undefined,
-      }))
-      await presenceApi.bulkCreateMandates({ userId: selectedUserId, days })
-      toast.success(`${days.length} jour(s) planifié(s).`)
-      setSelectedDates(new Set())
-      await loadMandates()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur lors de l'enregistrement.")
-    } finally {
-      setApplying(false)
+    const days = Array.from(selectedDates).map((date) => ({
+      date,
+      expectedArrivalTime: draft.expectedArrivalTime,
+      expectedDepartureTime: draft.expectedDepartureTime || undefined,
+      isNightShift: draft.isNightShift || undefined,
+      reason: draft.reason || undefined,
+    }))
+    // Un mandat bulk par employé (l'API ne traite qu'un employé à la fois) : on enchaîne les
+    // appels séquentiellement et on rapporte les éventuels échecs individuellement, plutôt que de
+    // tout annuler si un seul employé pose problème (ex : droit de mandater révoqué entre-temps).
+    let successCount = 0
+    const failedNames: string[] = []
+    for (const userId of userIds) {
+      try {
+        await presenceApi.bulkCreateMandates({ userId, days })
+        successCount++
+      } catch (err) {
+        const target = users.find((u) => u.id === userId)
+        failedNames.push(
+          target?.fullName ?? target?.username ?? (err instanceof Error ? err.message : userId)
+        )
+      }
     }
+    if (successCount > 0) {
+      toast.success(
+        `${days.length} jour(s) planifié(s) pour ${successCount} employé${successCount > 1 ? 's' : ''}.`
+      )
+    }
+    if (failedNames.length > 0) {
+      toast.error(`Échec pour : ${failedNames.join(', ')}.`)
+    }
+    setSelectedDates(new Set())
+    await loadMandates()
+    setApplying(false)
   }
 
   async function handleClearDay(mandate: DailyMandate) {
@@ -294,27 +360,68 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
                 </select>
               </div>
             )}
-            <div>
+            <div className="relative" ref={pickerRef}>
               <label
                 htmlFor="planning-user"
                 className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
               >
-                Employé
+                Employés
               </label>
-              <select
+              <button
                 id="planning-user"
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className={INPUT + ' bg-white min-w-[220px]'}
+                type="button"
+                onClick={() => setPickerOpen((o) => !o)}
+                className={
+                  INPUT + ' bg-white min-w-[220px] text-left flex items-center justify-between gap-2'
+                }
               >
-                <option value="">Sélectionner un employé…</option>
-                {usersInSelectedBu.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName ?? u.username}
-                    {u.businessUnit ? ` — ${u.businessUnit.name}` : ''}
-                  </option>
-                ))}
-              </select>
+                <span className="truncate">
+                  {selectedUsers.length === 0
+                    ? 'Sélectionner des employés…'
+                    : selectedUsers.length === 1
+                      ? (selectedUsers[0].fullName ?? selectedUsers[0].username)
+                      : `${selectedUsers.length} employés sélectionnés`}
+                </span>
+                <span className="text-gray-400 text-xs shrink-0">▾</span>
+              </button>
+              {pickerOpen && (
+                <div className="absolute z-10 mt-1.5 w-72 max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg p-2">
+                  <div className="flex items-center justify-between px-1.5 pb-1.5 mb-1.5 border-b border-gray-100">
+                    <span className="text-[11px] font-semibold text-gray-400">
+                      {selectedUsers.length} / {usersInSelectedBu.length} sélectionné(s)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={toggleSelectAllUsers}
+                      className="text-[11px] font-semibold text-[#F28C38] hover:underline"
+                    >
+                      {usersInSelectedBu.length > 0 &&
+                      usersInSelectedBu.every((u) => selectedUserIds.has(u.id))
+                        ? 'Tout désélectionner'
+                        : 'Tout sélectionner'}
+                    </button>
+                  </div>
+                  {usersInSelectedBu.map((u) => (
+                    <label
+                      key={u.id}
+                      className="flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer select-none text-sm text-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.has(u.id)}
+                        onChange={() => toggleUserSelection(u.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-[#F28C38] focus:ring-[#F28C38]/20"
+                      />
+                      <span className="truncate">
+                        {u.fullName ?? u.username}
+                        {u.businessUnit ? (
+                          <span className="text-gray-400"> — {u.businessUnit.name}</span>
+                        ) : null}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -340,6 +447,16 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
             </button>
           </div>
         </div>
+
+        {selectedUsers.length > 1 && selectedUser && (
+          <p className="text-xs text-gray-400 mb-3">
+            Calendrier affiché :{' '}
+            <span className="font-semibold text-gray-500">
+              {selectedUser.fullName ?? selectedUser.username}
+            </span>{' '}
+            — le modèle sera appliqué aux {selectedUsers.length} employés sélectionnés.
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2 mb-3">
           <button
@@ -530,13 +647,16 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
           type="button"
           onClick={handleApply}
           disabled={
-            !selectedUserId || selectedDates.size === 0 || !draft.expectedArrivalTime || applying
+            selectedUserIds.size === 0 ||
+            selectedDates.size === 0 ||
+            !draft.expectedArrivalTime ||
+            applying
           }
           className="w-full bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40 transition-colors"
         >
           {applying
             ? 'Application…'
-            : `Appliquer à ${selectedDates.size} jour${selectedDates.size > 1 ? 's' : ''}`}
+            : `Appliquer à ${selectedDates.size} jour${selectedDates.size > 1 ? 's' : ''} pour ${selectedUserIds.size} employé${selectedUserIds.size > 1 ? 's' : ''}`}
         </button>
       </div>
     </div>

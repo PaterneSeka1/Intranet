@@ -16,6 +16,12 @@ const PASSWORD_CHANGE_ALLOWED_ROUTES = new Set([
   'GET /users/me',
   'PATCH /users/me',
   'POST /auth/logout',
+  // La géolocalisation de 1ère connexion du jour est prioritaire sur le
+  // changement de mot de passe obligatoire (cf. LoginClient.tsx) : sans cette
+  // route en liste blanche, un compte fraîchement créé/réinitialisé
+  // (mustChangePassword=true + aucune présence du jour) reçoit un 403 sur
+  // cet appel et reste bloqué indéfiniment sur l'écran de géolocalisation.
+  'POST /presence/first-login',
 ])
 
 @Injectable()
