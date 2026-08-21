@@ -218,5 +218,42 @@ describe('PresenceScheduleService', () => {
 
       expect(delay).toBe(-15)
     })
+
+    describe('équipe de nuit — fin de poste après minuit (ex: groupe NUIT_2000, départ attendu 05:00)', () => {
+      it('départ anticipé avant minuit : écart négatif (parti en avance), pas un faux "retard" énorme', () => {
+        // Poste attendu 20:00 -> 05:00 le lendemain ; départ réel enregistré à 23:30 le même soir.
+        const actual = new Date('2026-08-10T23:30:00.000Z')
+
+        const delay = service.calculateDepartureDelayMinutes('05:00', actual, true)
+
+        // Sans la correction symétrique, le calcul brut (23:30 - 05:00 = +1110 min) affichait à
+        // tort un très grand retard alors que l'employé est parti ~5h30 avant l'heure.
+        expect(delay).toBe(-330)
+      })
+
+      it('sans isNightShift, le même départ anticipé serait faussement compté comme un énorme retard (régression à éviter)', () => {
+        const actual = new Date('2026-08-10T23:30:00.000Z')
+
+        const delay = service.calculateDepartureDelayMinutes('05:00', actual, false)
+
+        expect(delay).toBe(1110)
+      })
+
+      it('départ après minuit, après l’heure attendue : retard calculé normalement (déjà correct sans ajustement)', () => {
+        const actual = new Date('2026-08-10T06:10:00.000Z')
+
+        const delay = service.calculateDepartureDelayMinutes('05:00', actual, true)
+
+        expect(delay).toBe(70)
+      })
+
+      it('départ après minuit, avant l’heure attendue : écart négatif calculé normalement', () => {
+        const actual = new Date('2026-08-10T04:30:00.000Z')
+
+        const delay = service.calculateDepartureDelayMinutes('05:00', actual, true)
+
+        expect(delay).toBe(-30)
+      })
+    })
   })
 })

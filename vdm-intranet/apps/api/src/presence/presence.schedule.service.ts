@@ -110,12 +110,22 @@ export class PresenceScheduleService {
     const [expHour, expMin] = expectedTime.split(':').map(Number)
     const actualHour = actualDateTime.getUTCHours()
     const actualMin = actualDateTime.getUTCMinutes()
-    const expectedTotalMins = expHour * 60 + expMin
+    let expectedTotalMins = expHour * 60 + expMin
     let actualTotalMins = actualHour * 60 + actualMin
 
-    // Gestion équipes de nuit : si l'heure réelle est en AM et l'heure attendue en PM
-    if (isNightShift && actualHour < 12 && expHour >= 12) {
-      actualTotalMins += 24 * 60
+    if (isNightShift) {
+      // Équipe de nuit à cheval sur minuit (ex: arrivée 20:00, départ 05:00) : les deux heures
+      // ne sont comparables que ramenées sur une même échelle continue.
+      if (actualHour < 12 && expHour >= 12) {
+        // Heure réelle après minuit (AM), heure attendue avant minuit (PM) : cas typique d'une
+        // arrivée en retard après minuit — on décale l'heure réelle d'un jour vers l'avant.
+        actualTotalMins += 24 * 60
+      } else if (actualHour >= 12 && expHour < 12) {
+        // Heure réelle avant minuit (PM), heure attendue après minuit (AM) : cas symétrique d'un
+        // départ (avancé ou tardif) alors que la fin de poste attendue est après minuit — c'est
+        // l'heure attendue qu'il faut décaler d'un jour vers l'avant, pas l'heure réelle.
+        expectedTotalMins += 24 * 60
+      }
     }
 
     return actualTotalMins - expectedTotalMins
