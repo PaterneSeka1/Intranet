@@ -121,8 +121,8 @@ describe('PresenceService — mandats', () => {
     })
   })
 
-  describe('Règle absolue — le CTO_ADMIN ne gère jamais l’emploi du temps du PDG', () => {
-    it('refuse bulkCreateMandates quand un CTO_ADMIN cible le PDG', async () => {
+  describe('Le CTO_ADMIN gère aussi l’emploi du temps du PDG (portée globale)', () => {
+    it('autorise bulkCreateMandates quand un CTO_ADMIN cible le PDG', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'pdg1',
         role: Role.PDG,
@@ -131,16 +131,16 @@ describe('PresenceService — mandats', () => {
         isActive: true,
       })
 
-      await expect(
-        service.bulkCreateMandates(
-          { userId: 'pdg1', days: [{ date: '2026-08-10', expectedArrivalTime: '09:00' }] },
-          ctoAdmin
-        )
-      ).rejects.toThrow(ForbiddenException)
-      expect(prisma.dailyMandate.upsert).not.toHaveBeenCalled()
+      const result = await service.bulkCreateMandates(
+        { userId: 'pdg1', days: [{ date: '2026-08-10', expectedArrivalTime: '09:00' }] },
+        ctoAdmin
+      )
+
+      expect(result).toHaveLength(1)
+      expect(prisma.dailyMandate.upsert).toHaveBeenCalledTimes(1)
     })
 
-    it('refuse createMandate quand un CTO_ADMIN cible le PDG', async () => {
+    it('autorise createMandate quand un CTO_ADMIN cible le PDG', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'pdg1',
         role: Role.PDG,
@@ -149,16 +149,15 @@ describe('PresenceService — mandats', () => {
         isActive: true,
       })
 
-      await expect(
-        service.createMandate(
-          { userId: 'pdg1', date: '2026-08-10', expectedArrivalTime: '09:00' },
-          ctoAdmin
-        )
-      ).rejects.toThrow(ForbiddenException)
-      expect(prisma.dailyMandate.upsert).not.toHaveBeenCalled()
+      await service.createMandate(
+        { userId: 'pdg1', date: '2026-08-10', expectedArrivalTime: '09:00' },
+        ctoAdmin
+      )
+
+      expect(prisma.dailyMandate.upsert).toHaveBeenCalledTimes(1)
     })
 
-    it('autorise en revanche le PDG à mandater le CTO_ADMIN (accès global inchangé)', async () => {
+    it('autorise en outre le PDG à mandater le CTO_ADMIN (accès global inchangé)', async () => {
       prisma.user.findUnique.mockResolvedValue({
         id: 'cto1',
         role: Role.CTO_ADMIN,
@@ -176,19 +175,21 @@ describe('PresenceService — mandats', () => {
       expect(prisma.dailyMandate.upsert).toHaveBeenCalledTimes(1)
     })
 
-    it("refuse deleteMandate à un CTO_ADMIN sur un mandat du PDG, même s'il en est le créateur (repli createdById inopérant)", async () => {
+    it("autorise deleteMandate à un CTO_ADMIN sur un mandat du PDG", async () => {
       prisma.dailyMandate.findUnique.mockResolvedValue({
         id: 'm1',
         userId: 'pdg1',
-        createdById: 'cto1', // simule un mandat créé avant l'introduction de cette règle
+        createdById: 'pdg1',
         user: { role: Role.PDG, businessUnitId: null, poleId: null },
       })
 
-      await expect(service.deleteMandate('m1', ctoAdmin)).rejects.toThrow(ForbiddenException)
-      expect(prisma.dailyMandate.delete).not.toHaveBeenCalled()
+      const result = await service.deleteMandate('m1', ctoAdmin)
+
+      expect(result).toEqual({ deleted: true })
+      expect(prisma.dailyMandate.delete).toHaveBeenCalledWith({ where: { id: 'm1' } })
     })
 
-    it('autorise en revanche le PDG à supprimer un mandat du CTO_ADMIN', async () => {
+    it('autorise en outre le PDG à supprimer un mandat du CTO_ADMIN', async () => {
       prisma.dailyMandate.findUnique.mockResolvedValue({
         id: 'm2',
         userId: 'cto1',

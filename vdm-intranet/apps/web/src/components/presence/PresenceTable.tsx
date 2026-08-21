@@ -51,11 +51,10 @@ interface Props {
   rows: PresenceRow[]
   canMandate: boolean
   currentUserId: string
-  currentUserRole?: string
   date?: string
 }
 
-export function PresenceTable({ rows, canMandate, currentUserId, currentUserRole, date }: Props) {
+export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) {
   const router = useRouter()
   const [mandateForm, setMandateForm] = useState<MandateForm | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -301,8 +300,6 @@ export function PresenceTable({ rows, canMandate, currentUserId, currentUserRole
         actions={
           canMandate
             ? (r) => {
-                // Le CTO_ADMIN ne peut jamais gérer l'emploi du temps du PDG — seul le PDG le peut.
-                if (currentUserRole === 'CTO_ADMIN' && r.user.role === 'PDG') return null
                 return (
                   <button
                     onClick={(e) => {

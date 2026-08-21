@@ -819,11 +819,10 @@ export class PresenceService {
     })
     if (!mandate) throw new NotFoundException('Mandat introuvable')
 
-    // Le repli « créateur du mandat » ne doit jamais permettre de contourner la règle CTO/PDG ni
-    // la règle d'auto-mandat (ex. mandat créé avant l'introduction de ces règles) : les deux
-    // restrictions sont donc appliquées en tête, avant même de considérer `createdById`.
+    // Le repli « créateur du mandat » ne doit jamais permettre de contourner la règle d'auto-mandat
+    // (ex. mandat créé avant l'introduction de cette règle) : elle est donc appliquée en tête,
+    // avant même de considérer `createdById`.
     const canDelete =
-      !(requester.role === Role.CTO_ADMIN && mandate.user.role === Role.PDG) &&
       !(requester.id === mandate.userId && requester.role !== Role.PDG) &&
       (this.canMandateUser(requester, { ...mandate.user, id: mandate.userId }) ||
         mandate.createdById === requester.id)
@@ -897,11 +896,9 @@ export class PresenceService {
     requester: Requester,
     target: { id: string; role: Role; businessUnitId?: string | null; poleId?: string | null }
   ): boolean {
-    // Règle absolue : le CTO_ADMIN ne peut jamais gérer l'emploi du temps du PDG — seul le PDG
-    // lui-même le peut. Vérifiée avant toute autre règle pour ne jamais être contournée (ex. par
-    // le repli createdById dans deleteMandate).
-    if (requester.role === Role.CTO_ADMIN && target.role === Role.PDG) return false
-
+    // Le CTO_ADMIN a une portée globale (CAN_VIEW_PRESENCE_GLOBAL) et peut donc gérer l'emploi du
+    // temps de tout employé, y compris celui du PDG.
+    //
     // Un responsable (CTO_ADMIN, DAF, RESPONSABLE_BU, RESPONSABLE_POLE) ne doit jamais définir
     // lui-même son propre planning — seul le PDG, au sommet de la hiérarchie et sans supérieur
     // pour le mandater, peut se mandater lui-même. Vérifiée avant les règles de portée pour ne

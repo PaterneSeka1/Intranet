@@ -66,14 +66,9 @@ export function MandatesManager({
   currentUserRole,
   users = [],
 }: Props) {
-  // Un responsable ne définit jamais son propre planning lui-même — seul le PDG le peut. Le
-  // CTO_ADMIN ne peut par ailleurs jamais gérer l'emploi du temps du PDG. (Règles appliquées côté
-  // backend ; on les anticipe ici pour éviter un aller-retour en erreur 403.)
-  const selectableUsers = users.filter(
-    (u) =>
-      !(currentUserRole === 'CTO_ADMIN' && u.role === 'PDG') &&
-      !(currentUserRole !== 'PDG' && u.id === currentUserId)
-  )
+  // Un responsable ne définit jamais son propre planning lui-même — seul le PDG le peut. (Règle
+  // appliquée côté backend ; on l'anticipe ici pour éviter un aller-retour en erreur 403.)
+  const selectableUsers = users.filter((u) => !(currentUserRole !== 'PDG' && u.id === currentUserId))
   const [mandates, setMandates] = useState<Mandate[]>(initialMandates)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -277,8 +272,6 @@ export function MandatesManager({
         actions={
           canMandate
             ? (m) => {
-                // Le CTO_ADMIN ne peut jamais gérer l'emploi du temps du PDG.
-                if (currentUserRole === 'CTO_ADMIN' && m.user.role === 'PDG') return null
                 // Un responsable ne peut jamais modifier son propre planning — seul le PDG le peut.
                 if (currentUserRole !== 'PDG' && m.user.id === currentUserId) return null
                 return (

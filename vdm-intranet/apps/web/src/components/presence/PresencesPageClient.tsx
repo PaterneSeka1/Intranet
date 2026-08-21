@@ -166,7 +166,6 @@ export function PresencesPageClient({
           rows={rows}
           canMandate={canMandate}
           currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
           date={date}
         />
       </div>

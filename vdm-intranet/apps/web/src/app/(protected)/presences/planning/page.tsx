@@ -52,11 +52,9 @@ export default async function PlanningPage() {
   ])
 
   // Un responsable ne définit jamais son propre planning lui-même — seul le PDG le peut (règle
-  // appliquée côté backend ; on l'anticipe ici pour ne pas proposer un choix menant à un 403). Le
-  // CTO_ADMIN ne peut par ailleurs jamais gérer l'emploi du temps du PDG.
+  // appliquée côté backend ; on l'anticipe ici pour ne pas proposer un choix menant à un 403).
   const users = allUsers.filter((u) => {
     if (user.role !== 'PDG' && u.id === user.id) return false
-    if (user.role === 'CTO_ADMIN' && u.role === 'PDG') return false
     return true
   })
 
