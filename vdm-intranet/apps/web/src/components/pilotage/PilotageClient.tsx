@@ -62,6 +62,7 @@ const ACTION_LABELS: Record<string, string> = {
   ACTIVITY_REPORT_EXPORTED: 'Export activité',
   CONNECTION_REPORT_EXPORTED: 'Export connexions',
   GENERAL_REPORT_EXPORTED: 'Rapport général',
+  EMPLOYEE_REPORT_EXPORTED: 'Fiche employé exportée',
   // Annonces
   ANNOUNCEMENT_CREATED: 'Annonce créée',
   ANNOUNCEMENT_UPDATED: 'Annonce modifiée',

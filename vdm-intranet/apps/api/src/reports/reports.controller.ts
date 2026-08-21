@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param, Query, Res, UseGuards } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Role } from '@prisma/client'
 import { Response } from 'express'
@@ -117,6 +117,32 @@ export class ReportsController {
   ) {
     const pdf = await this.reportsPdfService.generalPdf(user, from, to)
     this.sendPdf(res, pdf, 'rapport-general.pdf')
+  }
+
+  @Get('employee/:userId')
+  @ApiOperation({ summary: 'Export Excel — Fiche employé (présence, emploi du temps, congés)' })
+  async employeeExcel(
+    @CurrentUser() user: AuthUser,
+    @Res() res: Response,
+    @Param('userId') userId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string
+  ) {
+    const buffer = await this.reportsExcelService.employeeExcel(user, userId, from, to)
+    this.sendExcel(res, buffer, 'fiche-employe.xlsx')
+  }
+
+  @Get('employee/:userId/pdf')
+  @ApiOperation({ summary: 'Export PDF — Fiche employé (présence, emploi du temps, congés)' })
+  async employeePdf(
+    @CurrentUser() user: AuthUser,
+    @Res() res: Response,
+    @Param('userId') userId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string
+  ) {
+    const pdf = await this.reportsPdfService.employeePdf(user, userId, from, to)
+    this.sendPdf(res, pdf, 'fiche-employe.pdf')
   }
 
   private sendExcel(res: Response, buffer: Buffer, filename: string) {

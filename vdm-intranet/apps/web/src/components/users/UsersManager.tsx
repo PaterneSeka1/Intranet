@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { ROLE_LABELS, type Role, type User } from '@/types/user'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
@@ -370,33 +371,39 @@ export function UsersManager({
             )}
           </>
         }
-        actions={
-          canManage
-            ? (u) =>
-                canEditUser(u) ? (
-                  <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openEdit(u)
-                      }}
-                      className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleActive(u)
-                      }}
-                      className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}
-                    >
-                      {u.isActive ? 'Désactiver' : 'Activer'}
-                    </button>
-                  </>
-                ) : null
-            : undefined
-        }
+        actions={(u) => (
+          <>
+            <Link
+              href={`/utilisateurs/${u.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
+            >
+              Fiche
+            </Link>
+            {canManage && canEditUser(u) && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openEdit(u)
+                  }}
+                  className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
+                >
+                  Modifier
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleActive(u)
+                  }}
+                  className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}
+                >
+                  {u.isActive ? 'Désactiver' : 'Activer'}
+                </button>
+              </>
+            )}
+          </>
+        )}
       />
 
       <Modal

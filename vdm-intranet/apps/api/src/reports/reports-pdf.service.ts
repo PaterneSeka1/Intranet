@@ -16,6 +16,7 @@ type PresenceSummaryRows = Awaited<ReturnType<ReportsService['getPresenceSummary
 type ActivityRows = Awaited<ReturnType<ReportsService['getActivityRows']>>
 type ConnectionRows = Awaited<ReturnType<ReportsService['getConnectionRows']>>
 type GeneralData = Awaited<ReturnType<ReportsService['getGeneralData']>>
+type EmployeeReportData = Awaited<ReturnType<ReportsService['getEmployeeReportData']>>
 
 type StatCard = { label: string; value: string | number; accent?: string }
 
@@ -68,6 +69,18 @@ export class ReportsPdfService {
     const data = await this.reports.getGeneralData(requester, dateFrom, dateTo)
     const buffer = await this.renderPdf(this.generalHtml(data))
     await this.reports.logExport(requester.id, LogAction.GENERAL_REPORT_EXPORTED, 'pdf')
+    return buffer
+  }
+
+  async employeePdf(
+    requester: Requester,
+    userId: string,
+    dateFrom?: string,
+    dateTo?: string
+  ): Promise<Buffer> {
+    const data = await this.reports.getEmployeeReportData(requester, userId, dateFrom, dateTo)
+    const buffer = await this.renderPdf(this.employeeHtml(data))
+    await this.reports.logExport(requester.id, LogAction.EMPLOYEE_REPORT_EXPORTED, 'pdf')
     return buffer
   }
 
@@ -366,5 +379,59 @@ export class ReportsPdfService {
 
     const periodLabel = this.reports.fmtPeriodLabel(data.periodFrom, data.periodTo)
     return this.renderShell('Rapport général', periodLabel, body)
+  }
+
+  private employeeHtml(data: EmployeeReportData): string {
+    const { user, summary, presenceRows, leaves } = data
+    const displayName = user.fullName ?? user.username
+    const periodLabel = this.reports.fmtPeriodLabel(data.periodFrom, data.periodTo)
+
+    const stats = this.statCards([
+      { label: 'Absences (période)', value: summary.absences },
+      { label: 'Jours de retard', value: summary.lateDays },
+      { label: 'Minutes de retard', value: summary.lateMinutesTotal },
+      { label: 'Congés (période)', value: leaves.length },
+    ])
+
+    const infoTable = this.table(
+      ['Champ', 'Valeur'],
+      [
+        ['Identifiant', user.username],
+        ['Email', user.email ?? ''],
+        ['Rôle', user.role],
+        ['Business Unit', user.businessUnit?.name ?? ''],
+        ['Pôle', user.pole?.name ?? ''],
+        ['Manager', user.manager?.fullName ?? user.manager?.username ?? ''],
+        ['Emploi du temps', user.scheduleLabel],
+        ['Statut du compte', user.isActive ? 'Actif' : 'Inactif'],
+        ['Compte créé le', this.reports.fmtDate(user.createdAt)],
+        ['Dernière connexion', this.reports.fmtDateTime(user.lastLoginAt)],
+      ]
+    )
+
+    const presenceTable = this.table(
+      ['Date', 'Statut', 'Heure attendue', 'Arrivée', 'Écart (min)'],
+      presenceRows.map((r) => [
+        this.reports.fmtDate(r.date),
+        STATUS_LABELS[r.status] ?? r.status,
+        r.expectedArrivalTime,
+        this.reports.fmtDateTime(r.officialArrivalTime),
+        r.delayMinutes ?? '',
+      ]),
+      { numericCols: [4] }
+    )
+
+    const leavesTable = this.table(
+      ['Type', 'Du', 'Au'],
+      leaves.map((l) => [l.typeLabel, this.reports.fmtDate(l.startDate), this.reports.fmtDate(l.endDate)])
+    )
+
+    const body =
+      stats +
+      this.block('Informations', infoTable) +
+      this.block('Détail de présence', presenceTable) +
+      this.block('Congés sur la période', leavesTable)
+
+    return this.renderShell(`Fiche employé — ${displayName}`, periodLabel, body)
   }
 }

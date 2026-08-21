@@ -32,3 +32,17 @@ export function downloadExcelBlob(key: string, from?: string, to?: string): Prom
     defaultErrorMessage: 'Erreur lors de la génération du rapport.',
   })
 }
+
+export function downloadEmployeeExcelBlob(
+  userId: string,
+  from?: string,
+  to?: string
+): Promise<Blob> {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  const qs = params.toString()
+  return apiFetchBlob(`/reports/employee/${userId}${qs ? `?${qs}` : ''}`, {
+    defaultErrorMessage: 'Erreur lors de la génération de la fiche employé.',
+  })
+}

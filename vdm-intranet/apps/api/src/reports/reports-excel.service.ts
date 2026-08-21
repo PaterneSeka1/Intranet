@@ -230,6 +230,78 @@ export class ReportsExcelService {
     return this.toBuffer(workbook)
   }
 
+  async employeeExcel(
+    requester: Requester,
+    userId: string,
+    dateFrom?: string,
+    dateTo?: string
+  ): Promise<Buffer> {
+    const data = await this.reports.getEmployeeReportData(requester, userId, dateFrom, dateTo)
+    const { user, summary, presenceRows, leaves } = data
+    const workbook = this.newWorkbook()
+    const displayName = user.fullName ?? user.username
+    const periodLabel = this.reports.fmtPeriodLabel(data.periodFrom, data.periodTo)
+
+    this.buildSheet(workbook, 'Fiche', {
+      title: `Fiche employé — ${displayName}`,
+      subtitle: `Généré le ${this.reports.fmtDate(new Date())}`,
+      headers: [
+        { label: 'Champ', width: 22 },
+        { label: 'Valeur', width: 40 },
+      ],
+      rows: [
+        ['Identifiant', user.username],
+        ['Nom complet', displayName],
+        ['Email', user.email ?? ''],
+        ['Rôle', user.role],
+        ['Business Unit', user.businessUnit?.name ?? ''],
+        ['Pôle', user.pole?.name ?? ''],
+        ['Manager', user.manager?.fullName ?? user.manager?.username ?? ''],
+        ['Emploi du temps', user.scheduleLabel],
+        ['Statut du compte', user.isActive ? 'Actif' : 'Inactif'],
+        ['Compte créé le', this.reports.fmtDate(user.createdAt)],
+        ['Dernière connexion', this.reports.fmtDateTime(user.lastLoginAt)],
+      ],
+    })
+
+    this.buildSheet(workbook, 'Présence', {
+      title: 'Détail de présence',
+      subtitle: `${periodLabel} · Absences : ${summary.absences} · Jours de retard : ${summary.lateDays} · Minutes de retard : ${summary.lateMinutesTotal}`,
+      headers: [
+        { label: 'Date', width: 12 },
+        { label: 'Statut', width: 14 },
+        { label: 'Heure attendue', width: 14 },
+        { label: 'Arrivée officielle', width: 18 },
+        { label: 'Écart (min)', width: 12, numeric: true },
+        { label: 'Adresse GPS', width: 30 },
+        { label: 'Source', width: 12 },
+      ],
+      rows: presenceRows.map((r) => [
+        this.reports.fmtDate(r.date),
+        STATUS_LABELS[r.status] ?? r.status,
+        r.expectedArrivalTime,
+        this.reports.fmtDateTime(r.officialArrivalTime),
+        r.delayMinutes ?? '',
+        r.address ?? '',
+        r.sourceConnectionLogId ? 'Connexion' : 'Manuel',
+      ]),
+    })
+
+    this.buildSheet(workbook, 'Congés', {
+      title: 'Congés sur la période',
+      subtitle: periodLabel,
+      headers: [
+        { label: 'Type', width: 26 },
+        { label: 'Du', width: 14 },
+        { label: 'Au', width: 14 },
+      ],
+      rows: leaves.map((l) => [l.typeLabel, this.reports.fmtDate(l.startDate), this.reports.fmtDate(l.endDate)]),
+    })
+
+    await this.reports.logExport(requester.id, LogAction.EMPLOYEE_REPORT_EXPORTED, 'excel')
+    return this.toBuffer(workbook)
+  }
+
   // ─── Construction & mise en page ────────────────────────────────────────────
 
   private newWorkbook(): ExcelJS.Workbook {

@@ -1,10 +1,15 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { LogAction, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { PresenceScheduleService } from '../presence/presence.schedule.service'
 import { PublicHolidaysService } from '../public-holidays/public-holidays.service'
 import { LeaveSyncService } from '../leaves/leave-sync.service'
-import { matchLeaveToUser, isLeaveActiveOnDay } from '../leaves/leave-match.util'
+import { matchLeaveToUser, isLeaveActiveOnDay, leaveTypeLabel } from '../leaves/leave-match.util'
 import { isRecurringWorkDay } from '../common/working-days.util'
 import {
   CAN_VIEW_REPORTS,
@@ -553,6 +558,105 @@ export class ReportsService {
       today,
       periodFrom,
       periodTo,
+    }
+  }
+
+  /**
+   * Récupère un employé pour un rapport individuel, en appliquant le même périmètre BU/Pôle que
+   * les rapports agrégés (`buildUserWhere`). 404 plutôt que 403 si l'employé demandé est hors
+   * périmètre : même convention que `users.service.ts::findOne`, pour ne pas révéler à un
+   * demandeur sans accès qu'un tel employé existe ailleurs dans l'organisation.
+   */
+  private async findScopedUser(requester: Requester, userId: string, access: ReportAccess) {
+    const userWhere = this.buildUserWhere(requester, access)
+    const user = await this.prisma.user.findFirst({
+      where: { ...userWhere, id: userId },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        fullName: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        lastLoginAt: true,
+        businessUnit: { select: { name: true } },
+        pole: { select: { name: true } },
+        manager: { select: { fullName: true, username: true } },
+        workingDays: true,
+        scheduleGroup: {
+          select: {
+            name: true,
+            expectedArrivalTime: true,
+            expectedDepartureTime: true,
+            isNightShift: true,
+          },
+        },
+        individualExpectedArrivalTime: true,
+        individualExpectedDepartureTime: true,
+      },
+    })
+    if (!user) throw new NotFoundException('Utilisateur introuvable.')
+    return user
+  }
+
+  /**
+   * Fiche individuelle d'un employé : informations RH, emploi du temps, détail de présence et
+   * congés sur `[dateFrom, dateTo]` (défaut 90 derniers jours, même convention que les rapports
+   * agrégés). Accès `'presence'` — même niveau que le rapport de présences, pour que la DAF y ait
+   * aussi droit ; les congés et l'emploi du temps sont considérés comme des données de présence,
+   * pas des données "étendues" (activité/connexions).
+   */
+  async getEmployeeReportData(
+    requester: Requester,
+    userId: string,
+    dateFrom?: string,
+    dateTo?: string
+  ) {
+    this.assertAllowed(requester, 'presence')
+
+    const since90 = new Date()
+    since90.setUTCDate(since90.getUTCDate() - 90)
+    since90.setUTCHours(0, 0, 0, 0)
+
+    const parsedFrom = this.parseReportDate(dateFrom, 'Date de début')
+    const parsedTo = this.parseReportDate(dateTo, 'Date de fin')
+    this.assertDateRange(parsedFrom, parsedTo)
+
+    const today = getToday()
+    const start = dateOnly(parsedFrom ?? since90)
+    const rawEnd = dateOnly(parsedTo ?? today)
+    const end = rawEnd > today ? today : rawEnd
+
+    const user = await this.findScopedUser(requester, userId, 'presence')
+
+    const [summaries, presenceRows, activeLeaves] = await Promise.all([
+      this.computeAttendanceSummaries([user], { id: userId }, start, end),
+      this.prisma.presence.findMany({
+        where: { userId, date: { gte: start, lte: end } },
+        orderBy: { date: 'desc' },
+      }),
+      this.leaveSync.getActiveLeavesInRange(start, end),
+    ])
+
+    const leaves = activeLeaves
+      .filter((l) => matchLeaveToUser(l, user))
+      .map((l) => ({
+        typeLabel: leaveTypeLabel(l.type),
+        startDate: l.startDate,
+        endDate: l.endDate,
+      }))
+      .sort((a, b) => (a.startDate < b.startDate ? 1 : -1))
+
+    return {
+      user: { ...user, scheduleLabel: this.formatScheduleLabel(user) },
+      periodFrom: start,
+      periodTo: end,
+      summary: summaries.get(user.id)!,
+      presenceRows,
+      leaves,
     }
   }
 
