@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ROLE_LABELS } from '@/types/user'
-import { presenceApi, type PresenceRow } from '@/lib/presence'
+import { presenceApi, canMandateUser, type PresenceRow } from '@/lib/presence'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Modal } from '@/components/ui/Modal'
 import { toast } from '@/lib/toast'
@@ -51,10 +51,27 @@ interface Props {
   rows: PresenceRow[]
   canMandate: boolean
   currentUserId: string
+  currentUserRole?: string
+  currentUserBusinessUnitId?: string | null
+  currentUserPoleId?: string | null
   date?: string
 }
 
-export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) {
+export function PresenceTable({
+  rows,
+  canMandate,
+  currentUserId,
+  currentUserRole,
+  currentUserBusinessUnitId,
+  currentUserPoleId,
+  date,
+}: Props) {
+  const currentUserActor = {
+    id: currentUserId,
+    role: currentUserRole ?? '',
+    businessUnit: currentUserBusinessUnitId ? { id: currentUserBusinessUnitId } : null,
+    pole: currentUserPoleId ? { id: currentUserPoleId } : null,
+  }
   const router = useRouter()
   const [mandateForm, setMandateForm] = useState<MandateForm | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -300,6 +317,10 @@ export function PresenceTable({ rows, canMandate, currentUserId, date }: Props) 
         actions={
           canMandate
             ? (r) => {
+                // Une ligne ne propose "Mandater" que si l'utilisateur peut réellement définir
+                // l'emploi du temps de cet employé (BU/pôle) — sinon la liste de présences visible
+                // (ex. DAF, désormais globale) suggérerait à tort un droit qu'elle n'a pas.
+                if (!canMandateUser(currentUserActor, r.user)) return null
                 return (
                   <button
                     onClick={(e) => {

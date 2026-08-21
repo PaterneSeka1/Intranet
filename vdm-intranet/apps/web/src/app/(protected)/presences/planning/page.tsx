@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { PlanningCalendar } from '@/components/presence/PlanningCalendar'
+import { filterMandatableUsers } from '@/lib/mandate'
 import type { PresenceRow, ScheduleGroup } from '@/lib/presence'
 import { API_BASE } from '@/lib/api-base'
 
@@ -51,12 +52,18 @@ export default async function PlanningPage() {
     fetchScheduleGroups(token, cookieName),
   ])
 
-  // Un responsable ne définit jamais son propre planning lui-même — seul le PDG le peut (règle
-  // appliquée côté backend ; on l'anticipe ici pour ne pas proposer un choix menant à un 403).
-  const users = allUsers.filter((u) => {
-    if (user.role !== 'PDG' && u.id === user.id) return false
-    return true
-  })
+  // Un employé n'apparaît dans le sélecteur que si l'utilisateur peut réellement définir son emploi
+  // du temps (BU/pôle + règle d'auto-mandat, cf. canMandateUser côté backend) — sinon la liste de
+  // présences visible (ex. DAF, désormais globale) suggérerait à tort un droit qu'elle n'a pas.
+  const users = filterMandatableUsers(
+    {
+      id: user.id,
+      role: user.role,
+      businessUnit: user.businessUnit ?? null,
+      pole: user.pole ?? null,
+    },
+    allUsers
+  )
 
   return (
     <div className="p-6">

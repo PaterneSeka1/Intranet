@@ -154,6 +154,11 @@ export interface ConnectionLogEntry {
   isFirstConnectionOfDay: boolean
 }
 
+// Périmètre de mandatement (emploi du temps) : logique déplacée dans lib/mandate.ts (sans
+// 'use client') pour rester appelable depuis les Server Components. Ré-exporté ici pour ne pas
+// casser les composants clients existants qui importent depuis '@/lib/presence'.
+export { canMandateUser, filterMandatableUsers, type MandateActor } from './mandate'
+
 function presenceReq<T>(path: string, init?: RequestInit): Promise<T> {
   return apiFetch<T>(`/presence${path}`, init)
 }

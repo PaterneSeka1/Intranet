@@ -81,13 +81,15 @@ export class ReportsService {
       throw new ForbiddenException('Accès réservé aux responsables.')
     }
     if (access === 'extended' && !CAN_EXPORT_EXTENDED_REPORTS.includes(requester.role)) {
-      throw new ForbiddenException('La DAF est limitée aux rapports de présence et absence.')
+      throw new ForbiddenException('Rôle non autorisé pour ce type de rapport.')
     }
   }
 
   buildUserWhere(requester: Requester, access: ReportAccess = 'extended'): object {
     if (CAN_VIEW_REPORTS_GLOBAL.includes(requester.role)) return {}
-    if (access === 'presence' && requester.role === Role.DAF) return {}
+    // La DAF pilote l'entreprise sans exception de BU, y compris sur les rapports étendus
+    // (activité/connexions/général) — cohérent avec presence.service.ts et pilotage.service.ts.
+    if (requester.role === Role.DAF) return {}
     if (CAN_VIEW_REPORTS_BU_SCOPE.includes(requester.role) && requester.businessUnitId) {
       return { businessUnitId: requester.businessUnitId }
     }

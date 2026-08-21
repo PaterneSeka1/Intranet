@@ -304,7 +304,9 @@ export function PilotageClient({ role }: Props) {
     'En congé': b.onLeave,
     Absent: b.absent,
   }))
-  const availableReports = role === 'DAF' ? REPORTS.filter((r) => r.key === 'presence') : REPORTS
+  // La DAF a désormais accès à tous les types de rapports, y compris étendus (activité/connexions/
+  // général) — cohérent avec le scope entreprise complet côté API (reports.service.ts).
+  const availableReports = REPORTS
 
   return (
     <div className="space-y-8">

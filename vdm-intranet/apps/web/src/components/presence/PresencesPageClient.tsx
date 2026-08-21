@@ -14,6 +14,8 @@ interface Props {
   canMandate: boolean
   currentUserId: string
   currentUserRole: string
+  currentUserBusinessUnitId: string | null
+  currentUserPoleId: string | null
   holidays: PublicHoliday[]
 }
 
@@ -52,6 +54,8 @@ export function PresencesPageClient({
   canMandate,
   currentUserId,
   currentUserRole,
+  currentUserBusinessUnitId,
+  currentUserPoleId,
   holidays,
 }: Props) {
   const router = useRouter()
@@ -166,6 +170,9 @@ export function PresencesPageClient({
           rows={rows}
           canMandate={canMandate}
           currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          currentUserBusinessUnitId={currentUserBusinessUnitId}
+          currentUserPoleId={currentUserPoleId}
           date={date}
         />
       </div>
@@ -184,6 +191,8 @@ export function PresencesPageClient({
             canMandate={canMandate}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
+            currentUserBusinessUnitId={currentUserBusinessUnitId}
+            currentUserPoleId={currentUserPoleId}
             users={rows.map((r) => r.user)}
           />
         </div>

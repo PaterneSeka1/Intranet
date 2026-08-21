@@ -77,6 +77,9 @@ export class PilotageService {
   private buildUserWhere(requester: Requester): object {
     const base = { isActive: true }
     if (CAN_VIEW_PILOTAGE_GLOBAL.includes(requester.role)) return base
+    // La DAF pilote les présences de toute l'entreprise sans exception, quelle que soit la BU
+    // (cohérent avec le même carve-out déjà appliqué à presence.service.ts et reports.service.ts).
+    if (requester.role === Role.DAF) return base
     if (CAN_VIEW_PILOTAGE_BU_SCOPE.includes(requester.role) && requester.businessUnitId)
       return { ...base, businessUnitId: requester.businessUnitId }
     if (requester.role === Role.RESPONSABLE_POLE && requester.poleId) {

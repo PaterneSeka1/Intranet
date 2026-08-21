@@ -883,6 +883,9 @@ export class PresenceService {
 
   private buildUserScope(requester: Requester): Record<string, unknown> {
     if (CAN_VIEW_PRESENCE_GLOBAL.includes(requester.role)) return {}
+    // La DAF voit les présences de tous les employés sans exception, quelle que soit leur BU
+    // (cohérent avec le même carve-out déjà appliqué aux exports de présence, cf. reports.service.ts).
+    if (requester.role === Role.DAF) return {}
     if (CAN_VIEW_PRESENCE_BU_SCOPE.includes(requester.role) && requester.businessUnitId) {
       return { businessUnitId: requester.businessUnitId }
     }

@@ -6,7 +6,7 @@ import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Modal } from '@/components/ui/Modal'
-import { presenceApi } from '@/lib/presence'
+import { presenceApi, canMandateUser } from '@/lib/presence'
 
 export type Mandate = {
   id: string
@@ -31,7 +31,8 @@ type UserOption = {
   fullName: string | null
   username: string
   role: string
-  businessUnit: { name: string } | null
+  businessUnit: { id: string; name: string } | null
+  pole?: { id: string; name: string } | null
 }
 
 interface Props {
@@ -39,6 +40,8 @@ interface Props {
   canMandate: boolean
   currentUserId: string
   currentUserRole?: string
+  currentUserBusinessUnitId?: string | null
+  currentUserPoleId?: string | null
   users?: UserOption[]
 }
 
@@ -64,11 +67,24 @@ export function MandatesManager({
   canMandate,
   currentUserId,
   currentUserRole,
+  currentUserBusinessUnitId,
+  currentUserPoleId,
   users = [],
 }: Props) {
-  // Un responsable ne définit jamais son propre planning lui-même — seul le PDG le peut. (Règle
-  // appliquée côté backend ; on l'anticipe ici pour éviter un aller-retour en erreur 403.)
-  const selectableUsers = users.filter((u) => !(currentUserRole !== 'PDG' && u.id === currentUserId))
+  // Un employé n'apparaît dans le sélecteur que si l'utilisateur peut réellement définir son emploi
+  // du temps (BU/pôle + règle d'auto-mandat, cf. canMandateUser côté backend) — sinon la liste de
+  // présences visible (ex. DAF, désormais globale) suggérerait à tort un droit qu'elle n'a pas.
+  const selectableUsers = users.filter((u) =>
+    canMandateUser(
+      {
+        id: currentUserId,
+        role: currentUserRole ?? '',
+        businessUnit: currentUserBusinessUnitId ? { id: currentUserBusinessUnitId } : null,
+        pole: currentUserPoleId ? { id: currentUserPoleId } : null,
+      },
+      u
+    )
+  )
   const [mandates, setMandates] = useState<Mandate[]>(initialMandates)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)

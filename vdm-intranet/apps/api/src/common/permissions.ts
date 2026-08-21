@@ -54,6 +54,7 @@ export const CAN_VIEW_REPORTS: Role[] = [
 export const CAN_EXPORT_EXTENDED_REPORTS: Role[] = [
   Role.CTO_ADMIN,
   Role.PDG,
+  Role.DAF,
   Role.RESPONSABLE_BU,
   Role.RESPONSABLE_POLE,
 ]
