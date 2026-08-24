@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 const SIZES = {
   sm: 'max-w-sm',
@@ -8,6 +8,9 @@ const SIZES = {
   lg: 'max-w-lg',
   xl: 'max-w-xl',
 }
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 interface ModalProps {
   open: boolean
@@ -29,6 +32,9 @@ export function Modal({
   size = 'lg',
   accent = '#F28C38',
 }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+
   // Escape key
   useEffect(() => {
     if (!open) return
@@ -41,6 +47,46 @@ export function Modal({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  // Focus initial sur le premier élément focusable de la modale, et restauration du focus sur
+  // l'élément qui l'avait avant ouverture (au lieu de le laisser sur le déclencheur masqué
+  // derrière le fond assombri, ou nulle part).
+  useEffect(() => {
+    if (!open) return
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+    const panel = panelRef.current
+    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+    ;(firstFocusable ?? panel)?.focus()
+    return () => {
+      previouslyFocusedRef.current?.focus?.()
+    }
+  }, [open])
+
+  // Piège de focus : Tab/Shift+Tab restent à l'intérieur de la modale plutôt que de sortir vers
+  // le contenu masqué derrière le fond assombri.
+  useEffect(() => {
+    if (!open) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return
+      const panel = panelRef.current
+      if (!panel) return
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => el.offsetParent !== null
+      )
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
 
   // Prevent body scroll while open
   useEffect(() => {
@@ -63,9 +109,11 @@ export function Modal({
     >
       {/* Panel */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={`
           vdm-panel-in

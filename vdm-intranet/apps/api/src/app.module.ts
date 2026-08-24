@@ -17,12 +17,14 @@ import { PublicHolidaysModule } from './public-holidays/public-holidays.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { SearchModule } from './search/search.module'
 import { LeavesModule } from './leaves/leaves.module'
+import { validateEnv } from './config/env.validation'
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['../../.env', '.env'],
+      validate: validateEnv,
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     PrismaModule,

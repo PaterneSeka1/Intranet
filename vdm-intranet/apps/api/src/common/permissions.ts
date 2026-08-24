@@ -104,10 +104,33 @@ export const CAN_MANAGE_ORGANIZATION: Role[] = [Role.CTO_ADMIN]
 /** Rôles pouvant gérer les annonces */
 export const CAN_MANAGE_ANNOUNCEMENTS: Role[] = [Role.CTO_ADMIN, Role.PDG]
 
-/** Rôles pouvant gérer les utilisateurs restreints à leur propre BU */
+/**
+ * Rôles voyant/recherchant les utilisateurs restreints à leur propre BU.
+ * ⚠️ Lecture seule (scopeWhere/recherche) — ne donne aucun droit d'écriture.
+ * Pour l'écriture scopée, voir `CAN_MANAGE_USERS_SCOPED_WRITE`.
+ */
 export const CAN_MANAGE_USERS_BU_SCOPE: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
 
 /** Rôles admin protégés : seul CTO_ADMIN peut créer/modifier ces comptes */
 export const PROTECTED_ADMIN_ROLES: Role[] = [Role.CTO_ADMIN, Role.PDG]
+
+/**
+ * Rôles pouvant modifier des champs administratifs courants (nom, e-mail, mot de passe,
+ * activation) des utilisateurs de leur périmètre — jamais le rôle, la BU, le pôle ou le manager.
+ */
+export const CAN_MANAGE_USERS_SCOPED_WRITE: Role[] = [
+  Role.DAF,
+  Role.RESPONSABLE_BU,
+  Role.RESPONSABLE_POLE,
+]
+
+/** Rôles pouvant gérer les jours fériés (calendrier RH/paie, distinct du branding technique) */
+export const CAN_MANAGE_HOLIDAYS: Role[] = [Role.CTO_ADMIN, Role.DAF]
+
+/** Rôles pouvant gérer des annonces restreintes à leur propre BU (jamais globales ou hors BU) */
+export const CAN_MANAGE_ANNOUNCEMENTS_BU_SCOPE: Role[] = [Role.DAF, Role.RESPONSABLE_BU]
+
+/** Rôles pouvant gérer des groupes horaires restreints à leur propre BU */
+export const CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE: Role[] = [Role.RESPONSABLE_BU]
 
 export const isAccueilOnly = (role: Role) => ACCUEIL_ONLY_ROLES.includes(role)

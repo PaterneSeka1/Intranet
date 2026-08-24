@@ -3,6 +3,31 @@ import { fetchSettings } from '@/lib/settings'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Détecte le type MIME réel d'une icône personnalisée (data URI, chemin relatif ou URL absolue)
+ * au lieu de le coder en dur — un type déclaré ne correspondant pas au contenu réel (ex.
+ * `image/jpeg` pour un PNG) peut faire ignorer l'icône par certains navigateurs à l'installation.
+ */
+function detectImageMimeType(src: string): string {
+  const dataUriMatch = /^data:([^;,]+)/.exec(src)
+  if (dataUriMatch) return dataUriMatch[1]
+  const ext = src.split(/[?#]/)[0].split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'webp':
+      return 'image/webp'
+    case 'svg':
+      return 'image/svg+xml'
+    case 'gif':
+      return 'image/gif'
+    case 'png':
+    default:
+      return 'image/png'
+  }
+}
+
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await fetchSettings()
   const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
@@ -22,7 +47,14 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     categories: ['business', 'productivity'],
     icons: [
       ...(customIcon
-        ? [{ src: customIcon, sizes: 'any', type: 'image/jpeg', purpose: 'any' as const }]
+        ? [
+            {
+              src: customIcon,
+              sizes: 'any',
+              type: detectImageMimeType(customIcon),
+              purpose: 'any' as const,
+            },
+          ]
         : []),
       {
         src: '/icon-192.png',

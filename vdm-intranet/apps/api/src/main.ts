@@ -6,6 +6,7 @@ import { NestExpressApplication } from '@nestjs/platform-express'
 import cookieParser = require('cookie-parser')
 import helmet from 'helmet'
 import { AppModule } from './app.module'
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 
 function corsOrigins() {
   const origins =
@@ -26,6 +27,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
   )
+  app.useGlobalFilters(new AllExceptionsFilter())
   app.enableCors({
     origin: corsOrigins(),
     credentials: true,

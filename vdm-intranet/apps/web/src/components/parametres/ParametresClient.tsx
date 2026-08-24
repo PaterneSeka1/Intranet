@@ -5,7 +5,7 @@ import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { Modal } from '@/components/ui/Modal'
 
-import { API_BASE as API } from '@/lib/api-base'
+import { apiFetch } from '@/lib/http'
 import { saveSettings, deleteSetting } from '@/lib/settings'
 import { escapeCssString, opacityPercentToCss, opacitySettingToPercent } from '@/lib/theme-settings'
 
@@ -140,18 +140,10 @@ function compressImage(file: File, maxWidth = 1920, quality = 0.8): Promise<stri
 // API helper
 // ---------------------------------------------------------------------------
 
-async function apiReq<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}/api${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as { message?: string }).message ?? `Erreur ${res.status}`)
-  }
-  return res.json()
-}
+// Alias local vers le client HTTP unique (`lib/http.ts`) : cette page appelait auparavant
+// `fetch()` directement, ce qui laissait une session expirée échouer silencieusement au lieu
+// de renvoyer vers /login comme le reste de l'application.
+const apiReq = apiFetch
 
 const EMPTY_GROUP: GroupForm = {
   name: '',

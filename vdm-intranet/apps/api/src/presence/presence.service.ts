@@ -19,6 +19,7 @@ import {
   ACCUEIL_ONLY_ROLES,
   CAN_VIEW_PRESENCE_GLOBAL,
   CAN_VIEW_PRESENCE_BU_SCOPE,
+  CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE,
 } from '../common/permissions'
 import { NotificationsService } from '../notifications/notifications.service'
 import { LeaveSyncService, type ActiveLeave } from '../leaves/leave-sync.service'
@@ -513,15 +514,33 @@ export class PresenceService {
     })
   }
 
-  createScheduleGroup(dto: CreateScheduleGroupDto, createdById: string) {
+  /**
+   * Un RESPONSABLE_BU ne peut créer/gérer que des groupes horaires rattachés à sa propre BU
+   * (jamais un groupe global ni celui d'une autre BU) — le CTO_ADMIN reste seul à pouvoir créer
+   * des groupes globaux (`businessUnitId: null`).
+   */
+  private assertScheduleGroupBuScope(requester: Requester, businessUnitId: string | null) {
+    if (CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE.includes(requester.role)) {
+      if (!requester.businessUnitId || businessUnitId !== requester.businessUnitId) {
+        throw new ForbiddenException('Vous ne pouvez gérer que les groupes horaires de votre BU.')
+      }
+    }
+  }
+
+  createScheduleGroup(dto: CreateScheduleGroupDto, requester: Requester) {
+    const businessUnitId = CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE.includes(requester.role)
+      ? (requester.businessUnitId as string)
+      : (dto.businessUnitId ?? null)
+    this.assertScheduleGroupBuScope(requester, businessUnitId)
+
     return this.prisma.scheduleGroup
       .create({
-        data: dto,
+        data: { ...dto, businessUnitId },
       })
       .then(async (group) => {
         await this.prisma.activityLog.create({
           data: {
-            userId: createdById,
+            userId: requester.id,
             action: 'SCHEDULE_GROUP_CREATED',
             entity: 'ScheduleGroup',
             entityId: group.id,
@@ -532,15 +551,23 @@ export class PresenceService {
       })
   }
 
-  async updateScheduleGroup(id: string, dto: UpdateScheduleGroupDto, updatedById: string) {
+  async updateScheduleGroup(id: string, dto: UpdateScheduleGroupDto, requester: Requester) {
     const group = await this.prisma.scheduleGroup.findUnique({ where: { id } })
     if (!group) throw new NotFoundException('Groupe horaire introuvable')
+    this.assertScheduleGroupBuScope(requester, group.businessUnitId)
+    if (
+      dto.businessUnitId !== undefined &&
+      CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE.includes(requester.role)
+    ) {
+      // Un responsable BU ne peut pas déplacer son groupe hors de sa propre BU.
+      this.assertScheduleGroupBuScope(requester, dto.businessUnitId ?? null)
+    }
 
     try {
       const updated = await this.prisma.scheduleGroup.update({ where: { id }, data: dto })
       await this.prisma.activityLog.create({
         data: {
-          userId: updatedById,
+          userId: requester.id,
           action: 'SCHEDULE_GROUP_UPDATED',
           entity: 'ScheduleGroup',
           entityId: id,
@@ -555,12 +582,13 @@ export class PresenceService {
     }
   }
 
-  async deleteScheduleGroup(id: string, deletedById: string) {
+  async deleteScheduleGroup(id: string, requester: Requester) {
     const group = await this.prisma.scheduleGroup.findUnique({
       where: { id },
       include: { _count: { select: { users: true } } },
     })
     if (!group) throw new NotFoundException('Groupe horaire introuvable')
+    this.assertScheduleGroupBuScope(requester, group.businessUnitId)
     if (group._count.users > 0) {
       throw new BadRequestException(
         `Impossible de supprimer : ${group._count.users} utilisateur(s) assigné(s).`
@@ -576,7 +604,7 @@ export class PresenceService {
     }
     await this.prisma.activityLog.create({
       data: {
-        userId: deletedById,
+        userId: requester.id,
         action: 'SCHEDULE_GROUP_DELETED',
         entity: 'ScheduleGroup',
         entityId: id,

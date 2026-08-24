@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: vdm-intranet
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vdm_ci
+          POSTGRES_PASSWORD: vdm_ci_password
+          POSTGRES_DB: vdm_intranet_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vdm_ci -d vdm_intranet_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://vdm_ci:vdm_ci_password@localhost:5432/vdm_intranet_ci?schema=public
+      # Secret dédié à la CI uniquement — jamais utilisé en dehors de ce pipeline.
+      JWT_SECRET: ci-only-secret-never-used-outside-github-actions-please-ignore
+      NODE_ENV: test
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: vdm-intranet/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Générer le client Prisma
+        run: npm run db:generate
+
+      - name: >
+          Appliquer les migrations sur une base neuve (prisma migrate deploy) — détecte toute
+          régression sur l'historique de migrations avant un déploiement/restauration réel
+        run: npx prisma migrate deploy --schema packages/database/prisma/schema.prisma
+
+      - name: Vérifier le formatage (Prettier)
+        run: npx prettier --check "**/*.{ts,tsx,json,yaml,md}" --ignore-path .gitignore
+
+      - name: Type-check API
+        run: npm run type-check --workspace=apps/api
+
+      - name: Type-check Web
+        run: npm run type-check --workspace=apps/web
+
+      - name: Tests unitaires (API)
+        run: npm run test:api -- --ci
+
+      - name: Build API
+        run: npm run build:api
+
+      - name: Build Web
+        run: npm run build:web
+
+      - name: Audit des dépendances (informatif, ne bloque pas la CI)
+        run: npm audit --omit=dev || true

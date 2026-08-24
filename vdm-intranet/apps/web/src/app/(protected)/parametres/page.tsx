@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import { ParametresClient } from '@/components/parametres/ParametresClient'
+import { ParametresReadOnly } from '@/components/parametres/ParametresReadOnly'
 import { fetchSettings } from '@/lib/settings'
 
 type Bu = {
@@ -40,7 +41,11 @@ type Holiday = { id: string; date: string; label: string; isRecurring: boolean }
 export default async function ParametresPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.role !== 'CTO_ADMIN') redirect('/acces-refuse')
+  // Le CTO_ADMIN gère intégralement la page (branding compris) ; le PDG obtient un accès en
+  // lecture seule à l'organigramme BU/Pôles/groupes horaires/jours fériés — un trou de périmètre
+  // plus qu'un choix de gouvernance (il ne pouvait jusqu'ici même pas consulter sa propre
+  // structure organisationnelle dans l'outil). Tout autre rôle reste refusé.
+  if (user.role !== 'CTO_ADMIN' && user.role !== 'PDG') redirect('/acces-refuse')
 
   const [groups, buList, poleList, settingsList, holidays] = await Promise.all([
     serverFetch<ScheduleGroup[]>('/presence/schedule-groups') ?? [],
@@ -49,6 +54,19 @@ export default async function ParametresPage() {
     fetchSettings(),
     serverFetch<Holiday[]>('/public-holidays') ?? [],
   ])
+
+  if (user.role === 'PDG') {
+    return (
+      <div className="p-6">
+        <ParametresReadOnly
+          buList={buList ?? []}
+          poleList={poleList ?? []}
+          groups={groups ?? []}
+          holidays={holidays ?? []}
+        />
+      </div>
+    )
+  }
 
   const initialSettings = Object.fromEntries((settingsList ?? []).map((s) => [s.key, s.value]))
 

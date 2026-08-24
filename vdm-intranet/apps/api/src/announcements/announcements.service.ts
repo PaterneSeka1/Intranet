@@ -10,7 +10,7 @@ import { CreateAnnouncementDto } from './dto/create-announcement.dto'
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto'
 import { AnnouncementsGateway } from './announcements.gateway'
 import { NotificationsService } from '../notifications/notifications.service'
-import { CAN_MANAGE_ANNOUNCEMENTS } from '../common/permissions'
+import { CAN_MANAGE_ANNOUNCEMENTS, CAN_MANAGE_ANNOUNCEMENTS_BU_SCOPE } from '../common/permissions'
 
 type Requester = { id: string; role: Role; businessUnitId?: string | null }
 
@@ -39,10 +39,19 @@ export class AnnouncementsService {
 
   findAll(requester: Requester | undefined, activeOnly = false) {
     const canSeeAll = requester && CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)
+    // Manager BU (DAF, RESPONSABLE_BU) consultant sa propre liste de gestion : voit toutes ses
+    // annonces (brouillon/inactive/expirée comprises), mais jamais celles d'une autre BU ni les
+    // globales — distinct de la vue "widget/bannière" (activeOnly=true) où il reste un simple
+    // destinataire (global + sa BU, actives uniquement, cf. branche ci-dessous).
+    const canManageOwnBu =
+      !canSeeAll &&
+      !!requester &&
+      CAN_MANAGE_ANNOUNCEMENTS_BU_SCOPE.includes(requester.role) &&
+      !!requester.businessUnitId
     const now = new Date()
     const whereParts: Prisma.AnnouncementWhereInput[] = []
 
-    if (activeOnly || !canSeeAll) {
+    if (activeOnly || (!canSeeAll && !canManageOwnBu)) {
       whereParts.push({
         isActive: true,
         publishedAt: { lte: now },
@@ -51,11 +60,15 @@ export class AnnouncementsService {
     }
 
     if (!canSeeAll) {
-      whereParts.push({
-        OR: requester?.businessUnitId
-          ? [{ businessUnitId: null }, { businessUnitId: requester.businessUnitId }]
-          : [{ businessUnitId: null }],
-      })
+      whereParts.push(
+        canManageOwnBu && !activeOnly
+          ? { businessUnitId: requester!.businessUnitId }
+          : {
+              OR: requester?.businessUnitId
+                ? [{ businessUnitId: null }, { businessUnitId: requester.businessUnitId }]
+                : [{ businessUnitId: null }],
+            }
+      )
     }
 
     const where: Prisma.AnnouncementWhereInput = whereParts.length ? { AND: whereParts } : {}
@@ -69,13 +82,22 @@ export class AnnouncementsService {
   }
 
   async create(dto: CreateAnnouncementDto, requester: Requester) {
-    if (!CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)) {
+    const isGlobalManager = CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)
+    const isBuManager =
+      !isGlobalManager &&
+      CAN_MANAGE_ANNOUNCEMENTS_BU_SCOPE.includes(requester.role) &&
+      !!requester.businessUnitId
+    if (!isGlobalManager && !isBuManager) {
       throw new ForbiddenException('Réservé aux administrateurs.')
     }
 
     const title = this.cleanRequiredText(dto.title, 'Le titre est obligatoire.')
     const body = this.cleanRequiredText(dto.body, 'Le corps de l’annonce est obligatoire.')
-    const businessUnitId = this.cleanOptionalId(dto.businessUnitId)
+    // Un manager scopé (DAF, RESPONSABLE_BU) ne peut jamais publier une annonce globale ou
+    // ciblant une autre BU que la sienne — la cible demandée est ignorée au profit de sa BU.
+    const businessUnitId = isBuManager
+      ? (requester.businessUnitId as string)
+      : this.cleanOptionalId(dto.businessUnitId)
     await this.ensureBusinessUnitExists(businessUnitId)
 
     const publishedAt = dto.publishedAt ? new Date(dto.publishedAt) : new Date()
@@ -127,19 +149,36 @@ export class AnnouncementsService {
   }
 
   async update(id: string, dto: UpdateAnnouncementDto, requester: Requester) {
-    if (!CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)) {
+    const isGlobalManager = CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)
+    const isBuManager =
+      !isGlobalManager &&
+      CAN_MANAGE_ANNOUNCEMENTS_BU_SCOPE.includes(requester.role) &&
+      !!requester.businessUnitId
+    if (!isGlobalManager && !isBuManager) {
       throw new ForbiddenException('Réservé aux administrateurs.')
     }
 
     const existing = await this.prisma.announcement.findUnique({ where: { id } })
     if (!existing) throw new NotFoundException('Annonce introuvable.')
 
+    if (isBuManager) {
+      if (existing.businessUnitId !== requester.businessUnitId) {
+        throw new ForbiddenException('Vous ne pouvez modifier que les annonces de votre BU.')
+      }
+      if (
+        dto.businessUnitId !== undefined &&
+        this.cleanOptionalId(dto.businessUnitId) !== requester.businessUnitId
+      ) {
+        throw new ForbiddenException('Vous ne pouvez pas déplacer cette annonce hors de votre BU.')
+      }
+    }
+
     const data: Record<string, unknown> = {}
     if (dto.title !== undefined)
       data.title = this.cleanRequiredText(dto.title, 'Le titre est obligatoire.')
     if (dto.body !== undefined)
       data.body = this.cleanRequiredText(dto.body, 'Le corps de l’annonce est obligatoire.')
-    if (dto.businessUnitId !== undefined) {
+    if (dto.businessUnitId !== undefined && !isBuManager) {
       const businessUnitId = this.cleanOptionalId(dto.businessUnitId)
       await this.ensureBusinessUnitExists(businessUnitId)
       data.businessUnitId = businessUnitId
@@ -171,12 +210,21 @@ export class AnnouncementsService {
   }
 
   async remove(id: string, requester: Requester) {
-    if (!CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)) {
+    const isGlobalManager = CAN_MANAGE_ANNOUNCEMENTS.includes(requester.role)
+    const isBuManager =
+      !isGlobalManager &&
+      CAN_MANAGE_ANNOUNCEMENTS_BU_SCOPE.includes(requester.role) &&
+      !!requester.businessUnitId
+    if (!isGlobalManager && !isBuManager) {
       throw new ForbiddenException('Réservé aux administrateurs.')
     }
 
     const existing = await this.prisma.announcement.findUnique({ where: { id } })
     if (!existing) throw new NotFoundException('Annonce introuvable.')
+
+    if (isBuManager && existing.businessUnitId !== requester.businessUnitId) {
+      throw new ForbiddenException('Vous ne pouvez supprimer que les annonces de votre BU.')
+    }
 
     try {
       await this.prisma.announcement.delete({ where: { id } })

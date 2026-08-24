@@ -13,7 +13,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Role } from '@prisma/client'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import { CAN_MANAGE_SETTINGS } from '../common/permissions'
+import { CAN_MANAGE_HOLIDAYS } from '../common/permissions'
 import { PublicHolidaysService } from './public-holidays.service'
 import { CreatePublicHolidayDto } from './dto/create-public-holiday.dto'
 import { UpdatePublicHolidayDto } from './dto/update-public-holiday.dto'
@@ -33,27 +33,27 @@ export class PublicHolidaysController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Créer un jour férié (CTO_ADMIN)' })
+  @ApiOperation({ summary: 'Créer un jour férié (CTO_ADMIN, DAF)' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreatePublicHolidayDto) {
-    if (!CAN_MANAGE_SETTINGS.includes(user.role)) throw new ForbiddenException()
+    if (!CAN_MANAGE_HOLIDAYS.includes(user.role)) throw new ForbiddenException()
     return this.service.create(dto)
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Modifier un jour férié (CTO_ADMIN)' })
+  @ApiOperation({ summary: 'Modifier un jour férié (CTO_ADMIN, DAF)' })
   update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() dto: UpdatePublicHolidayDto
   ) {
-    if (!CAN_MANAGE_SETTINGS.includes(user.role)) throw new ForbiddenException()
+    if (!CAN_MANAGE_HOLIDAYS.includes(user.role)) throw new ForbiddenException()
     return this.service.update(id, dto)
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Supprimer un jour férié (CTO_ADMIN)' })
+  @ApiOperation({ summary: 'Supprimer un jour férié (CTO_ADMIN, DAF)' })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    if (!CAN_MANAGE_SETTINGS.includes(user.role)) throw new ForbiddenException()
+    if (!CAN_MANAGE_HOLIDAYS.includes(user.role)) throw new ForbiddenException()
     return this.service.remove(id)
   }
 }

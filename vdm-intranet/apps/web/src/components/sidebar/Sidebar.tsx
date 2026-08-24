@@ -29,6 +29,7 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: 'Pilotage', href: '/pilotage', icon: '📊' },
     { label: 'Présences', href: '/presences', icon: '📅' },
     { label: 'Emploi du temps', href: '/presences/planning', icon: '🗓️' },
+    { label: 'Organisation', href: '/parametres', icon: '⚙️' },
     { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
   ],
   DAF: [

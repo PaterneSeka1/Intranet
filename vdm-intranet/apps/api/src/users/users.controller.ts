@@ -8,7 +8,12 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { Roles } from '../common/decorators/roles.decorator'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import { CAN_VIEW_USERS, CAN_MANAGE_USERS } from '../common/permissions'
+import {
+  CAN_VIEW_USERS,
+  CAN_MANAGE_USERS,
+  CAN_MANAGE_USERS_BU_SCOPE,
+  CAN_MANAGE_USERS_SCOPED_WRITE,
+} from '../common/permissions'
 
 type JwtUser = {
   id: string
@@ -63,16 +68,30 @@ export class UsersController {
     return this.usersService.update(id, dto, user)
   }
 
+  @Patch(':id/scoped')
+  @Roles(...CAN_MANAGE_USERS_SCOPED_WRITE)
+  @ApiOperation({
+    summary:
+      'Modifier un utilisateur de son périmètre (DAF/RESPONSABLE_BU : administratif + planning ; RESPONSABLE_POLE : planning uniquement) — jamais le rôle, la BU, le pôle ou le manager',
+  })
+  updateScoped(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() user: JwtUser) {
+    return this.usersService.updateScoped(id, dto, user)
+  }
+
   @Patch(':id/activate')
-  @Roles(...CAN_MANAGE_USERS)
-  @ApiOperation({ summary: 'Activer un compte (CTO_ADMIN, PDG)' })
+  @Roles(...CAN_MANAGE_USERS, ...CAN_MANAGE_USERS_BU_SCOPE)
+  @ApiOperation({
+    summary: 'Activer un compte (CTO_ADMIN, PDG, ou DAF/RESPONSABLE_BU sur leur BU)',
+  })
   activate(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     return this.usersService.setActive(id, true, user)
   }
 
   @Patch(':id/deactivate')
-  @Roles(...CAN_MANAGE_USERS)
-  @ApiOperation({ summary: 'Désactiver un compte (CTO_ADMIN, PDG)' })
+  @Roles(...CAN_MANAGE_USERS, ...CAN_MANAGE_USERS_BU_SCOPE)
+  @ApiOperation({
+    summary: 'Désactiver un compte (CTO_ADMIN, PDG, ou DAF/RESPONSABLE_BU sur leur BU)',
+  })
   deactivate(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     return this.usersService.setActive(id, false, user)
   }

@@ -372,7 +372,8 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
                 type="button"
                 onClick={() => setPickerOpen((o) => !o)}
                 className={
-                  INPUT + ' bg-white min-w-[220px] text-left flex items-center justify-between gap-2'
+                  INPUT +
+                  ' bg-white min-w-[220px] text-left flex items-center justify-between gap-2'
                 }
               >
                 <span className="truncate">
@@ -504,12 +505,23 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
             const isOffDay = !workingDaysSet.has((cell.weekdayIdx + 1) % 7)
 
             return (
-              <button
+              // `div` avec role="button" (et non un vrai <button>) car la case contient un second
+              // contrôle interactif indépendant (bouton "Supprimer ce jour") — imbriquer un
+              // <button> dans un autre est invalide en HTML et rendait ce second contrôle
+              // inutilisable au clavier.
+              <div
                 key={cell.iso}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleDate(cell.iso)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    toggleDate(cell.iso)
+                  }
+                }}
                 className={[
-                  'relative rounded-xl border p-2 text-left min-h-[64px] transition-colors',
+                  'relative rounded-xl border p-2 text-left min-h-[64px] transition-colors cursor-pointer',
                   selected
                     ? 'border-[#F28C38] bg-[#F28C38]/10 ring-2 ring-[#F28C38]/30'
                     : mandate
@@ -534,8 +546,8 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
                   </div>
                 ) : null}
                 {mandate && (
-                  <span
-                    role="button"
+                  <button
+                    type="button"
                     aria-label="Supprimer ce jour"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -544,9 +556,9 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
                     className="absolute top-1 right-1 text-gray-300 hover:text-red-500 text-xs leading-none"
                   >
                     ×
-                  </span>
+                  </button>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>

@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query, Res, UseGuards } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Role } from '@prisma/client'
 import { Response } from 'express'
+import { Throttle } from '@nestjs/throttler'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { ReportsPdfService } from './reports-pdf.service'
@@ -16,6 +17,10 @@ type AuthUser = {
 
 @ApiTags('reports')
 @UseGuards(JwtAuthGuard)
+// Exports coûteux en mémoire/CPU (Puppeteer pour le PDF, classeur ExcelJS entièrement construit
+// en mémoire) : limite dédiée, plus stricte que le quota global de l'API, pour éviter qu'une
+// boucle de retry ou un abus ne sature le VPS.
+@Throttle({ default: { ttl: 60_000, limit: 10 } })
 @Controller('reports')
 export class ReportsController {
   constructor(

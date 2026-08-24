@@ -23,7 +23,11 @@ import { CreateMandateDto } from './dto/create-mandate.dto'
 import { BulkCreateMandateDto } from './dto/bulk-create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
-import { CAN_MANAGE_MANDATES, CAN_MANAGE_SCHEDULE_GROUPS } from '../common/permissions'
+import {
+  CAN_MANAGE_MANDATES,
+  CAN_MANAGE_SCHEDULE_GROUPS,
+  CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE,
+} from '../common/permissions'
 
 type AuthUser = {
   id: string
@@ -82,8 +86,13 @@ export class PresenceController {
 
   @Post('schedule-groups')
   createScheduleGroup(@CurrentUser() user: AuthUser, @Body() dto: CreateScheduleGroupDto) {
-    if (!CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role)) throw new ForbiddenException()
-    return this.presenceService.createScheduleGroup(dto, user.id)
+    if (
+      !CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role) &&
+      !CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE.includes(user.role)
+    ) {
+      throw new ForbiddenException()
+    }
+    return this.presenceService.createScheduleGroup(dto, user)
   }
 
   @Patch('schedule-groups/:id')
@@ -92,14 +101,24 @@ export class PresenceController {
     @Param('id') id: string,
     @Body() dto: UpdateScheduleGroupDto
   ) {
-    if (!CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role)) throw new ForbiddenException()
-    return this.presenceService.updateScheduleGroup(id, dto, user.id)
+    if (
+      !CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role) &&
+      !CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE.includes(user.role)
+    ) {
+      throw new ForbiddenException()
+    }
+    return this.presenceService.updateScheduleGroup(id, dto, user)
   }
 
   @Delete('schedule-groups/:id')
   deleteScheduleGroup(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    if (!CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role)) throw new ForbiddenException()
-    return this.presenceService.deleteScheduleGroup(id, user.id)
+    if (
+      !CAN_MANAGE_SCHEDULE_GROUPS.includes(user.role) &&
+      !CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE.includes(user.role)
+    ) {
+      throw new ForbiddenException()
+    }
+    return this.presenceService.deleteScheduleGroup(id, user)
   }
 
   // ----------------------------------------------------------------

@@ -169,6 +169,8 @@ export function DataTable<T>({
               />
               {search && (
                 <button
+                  type="button"
+                  aria-label="Effacer la recherche"
                   onClick={() => {
                     setSearch('')
                     goToPage(1)
@@ -190,22 +192,44 @@ export function DataTable<T>({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                {columns.map((col) => (
-                  <th
-                    key={col.key}
-                    className={`text-left ${headPad} text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap select-none
+                {columns.map((col) => {
+                  const currentDir = sort?.key === col.key ? sort.dir : null
+                  return (
+                    <th
+                      key={col.key}
+                      aria-sort={
+                        col.sortable
+                          ? currentDir === 'asc'
+                            ? 'ascending'
+                            : currentDir === 'desc'
+                              ? 'descending'
+                              : 'none'
+                          : undefined
+                      }
+                      className={`text-left ${headPad} text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap select-none
                       ${col.sortable ? 'cursor-pointer hover:bg-gray-50 hover:text-[#F28C38] transition-colors' : ''}
                       ${col.headerClass ?? ''}`}
-                    onClick={col.sortable ? () => toggleSort(col.key) : undefined}
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      {col.label}
-                      {col.sortable && (
-                        <SortIndicator dir={sort?.key === col.key ? sort.dir : null} />
-                      )}
-                    </span>
-                  </th>
-                ))}
+                      onClick={col.sortable ? () => toggleSort(col.key) : undefined}
+                      {...(col.sortable
+                        ? {
+                            role: 'button' as const,
+                            tabIndex: 0,
+                            onKeyDown: (e: React.KeyboardEvent) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                toggleSort(col.key)
+                              }
+                            },
+                          }
+                        : {})}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        {col.label}
+                        {col.sortable && <SortIndicator dir={currentDir} />}
+                      </span>
+                    </th>
+                  )
+                })}
                 {hasActions && (
                   <th
                     className={`${headPad} text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider`}
