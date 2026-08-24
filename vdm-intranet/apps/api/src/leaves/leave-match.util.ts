@@ -2,9 +2,13 @@ import type { ActiveLeave } from './leave-sync.service'
 
 export type MatchableUser = { username: string; email?: string | null }
 
+/// Identité CONGE minimale nécessaire au rapprochement — satisfaite aussi bien par un
+/// congé actif (ActiveLeave) que par un employé du référentiel (CongeEmployee).
+export type MatchableCongeIdentity = { matricule: string | null; email: string | null }
+
 /// Rapprochement Intranet ↔ Congé : le matricule Congé est aligné en déploiement
 /// sur le login (username) Intranet ; l'email sert de repli si le matricule ne matche pas.
-export function matchLeaveToUser(leave: ActiveLeave, user: MatchableUser): boolean {
+export function matchLeaveToUser(leave: MatchableCongeIdentity, user: MatchableUser): boolean {
   if (leave.matricule && leave.matricule.toLowerCase() === user.username.toLowerCase()) return true
   if (leave.email && user.email && leave.email.toLowerCase() === user.email.toLowerCase())
     return true

@@ -8,6 +8,7 @@ import { toast } from '@/lib/toast'
 import { Modal } from '@/components/ui/Modal'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { api } from '@/lib/api'
+import { leavesApi, type CongeEmployeeCandidate } from '@/lib/leaves'
 
 type Bu = { id: string; name: string; code: string }
 type Pole = { id: string; name: string; code: string; businessUnitId: string }
@@ -160,6 +161,11 @@ export function UsersManager({
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Sélecteur "employé CONGE existant" — pré-remplit l'identité à la création pour garantir
+  // qu'on crée bien le même employé que sur la plateforme de congés (matricule == username).
+  const [congeEmployees, setCongeEmployees] = useState<CongeEmployeeCandidate[]>([])
+  const [congeConfigured, setCongeConfigured] = useState(false)
+  const [selectedCongeMatricule, setSelectedCongeMatricule] = useState('')
 
   // RESPONSABLE_POLE ne touche jamais aux champs administratifs (identité/mot de passe), seulement
   // au planning — cf. assertCanManageScopedTarget (users.service.ts).
@@ -211,8 +217,34 @@ export function UsersManager({
     setEditing(null)
     setScopedEdit(false)
     setForm(EMPTY_FORM)
+    setSelectedCongeMatricule('')
     setError('')
     setShowForm(true)
+    void loadCongeEmployees()
+  }
+
+  async function loadCongeEmployees() {
+    try {
+      const result = await leavesApi.congeEmployeeCandidates()
+      setCongeConfigured(result.configured)
+      setCongeEmployees(result.employees)
+    } catch {
+      // Intégration optionnelle : un échec ne doit jamais bloquer la création manuelle.
+      setCongeConfigured(false)
+      setCongeEmployees([])
+    }
+  }
+
+  function selectCongeEmployee(matricule: string) {
+    setSelectedCongeMatricule(matricule)
+    const emp = congeEmployees.find((e) => e.matricule === matricule)
+    if (!emp) return
+    f({
+      username: emp.matricule,
+      firstName: emp.firstName,
+      lastName: emp.lastName,
+      email: emp.email ?? '',
+    })
   }
 
   function openEdit(u: User) {
@@ -512,6 +544,41 @@ export function UsersManager({
               </div>
             </div>
           </div>
+
+          {/* Employé CONGE existant — uniquement à la création, si l'intégration est active et
+              qu'il reste des employés CONGE sans compte Intranet correspondant */}
+          {!editing && congeConfigured && congeEmployees.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                Employé CONGE existant{' '}
+                <span className="text-gray-300 normal-case font-normal">
+                  (optionnel — pré-remplit l&apos;identité)
+                </span>
+              </label>
+              <select
+                value={selectedCongeMatricule}
+                onChange={(e) => selectCongeEmployee(e.target.value)}
+                className={SELECT}
+              >
+                <option value="">— Saisie manuelle —</option>
+                {congeEmployees
+                  .slice()
+                  .sort((a, b) =>
+                    `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`)
+                  )
+                  .map((emp) => (
+                    <option key={emp.matricule} value={emp.matricule}>
+                      {emp.lastName} {emp.firstName} — {emp.matricule}
+                      {emp.departmentName ? ` (${emp.departmentName})` : ''}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-[11px] text-gray-400">
+                Employés de la plateforme de congés n&apos;ayant pas encore de compte ici. En
+                choisir un garantit que c&apos;est le même employé (identifiant = matricule CONGE).
+              </p>
+            </div>
+          )}
 
           {/* Identité — masquée pour un responsable de pôle en édition scopée (planning uniquement) */}
           {(!scopedEdit || scopedAdminFieldsAllowed) && (

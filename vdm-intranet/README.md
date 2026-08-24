@@ -155,6 +155,15 @@ pm2 start ecosystem.config.js
 # SSL via Let's Encrypt
 ```
 
+### Checklist intégration Congés (VEDEM/CONGE — déjà en ligne)
+
+L'app CONGE (dépôt séparé, Next.js/Prisma/MongoDB) est **déjà déployée en production**, contrairement au reste de cet Intranet. À ne pas oublier lors du déploiement pour que l'intégration fonctionne réellement (statut "en congé", widget "Employés en congé", sélecteur "employé CONGE existant" à la création d'un compte) :
+
+1. **Renseigner en production** `CONGE_API_URL` et `CONGE_API_SECRET` (`.env` de vdm-intranet) — voir `.env.example` pour le format ; tant qu'ils sont vides, toute l'intégration reste désactivée en silence (aucune erreur, mais aucun effet non plus).
+2. `CONGE_API_SECRET` doit être **strictement identique** à `INTRANET_SYNC_SECRET` côté CONGE en production.
+3. Vérifier que l'instance CONGE en ligne expose bien `GET /api/employees` (nouvel endpoint requis par le sélecteur de création d'employé, en plus de `GET /api/leaves/active` déjà utilisé pour les congés) — s'il n'a pas encore été développé/déployé côté dépôt CONGE, le sélecteur restera invisible même si vdm-intranet est à jour. Contrat détaillé dans `TACHE.md` (section "Sélecteur employé CONGE existant").
+4. Après déploiement, tester `GET /leaves/on-leave/today` et `GET /leaves/conge-employees` (connecté en CTO_ADMIN/PDG) : les deux doivent répondre sans 401/timeout.
+
 ## Validation
 
 ```bash

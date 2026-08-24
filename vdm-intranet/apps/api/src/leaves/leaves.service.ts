@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { LeaveSyncService } from './leave-sync.service'
+import { LeaveSyncService, type CongeEmployee } from './leave-sync.service'
 import { matchLeaveToUser } from './leave-match.util'
 
 function getToday(): Date {
@@ -65,5 +65,29 @@ export class LeavesService {
     }
 
     return { date: today.toISOString().split('T')[0], employees }
+  }
+
+  // Alimente le formulaire de création d'employé : ne propose que les employés CONGE qui
+  // n'ont pas déjà un compte Intranet (rapprochement matricule/email), pour garantir qu'on
+  // crée bien "le même employé" et éviter les doublons de sélection.
+  async getCongeEmployeeCandidates(): Promise<{
+    configured: boolean
+    employees: CongeEmployee[]
+  }> {
+    const configured = this.leaveSync.isConfigured()
+    if (!configured) return { configured, employees: [] }
+
+    const employees = await this.leaveSync.getEmployees()
+    if (employees.length === 0) return { configured, employees: [] }
+
+    const users = await this.prisma.user.findMany({
+      select: { username: true, email: true },
+    })
+
+    const candidates = employees.filter(
+      (employee) => !users.some((user) => matchLeaveToUser(employee, user))
+    )
+
+    return { configured, employees: candidates }
   }
 }
