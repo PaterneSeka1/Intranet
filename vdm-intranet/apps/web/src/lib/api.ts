@@ -38,6 +38,8 @@ export const api = {
       apiFetch<User>('/users', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: unknown) =>
       apiFetch<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    updateScoped: (id: string, data: unknown) =>
+      apiFetch<User>(`/users/${id}/scoped`, { method: 'PATCH', body: JSON.stringify(data) }),
     updateMe: (data: unknown) =>
       apiFetch<User>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }),
     activate: (id: string) => apiFetch<User>(`/users/${id}/activate`, { method: 'PATCH' }),

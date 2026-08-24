@@ -95,6 +95,17 @@ export interface ScheduleGroup {
   _count: { users: number }
 }
 
+export interface ScheduleGroupPayload {
+  name: string
+  code: string
+  description?: string | null
+  expectedArrivalTime: string
+  expectedDepartureTime?: string | null
+  businessUnitId?: string | null
+  poleId?: string | null
+  isNightShift?: boolean
+}
+
 export interface DailyMandate {
   id: string
   userId: string
@@ -175,6 +186,15 @@ export const presenceApi = {
   endDay: (data: EndDayPayload) =>
     presenceReq<Presence>('/end-day', { method: 'POST', body: JSON.stringify(data) }),
   scheduleGroups: () => presenceReq<ScheduleGroup[]>('/schedule-groups'),
+  createScheduleGroup: (data: ScheduleGroupPayload) =>
+    presenceReq<ScheduleGroup>('/schedule-groups', { method: 'POST', body: JSON.stringify(data) }),
+  updateScheduleGroup: (id: string, data: Partial<ScheduleGroupPayload>) =>
+    presenceReq<ScheduleGroup>(`/schedule-groups/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteScheduleGroup: (id: string) =>
+    presenceReq<{ deleted: boolean }>(`/schedule-groups/${id}`, { method: 'DELETE' }),
   mandates: () => presenceReq<DailyMandate[]>('/mandates'),
   createMandate: (data: MandatePayload) =>
     presenceReq<DailyMandate>('/mandates', { method: 'POST', body: JSON.stringify(data) }),

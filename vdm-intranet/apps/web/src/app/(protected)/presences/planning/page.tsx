@@ -3,9 +3,12 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { PlanningCalendar } from '@/components/presence/PlanningCalendar'
+import { ScheduleGroupsManager } from '@/components/presence/ScheduleGroupsManager'
 import { filterMandatableUsers } from '@/lib/mandate'
 import type { PresenceRow, ScheduleGroup } from '@/lib/presence'
 import { API_BASE } from '@/lib/api-base'
+
+type PoleOption = { id: string; name: string; businessUnitId: string }
 
 async function fetchUsers(token: string, cookieName: string): Promise<PresenceRow['user'][]> {
   try {
@@ -34,6 +37,19 @@ async function fetchScheduleGroups(token: string, cookieName: string): Promise<S
   }
 }
 
+async function fetchPoles(token: string, cookieName: string): Promise<PoleOption[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/tabs/poles`, {
+      headers: { Cookie: `${cookieName}=${token}` },
+      cache: 'no-store',
+    })
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
+}
+
 export default async function PlanningPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
@@ -47,10 +63,15 @@ export default async function PlanningPage() {
   const cookieName = process.env.COOKIE_NAME ?? 'vdm_token'
   const token = cookieStore.get(cookieName)?.value ?? ''
 
-  const [allUsers, scheduleGroups] = await Promise.all([
+  const [allUsers, scheduleGroups, allPoles] = await Promise.all([
     fetchUsers(token, cookieName),
     fetchScheduleGroups(token, cookieName),
+    fetchPoles(token, cookieName),
   ])
+
+  // Seul RESPONSABLE_BU gère ses propres groupes horaires depuis cette page
+  // (CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE côté API) — CTO_ADMIN les gère globalement via /parametres.
+  const canManageOwnScheduleGroups = user.role === 'RESPONSABLE_BU' && !!user.businessUnit
 
   // Un employé n'apparaît dans le sélecteur que si l'utilisateur peut réellement définir son emploi
   // du temps (BU/pôle + règle d'auto-mandat, cf. canMandateUser côté backend) — sinon la liste de
@@ -80,6 +101,15 @@ export default async function PlanningPage() {
           jour/nuit/week-end (ex : Pôle TV/Radio).
         </p>
       </div>
+
+      {canManageOwnScheduleGroups && user.businessUnit && (
+        <ScheduleGroupsManager
+          initialGroups={scheduleGroups}
+          businessUnitId={user.businessUnit.id}
+          businessUnitName={user.businessUnit.name}
+          poles={allPoles.filter((p) => p.businessUnitId === user.businessUnit!.id)}
+        />
+      )}
 
       <PlanningCalendar users={users} scheduleGroups={scheduleGroups} />
     </div>

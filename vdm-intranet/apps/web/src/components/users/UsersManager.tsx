@@ -24,7 +24,10 @@ interface Props {
   poleList: Pole[]
   scheduleGroups: ScheduleGroup[]
   canManage: boolean
+  /** DAF/RESPONSABLE_BU/RESPONSABLE_POLE : édition scopée à leur périmètre (PATCH /users/:id/scoped). */
+  canManageScoped: boolean
   currentUserRole: Role
+  currentUserId: string
 }
 
 type FormData = {
@@ -95,6 +98,9 @@ const ROLE_HINTS: Record<Role, string> = {
 
 const NO_BU_ROLES: Role[] = ['PDG']
 const PROTECTED_ADMIN_ROLES: Role[] = ['CTO_ADMIN', 'PDG']
+// Reflète SCOPED_WRITE_FORBIDDEN_TARGET_ROLES (users.service.ts) : un manager scopé (DAF,
+// RESPONSABLE_BU, RESPONSABLE_POLE) ne peut jamais gérer un pair ou un supérieur via /users/:id/scoped.
+const SCOPED_WRITE_FORBIDDEN_TARGET_ROLES: Role[] = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU']
 const DIRECT_MANAGER_ROLES: Role[] = [
   'CTO_ADMIN',
   'PDG',
@@ -143,14 +149,35 @@ export function UsersManager({
   poleList,
   scheduleGroups,
   canManage,
+  canManageScoped,
   currentUserRole,
+  currentUserId,
 }: Props) {
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [editing, setEditing] = useState<User | null>(null)
+  const [scopedEdit, setScopedEdit] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // RESPONSABLE_POLE ne touche jamais aux champs administratifs (identité/mot de passe), seulement
+  // au planning — cf. assertCanManageScopedTarget (users.service.ts).
+  const scopedAdminFieldsAllowed = currentUserRole !== 'RESPONSABLE_POLE'
+
+  function canScopedEditTarget(u: User) {
+    return (
+      canManageScoped &&
+      u.id !== currentUserId &&
+      !SCOPED_WRITE_FORBIDDEN_TARGET_ROLES.includes(u.role)
+    )
+  }
+
+  // Activer/désactiver via /users/:id/activate|deactivate n'est ouvert qu'à DAF/RESPONSABLE_BU
+  // côté API (CAN_MANAGE_USERS_BU_SCOPE) — jamais RESPONSABLE_POLE.
+  function canScopedActivateTarget(u: User) {
+    return scopedAdminFieldsAllowed && canScopedEditTarget(u)
+  }
 
   function f(patch: Partial<FormData>) {
     setForm((prev) => ({ ...prev, ...patch }))
@@ -182,14 +209,19 @@ export function UsersManager({
 
   function openCreate() {
     setEditing(null)
+    setScopedEdit(false)
     setForm(EMPTY_FORM)
     setError('')
     setShowForm(true)
   }
 
   function openEdit(u: User) {
-    if (!canEditUser(u)) {
-      toast.error('Seul le CTO peut modifier un compte CTO ou PDG.')
+    if (canEditUser(u)) {
+      setScopedEdit(false)
+    } else if (canScopedEditTarget(u)) {
+      setScopedEdit(true)
+    } else {
+      toast.error('Vous ne pouvez pas modifier cet utilisateur.')
       return
     }
     setEditing(u)
@@ -214,6 +246,39 @@ export function UsersManager({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (editing && scopedEdit) {
+      if (!canScopedEditTarget(editing)) {
+        setError('Vous ne pouvez pas modifier cet utilisateur.')
+        return
+      }
+      setSaving(true)
+      setError('')
+      try {
+        const payload: Record<string, unknown> = {
+          scheduleGroupId: form.scheduleGroupId || null,
+          individualExpectedArrivalTime: form.individualExpectedArrivalTime || null,
+          individualExpectedDepartureTime: form.individualExpectedDepartureTime || null,
+          workingDays: form.workingDays,
+        }
+        if (scopedAdminFieldsAllowed) {
+          payload.firstName = form.firstName || undefined
+          payload.lastName = form.lastName || undefined
+          payload.email = form.email || undefined
+          if (form.password) payload.password = form.password
+        }
+        const updated = await api.users.updateScoped(editing.id, payload)
+        setUsers((prev) => prev.map((u) => (u.id === editing.id ? updated : u)))
+        setShowForm(false)
+        toast.success('Utilisateur mis à jour.')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erreur')
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
     if (!canManage) return
     if (editing && !canEditUser(editing)) {
       setError('Seul le CTO peut modifier un compte CTO ou PDG.')
@@ -261,8 +326,8 @@ export function UsersManager({
   }
 
   async function toggleActive(u: User) {
-    if (!canEditUser(u)) {
-      toast.error('Seul le CTO peut activer ou désactiver un compte CTO ou PDG.')
+    if (!canEditUser(u) && !canScopedActivateTarget(u)) {
+      toast.error('Vous ne pouvez pas activer ou désactiver ce compte.')
       return
     }
     try {
@@ -380,27 +445,27 @@ export function UsersManager({
             >
               Fiche
             </Link>
-            {canManage && canEditUser(u) && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openEdit(u)
-                  }}
-                  className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
-                >
-                  Modifier
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    toggleActive(u)
-                  }}
-                  className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}
-                >
-                  {u.isActive ? 'Désactiver' : 'Activer'}
-                </button>
-              </>
+            {(canEditUser(u) || canScopedEditTarget(u)) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openEdit(u)
+                }}
+                className="text-xs border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:border-[#F28C38] hover:text-[#F28C38] transition-colors"
+              >
+                Modifier
+              </button>
+            )}
+            {(canEditUser(u) || canScopedActivateTarget(u)) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleActive(u)
+                }}
+                className={`text-xs border px-2.5 py-1 rounded-lg transition-colors ${u.isActive ? 'border-red-100 text-red-500 hover:bg-red-50' : 'border-green-100 text-green-600 hover:bg-green-50'}`}
+              >
+                {u.isActive ? 'Désactiver' : 'Activer'}
+              </button>
             )}
           </>
         )}
@@ -410,7 +475,15 @@ export function UsersManager({
         open={showForm}
         onClose={() => setShowForm(false)}
         title={editing ? `Modifier — ${editing.username}` : 'Nouvel utilisateur'}
-        subtitle={editing ? 'Mise à jour du compte' : 'Créer un nouveau compte sur le portail'}
+        subtitle={
+          editing
+            ? scopedEdit
+              ? scopedAdminFieldsAllowed
+                ? 'Identité, mot de passe et planning de votre périmètre'
+                : 'Planning de votre périmètre'
+              : 'Mise à jour du compte'
+            : 'Créer un nouveau compte sur le portail'
+        }
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -440,186 +513,192 @@ export function UsersManager({
             </div>
           </div>
 
-          {/* Identité */}
-          <div className="space-y-3">
-            <SectionHeader icon="👤" title="Identité" />
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Prénom
-                </label>
-                <input
-                  type="text"
-                  value={form.firstName}
-                  onChange={(e) => f({ firstName: e.target.value })}
-                  className={INPUT}
-                  placeholder="Ex : Konan"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Nom
-                </label>
-                <input
-                  type="text"
-                  value={form.lastName}
-                  onChange={(e) => f({ lastName: e.target.value })}
-                  className={INPUT}
-                  placeholder="Ex : Yao"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                Email
-              </label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => f({ email: e.target.value })}
-                className={INPUT}
-                placeholder="prenom.nom@veilleurdesmedias.com"
-              />
-            </div>
-          </div>
-
-          {/* Compte */}
-          <div className="space-y-3">
-            <SectionHeader icon="🔑" title="Compte" />
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Identifiant *
-                </label>
-                <input
-                  type="text"
-                  value={form.username}
-                  onChange={(e) => f({ username: e.target.value })}
-                  required
-                  disabled={!!editing}
-                  className={`${INPUT} ${editing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`}
-                  placeholder="Ex : KYao"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                  {editing ? 'Nouveau mot de passe' : 'Mot de passe *'}
-                </label>
-                <PasswordInput
-                  value={form.password}
-                  onChange={(e) => f({ password: e.target.value })}
-                  required={!editing}
-                  minLength={8}
-                  placeholder={editing ? 'Vide = inchangé' : '8 caractères minimum'}
-                  className={INPUT}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Rôle & Organisation */}
-          <div className="space-y-3">
-            <SectionHeader icon="🏢" title="Rôle & Organisation" />
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                Rôle *
-              </label>
-              <select
-                value={form.role}
-                onChange={(e) => {
-                  const role = e.target.value as Role
-                  if (NO_BU_ROLES.includes(role)) {
-                    f({ role, businessUnitId: '', poleId: '' })
-                  } else {
-                    f({ role })
-                  }
-                }}
-                required
-                className={SELECT}
-              >
-                {manageableRoles.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-gray-400 mt-1">{ROLE_HINTS[form.role]}</p>
-            </div>
-
-            {noBuRole ? (
-              <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl text-xs text-gray-400 border border-gray-100">
-                Ce rôle n'est pas rattaché à une Business Unit.
-              </div>
-            ) : (
+          {/* Identité — masquée pour un responsable de pôle en édition scopée (planning uniquement) */}
+          {(!scopedEdit || scopedAdminFieldsAllowed) && (
+            <div className="space-y-3">
+              <SectionHeader icon="👤" title="Identité" />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                    Business Unit
+                    Prénom
                   </label>
-                  <select
-                    value={form.businessUnitId}
-                    onChange={(e) => f({ businessUnitId: e.target.value, poleId: '' })}
-                    className={SELECT}
-                  >
-                    <option value="">— Aucune —</option>
-                    {buList.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value={form.firstName}
+                    onChange={(e) => f({ firstName: e.target.value })}
+                    className={INPUT}
+                    placeholder="Ex : Konan"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                    Pôle
+                    Nom
                   </label>
-                  <select
-                    value={form.poleId}
-                    onChange={(e) => f({ poleId: e.target.value })}
-                    disabled={!form.businessUnitId}
-                    className={`${SELECT} ${!form.businessUnitId ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <option value="">— Aucun —</option>
-                    {filteredPoles.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value={form.lastName}
+                    onChange={(e) => f({ lastName: e.target.value })}
+                    className={INPUT}
+                    placeholder="Ex : Yao"
+                  />
                 </div>
               </div>
-            )}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => f({ email: e.target.value })}
+                  className={INPUT}
+                  placeholder="prenom.nom@veilleurdesmedias.com"
+                />
+              </div>
+            </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                Manager direct{' '}
-                <span className="text-gray-300 normal-case font-normal">(optionnel)</span>
-              </label>
-              <select
-                value={form.managerId}
-                onChange={(e) => f({ managerId: e.target.value })}
-                className={SELECT}
-              >
-                <option value="">— Aucun —</option>
-                {users
-                  .filter(
-                    (u) =>
-                      u.isActive &&
-                      DIRECT_MANAGER_ROLES.includes(u.role) &&
-                      (!editing || u.id !== editing.id)
-                  )
-                  .sort((a, b) =>
-                    (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username)
-                  )
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.fullName ?? u.username} — {ROLE_LABELS[u.role]}
+          {/* Compte — masqué pour un responsable de pôle en édition scopée (planning uniquement) */}
+          {(!scopedEdit || scopedAdminFieldsAllowed) && (
+            <div className="space-y-3">
+              <SectionHeader icon="🔑" title="Compte" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Identifiant *
+                  </label>
+                  <input
+                    type="text"
+                    value={form.username}
+                    onChange={(e) => f({ username: e.target.value })}
+                    required
+                    disabled={!!editing}
+                    className={`${INPUT} ${editing ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`}
+                    placeholder="Ex : KYao"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    {editing ? 'Nouveau mot de passe' : 'Mot de passe *'}
+                  </label>
+                  <PasswordInput
+                    value={form.password}
+                    onChange={(e) => f({ password: e.target.value })}
+                    required={!editing}
+                    minLength={8}
+                    placeholder={editing ? 'Vide = inchangé' : '8 caractères minimum'}
+                    className={INPUT}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rôle & Organisation — jamais modifiable en édition scopée (DAF/RESPONSABLE_BU/RESPONSABLE_POLE) */}
+          {!scopedEdit && (
+            <div className="space-y-3">
+              <SectionHeader icon="🏢" title="Rôle & Organisation" />
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Rôle *
+                </label>
+                <select
+                  value={form.role}
+                  onChange={(e) => {
+                    const role = e.target.value as Role
+                    if (NO_BU_ROLES.includes(role)) {
+                      f({ role, businessUnitId: '', poleId: '' })
+                    } else {
+                      f({ role })
+                    }
+                  }}
+                  required
+                  className={SELECT}
+                >
+                  {manageableRoles.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
                     </option>
                   ))}
-              </select>
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">{ROLE_HINTS[form.role]}</p>
+              </div>
+
+              {noBuRole ? (
+                <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl text-xs text-gray-400 border border-gray-100">
+                  Ce rôle n'est pas rattaché à une Business Unit.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                      Business Unit
+                    </label>
+                    <select
+                      value={form.businessUnitId}
+                      onChange={(e) => f({ businessUnitId: e.target.value, poleId: '' })}
+                      className={SELECT}
+                    >
+                      <option value="">— Aucune —</option>
+                      {buList.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                      Pôle
+                    </label>
+                    <select
+                      value={form.poleId}
+                      onChange={(e) => f({ poleId: e.target.value })}
+                      disabled={!form.businessUnitId}
+                      className={`${SELECT} ${!form.businessUnitId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <option value="">— Aucun —</option>
+                      {filteredPoles.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Manager direct{' '}
+                  <span className="text-gray-300 normal-case font-normal">(optionnel)</span>
+                </label>
+                <select
+                  value={form.managerId}
+                  onChange={(e) => f({ managerId: e.target.value })}
+                  className={SELECT}
+                >
+                  <option value="">— Aucun —</option>
+                  {users
+                    .filter(
+                      (u) =>
+                        u.isActive &&
+                        DIRECT_MANAGER_ROLES.includes(u.role) &&
+                        (!editing || u.id !== editing.id)
+                    )
+                    .sort((a, b) =>
+                      (a.fullName ?? a.username).localeCompare(b.fullName ?? b.username)
+                    )
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName ?? u.username} — {ROLE_LABELS[u.role]}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Horaires */}
           <div className="space-y-3">

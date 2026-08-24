@@ -17,6 +17,9 @@ type ScheduleGroup = {
 // coquille frontend — seul le lien de navigation Sidebar manquait (corrigé séparément).
 const CAN_VIEW = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE']
 const CAN_MANAGE = ['CTO_ADMIN', 'PDG']
+// DAF/RESPONSABLE_BU/RESPONSABLE_POLE : édition scopée (PATCH /users/:id/scoped) — jamais le rôle,
+// la BU, le pôle ou le manager, cf. users.service.ts::updateScoped/CAN_MANAGE_USERS_SCOPED_WRITE.
+const CAN_MANAGE_SCOPED = ['DAF', 'RESPONSABLE_BU', 'RESPONSABLE_POLE']
 
 export default async function UtilisateursPage() {
   const user = await getCurrentUser()
@@ -38,7 +41,9 @@ export default async function UtilisateursPage() {
         poleList={poleList ?? []}
         scheduleGroups={scheduleGroups ?? []}
         canManage={CAN_MANAGE.includes(user.role)}
+        canManageScoped={CAN_MANAGE_SCOPED.includes(user.role)}
         currentUserRole={user.role}
+        currentUserId={user.id}
       />
     </div>
   )

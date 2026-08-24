@@ -501,3 +501,13 @@ Demande : analyse complète du dépôt (backend, frontend, rôles/permissions, i
 **Validation** : `npx tsc --noEmit` (api + web) OK. `npx jest` (`apps/api`) : 102/102 OK (95 préexistants + 7 nouveaux). `npm run build:api` OK. `rm -rf apps/web/.next` puis `npm run build:web` OK. `npx prettier --write` sur tous les fichiers modifiés. YAML de la CI validé par parsing, non exécuté sur GitHub (aucun push effectué). **Non fait** : `db:push`/`db:seed`/démarrage réel/vérification visuelle navigateur — aucun accès Docker/PostgreSQL dans cet environnement (aucune migration Prisma n'était de toute façon nécessaire, tous les enrichissements de rôles sont purement applicatifs).
 
 - `TACHE.md` mis à jour avec le détail complet de cette session.
+
+### Nouvelle demande réalisée — Câblage frontend des droits scopés DAF/RESPONSABLE_BU/RESPONSABLE_POLE (2026-08-24)
+
+- Demande : traiter en priorité la dette identifiée dans l'audit du même jour ci-dessus — les endpoints API existaient déjà (`PATCH /users/:id/scoped`, annonces BU-scope, groupes horaires BU-scope) mais aucune UI ne les exposait sur `/utilisateurs`, `/annonces`, `/presences/planning`. Session frontend uniquement, aucun changement backend, aucune migration.
+- `/annonces` : `CAN_MANAGE` étendu à `DAF`/`RESPONSABLE_BU` ; `AnnouncementsManager` verrouille la BU ciblée sur celle du manager scopé (plus de sélecteur global) via un nouveau prop `scopedBu`. Entrée Sidebar "Annonces BU" ajoutée pour ces deux rôles (absente jusqu'ici, alors que le backend l'autorisait déjà).
+- `/utilisateurs` : `UsersManager` gagne un mode d'édition scopée (props `canManageScoped`/`currentUserId`) — DAF/RESPONSABLE_BU peuvent corriger identité/mot de passe/planning, RESPONSABLE_POLE planning uniquement, jamais rôle/BU/pôle/manager, jamais un pair/supérieur ni soi-même (règles répliquées du backend côté client pour éviter des boutons menant à un 403). Nouveau `api.users.updateScoped()`.
+- `/presences/planning` : nouveau composant `ScheduleGroupsManager.tsx` (repliable), visible uniquement pour `RESPONSABLE_BU` — CRUD de ses propres groupes horaires (le serveur force déjà la BU, pas de sélecteur), pôle optionnel filtré à sa BU.
+- Tests réels : `npx tsc --noEmit` (api+web) OK, `npx jest` (`apps/api`) 102/102 OK (aucune régression), `npm run build:api` OK, `rm -rf apps/web/.next` puis `npm run build:web` OK (toutes les routes concernées listées dans la sortie du build), `npx prettier --write` OK, `git diff --check` OK.
+- **Non fait** : vérification visuelle réelle dans un navigateur (pas d'outil de navigateur disponible dans cet environnement, même limite que les sessions précédentes).
+- `TACHE.md` mis à jour avec le détail complet de cette session.

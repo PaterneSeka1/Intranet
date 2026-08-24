@@ -14,6 +14,9 @@ type Bu = { id: string; name: string; code: string }
 interface Props {
   initialAnnouncements: Announcement[]
   buList: Bu[]
+  /** Non nul pour un manager scopé (DAF/RESPONSABLE_BU) : ses annonces sont toujours limitées à
+   * cette BU, jamais globales ni sur une autre BU — reflète announcements.service.ts côté API. */
+  scopedBu?: Bu | null
 }
 
 type FormData = {
@@ -73,7 +76,7 @@ function sortAnnouncements(items: Announcement[]) {
   })
 }
 
-export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
+export function AnnouncementsManager({ initialAnnouncements, buList, scopedBu = null }: Props) {
   const [items, setItems] = useState<Announcement[]>(() => sortAnnouncements(initialAnnouncements))
   const [editing, setEditing] = useState<Announcement | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -104,7 +107,7 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
 
   function openCreate() {
     setEditing(null)
-    setForm({ ...EMPTY_FORM, publishedAt: todayUtc() })
+    setForm({ ...EMPTY_FORM, publishedAt: todayUtc(), businessUnitId: scopedBu?.id ?? '' })
     setError('')
     setShowForm(true)
   }
@@ -242,8 +245,15 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Annonces</h1>
+          <h1 className="text-xl font-bold text-gray-900">
+            {scopedBu ? `Annonces — ${scopedBu.name}` : 'Annonces'}
+          </h1>
           <p className="text-sm text-gray-500 mt-0.5">
+            {scopedBu && (
+              <span className="block text-xs text-gray-400 mb-0.5">
+                Limitées à votre BU — les annonces globales restent gérées par la direction.
+              </span>
+            )}
             {filteredItems.length !== items.length
               ? `${filteredItems.length} / ${items.length} annonce${items.length > 1 ? 's' : ''}`
               : `${items.length} annonce${items.length > 1 ? 's' : ''}`}
@@ -430,25 +440,31 @@ export function AnnouncementsManager({ initialAnnouncements, buList }: Props) {
 
           <div>
             <label
-              htmlFor="ann-bu"
+              htmlFor={scopedBu ? undefined : 'ann-bu'}
               className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
             >
-              BU ciblée{' '}
-              <span className="text-gray-400 normal-case font-normal">(toutes si vide)</span>
+              BU ciblée
             </label>
-            <select
-              id="ann-bu"
-              value={form.businessUnitId}
-              onChange={(e) => setForm({ ...form, businessUnitId: e.target.value })}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white"
-            >
-              <option value="">Toutes les BU</option>
-              {buList.map((bu) => (
-                <option key={bu.id} value={bu.id}>
-                  {bu.name}
-                </option>
-              ))}
-            </select>
+            {scopedBu ? (
+              <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-500 border border-gray-100">
+                {scopedBu.name}{' '}
+                <span className="text-gray-400">— vous ne pouvez cibler que votre BU</span>
+              </div>
+            ) : (
+              <select
+                id="ann-bu"
+                value={form.businessUnitId}
+                onChange={(e) => setForm({ ...form, businessUnitId: e.target.value })}
+                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] bg-white"
+              >
+                <option value="">Toutes les BU</option>
+                {buList.map((bu) => (
+                  <option key={bu.id} value={bu.id}>
+                    {bu.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex gap-6">
