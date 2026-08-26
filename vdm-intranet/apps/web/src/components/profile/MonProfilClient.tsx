@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Monitor, Smartphone } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { ROLE_LABELS, type User } from '@/types/user'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -358,7 +359,7 @@ function SecuritySection() {
       <div className="space-y-2">
         {logs?.map((log) => {
           const { label, os } = parseUserAgent(log.userAgent)
-          const icon = os === 'Android' || os === 'iOS' ? '📱' : '🖥️'
+          const DeviceIcon = os === 'Android' || os === 'iOS' ? Smartphone : Monitor
           const at =
             log.type === 'LOGOUT' ? (log.disconnectedAt ?? log.connectedAt) : log.connectedAt
           return (
@@ -366,7 +367,7 @@ function SecuritySection() {
               key={log.id}
               className="bg-gray-50 rounded-xl px-3.5 py-2.5 flex items-center gap-3"
             >
-              <span className="text-lg shrink-0">{icon}</span>
+              <DeviceIcon className="w-5 h-5 text-gray-400 shrink-0" strokeWidth={1.75} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-gray-700 font-medium">{label}</div>
                 <div className="text-xs text-gray-400">

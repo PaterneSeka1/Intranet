@@ -3,62 +3,75 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import {
+  Home,
+  Users,
+  Calendar,
+  CalendarClock,
+  LayoutGrid,
+  Megaphone,
+  BarChart3,
+  Settings,
+  History,
+  LogOut,
+  type LucideIcon,
+} from 'lucide-react'
 import type { User, Role } from '@/types/user'
 import { LogoutOverlay } from '@/components/auth/LogoutOverlay'
 import { NotificationsBell } from '@/components/notifications/NotificationsBell'
 
-type MenuItem = { label: string; href: string; icon: string }
+type MenuItem = { label: string; href: string; icon: LucideIcon }
 
 const MENUS: Record<Role, MenuItem[]> = {
   CTO_ADMIN: [
-    { label: 'Accueil', href: '/accueil', icon: '🏠' },
-    { label: 'Utilisateurs', href: '/utilisateurs', icon: '👥' },
-    { label: 'Présences', href: '/presences', icon: '📅' },
-    { label: 'Emploi du temps', href: '/presences/planning', icon: '🗓️' },
-    { label: 'Onglets', href: '/onglets', icon: '📑' },
-    { label: 'Annonces', href: '/annonces', icon: '📢' },
-    { label: 'Pilotage', href: '/pilotage', icon: '📊' },
-    { label: 'Paramètres', href: '/parametres', icon: '⚙️' },
-    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+    { label: 'Accueil', href: '/accueil', icon: Home },
+    { label: 'Utilisateurs', href: '/utilisateurs', icon: Users },
+    { label: 'Présences', href: '/presences', icon: Calendar },
+    { label: 'Emploi du temps', href: '/presences/planning', icon: CalendarClock },
+    { label: 'Onglets', href: '/onglets', icon: LayoutGrid },
+    { label: 'Annonces', href: '/annonces', icon: Megaphone },
+    { label: 'Pilotage', href: '/pilotage', icon: BarChart3 },
+    { label: 'Paramètres', href: '/parametres', icon: Settings },
+    { label: 'Mon historique', href: '/mon-historique', icon: History },
   ],
   PDG: [
-    { label: 'Accueil', href: '/accueil', icon: '🏠' },
-    { label: 'Utilisateurs', href: '/utilisateurs', icon: '👥' },
-    { label: 'Annonces', href: '/annonces', icon: '📢' },
-    { label: 'Onglets', href: '/onglets', icon: '📑' },
-    { label: 'Pilotage', href: '/pilotage', icon: '📊' },
-    { label: 'Présences', href: '/presences', icon: '📅' },
-    { label: 'Emploi du temps', href: '/presences/planning', icon: '🗓️' },
-    { label: 'Organisation', href: '/parametres', icon: '⚙️' },
-    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+    { label: 'Accueil', href: '/accueil', icon: Home },
+    { label: 'Utilisateurs', href: '/utilisateurs', icon: Users },
+    { label: 'Annonces', href: '/annonces', icon: Megaphone },
+    { label: 'Onglets', href: '/onglets', icon: LayoutGrid },
+    { label: 'Pilotage', href: '/pilotage', icon: BarChart3 },
+    { label: 'Présences', href: '/presences', icon: Calendar },
+    { label: 'Emploi du temps', href: '/presences/planning', icon: CalendarClock },
+    { label: 'Organisation', href: '/parametres', icon: Settings },
+    { label: 'Mon historique', href: '/mon-historique', icon: History },
   ],
   DAF: [
-    { label: 'Accueil', href: '/accueil', icon: '🏠' },
-    { label: 'Utilisateurs BU', href: '/utilisateurs', icon: '👥' },
-    { label: 'Onglets DAF', href: '/onglets', icon: '📑' },
-    { label: 'Annonces BU', href: '/annonces', icon: '📢' },
-    { label: 'Pilotage & rapports', href: '/pilotage#rapports', icon: '📊' },
-    { label: 'Présences', href: '/presences', icon: '📅' },
-    { label: 'Emploi du temps BU', href: '/presences/planning', icon: '🗓️' },
-    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+    { label: 'Accueil', href: '/accueil', icon: Home },
+    { label: 'Utilisateurs BU', href: '/utilisateurs', icon: Users },
+    { label: 'Onglets DAF', href: '/onglets', icon: LayoutGrid },
+    { label: 'Annonces BU', href: '/annonces', icon: Megaphone },
+    { label: 'Pilotage & rapports', href: '/pilotage#rapports', icon: BarChart3 },
+    { label: 'Présences', href: '/presences', icon: Calendar },
+    { label: 'Emploi du temps BU', href: '/presences/planning', icon: CalendarClock },
+    { label: 'Mon historique', href: '/mon-historique', icon: History },
   ],
   RESPONSABLE_BU: [
-    { label: 'Accueil', href: '/accueil', icon: '🏠' },
-    { label: 'Utilisateurs BU', href: '/utilisateurs', icon: '👥' },
-    { label: 'Présences BU', href: '/presences', icon: '📅' },
-    { label: 'Emploi du temps BU', href: '/presences/planning', icon: '🗓️' },
-    { label: 'Onglets BU', href: '/onglets', icon: '📑' },
-    { label: 'Annonces BU', href: '/annonces', icon: '📢' },
-    { label: 'Pilotage BU', href: '/pilotage', icon: '📊' },
-    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+    { label: 'Accueil', href: '/accueil', icon: Home },
+    { label: 'Utilisateurs BU', href: '/utilisateurs', icon: Users },
+    { label: 'Présences BU', href: '/presences', icon: Calendar },
+    { label: 'Emploi du temps BU', href: '/presences/planning', icon: CalendarClock },
+    { label: 'Onglets BU', href: '/onglets', icon: LayoutGrid },
+    { label: 'Annonces BU', href: '/annonces', icon: Megaphone },
+    { label: 'Pilotage BU', href: '/pilotage', icon: BarChart3 },
+    { label: 'Mon historique', href: '/mon-historique', icon: History },
   ],
   RESPONSABLE_POLE: [
-    { label: 'Accueil', href: '/accueil', icon: '🏠' },
-    { label: 'Utilisateurs Pôle', href: '/utilisateurs', icon: '👥' },
-    { label: 'Présences Pôle', href: '/presences', icon: '📅' },
-    { label: 'Emploi du temps Pôle', href: '/presences/planning', icon: '🗓️' },
-    { label: 'Pilotage Pôle', href: '/pilotage', icon: '📊' },
-    { label: 'Mon historique', href: '/mon-historique', icon: '🕐' },
+    { label: 'Accueil', href: '/accueil', icon: Home },
+    { label: 'Utilisateurs Pôle', href: '/utilisateurs', icon: Users },
+    { label: 'Présences Pôle', href: '/presences', icon: Calendar },
+    { label: 'Emploi du temps Pôle', href: '/presences/planning', icon: CalendarClock },
+    { label: 'Pilotage Pôle', href: '/pilotage', icon: BarChart3 },
+    { label: 'Mon historique', href: '/mon-historique', icon: History },
   ],
   EMPLOYE: [],
   CONSULTANT: [],
@@ -138,7 +151,7 @@ export function Sidebar({
                   active ? 'vdm-sb-text font-semibold' : 'vdm-sb-link vdm-sb-text-dim'
                 }`}
               >
-                <span className="text-base">{item.icon}</span>
+                <item.icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
                 {item.label}
               </Link>
             )
@@ -177,7 +190,7 @@ export function Sidebar({
           onClick={() => setShowLogout(true)}
           className="vdm-sb-link vdm-sb-text-dim w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors"
         >
-          <span className="text-base">🚪</span>
+          <LogOut className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
           Déconnexion
         </button>
       </div>

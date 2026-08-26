@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Trash2, HelpCircle } from 'lucide-react'
 import { subscribeConfirm, resolveConfirm, type ConfirmOptions } from '@/lib/confirm'
 
 export function ConfirmPortal() {
@@ -91,10 +92,14 @@ export function ConfirmPortal() {
             <div
               className={`
               shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl
-              ${destructive ? 'bg-red-50' : 'bg-amber-50'}
+              ${destructive ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}
             `}
             >
-              {destructive ? '🗑️' : '❓'}
+              {destructive ? (
+                <Trash2 className="w-6 h-6" strokeWidth={1.75} />
+              ) : (
+                <HelpCircle className="w-6 h-6" strokeWidth={1.75} />
+              )}
             </div>
             <div className="flex-1 pt-1.5">
               {title && (

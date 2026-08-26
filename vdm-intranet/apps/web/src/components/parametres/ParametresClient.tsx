@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { apiFetch } from '@/lib/http'
 import { saveSettings, deleteSetting } from '@/lib/settings'
 import { escapeCssString, opacityPercentToCss, opacitySettingToPercent } from '@/lib/theme-settings'
+import { Moon, Sun, DoorOpen, CalendarDays, Check } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -2083,7 +2084,7 @@ function BgPanel({
                     </span>
                     {current === bg.value && (
                       <span className="absolute top-0.5 right-0.5 bg-white/30 rounded-full w-3.5 h-3.5 flex items-center justify-center text-white text-[8px]">
-                        ✓
+                        <Check className="w-2.5 h-2.5" strokeWidth={2.5} />
                       </span>
                     )}
                   </button>
@@ -2150,8 +2151,8 @@ function HolidaysSection({
             key={h.id}
             className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4"
           >
-            <div className="w-12 h-12 rounded-xl bg-[#F28C38]/10 flex items-center justify-center shrink-0 text-lg">
-              📅
+            <div className="w-12 h-12 rounded-xl bg-[#F28C38]/10 flex items-center justify-center shrink-0 text-[#F28C38]">
+              <CalendarDays className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-gray-900 text-sm flex items-center gap-2 flex-wrap">
@@ -2272,9 +2273,17 @@ function GroupsSection({
                   {g.expectedArrivalTime}
                 </span>
                 <span
-                  className={`text-[9px] font-medium mt-0.5 ${isNight ? 'text-indigo-400' : 'text-[#F28C38]/60'}`}
+                  className={`flex items-center gap-1 text-[9px] font-medium mt-0.5 ${isNight ? 'text-indigo-400' : 'text-[#F28C38]/60'}`}
                 >
-                  {isNight ? '🌙 Nuit' : '☀️ Jour'}
+                  {isNight ? (
+                    <>
+                      <Moon className="w-3.5 h-3.5" strokeWidth={1.75} /> Nuit
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="w-3.5 h-3.5" strokeWidth={1.75} /> Jour
+                    </>
+                  )}
                 </span>
               </div>
 
@@ -2303,8 +2312,8 @@ function GroupsSection({
                     </span>
                   )}
                   {g.expectedDepartureTime && (
-                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                      🚪 {g.expectedDepartureTime}
+                    <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                      <DoorOpen className="w-3.5 h-3.5" strokeWidth={1.75} /> {g.expectedDepartureTime}
                     </span>
                   )}
                   <span className="text-[10px] text-gray-400">

@@ -1,10 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import { Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { type Tab, type CreateTabPayload, type UpdateTabPayload, tabsApi } from '@/lib/tabs'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { Modal } from '@/components/ui/Modal'
+import {
+  TAB_ICON_REGISTRY,
+  TAB_ICON_PRESETS,
+  DEFAULT_TAB_ICON,
+  isImageIcon,
+  TabIcon,
+} from '@/components/tabs/tab-icons'
 
 type BuOption = { id: string; name: string; code: string }
 
@@ -16,24 +24,7 @@ interface Props {
   canManageAll: boolean
 }
 
-const ICON_PRESETS = [
-  '📰',
-  '🔔',
-  '▶️',
-  '✖️',
-  '📘',
-  '💼',
-  '📁',
-  '✉️',
-  '📋',
-  '📝',
-  '📊',
-  '🐙',
-  '▲',
-  '☁️',
-  '📗',
-  '🔗',
-]
+const ICON_PRESETS = TAB_ICON_PRESETS
 
 const IMAGE_ICON_SIZE = 128
 const MAX_ICON_FILE_SIZE = 2 * 1024 * 1024
@@ -51,17 +42,13 @@ const EMPTY_FORM: FormData = {
   name: '',
   url: '',
   description: '',
-  icon: '🔗',
+  icon: DEFAULT_TAB_ICON,
   color: '#F28C38',
   businessUnitId: '',
 }
 
 const GLOBAL_TAB_MANAGERS = ['CTO_ADMIN', 'PDG']
 const BU_TAB_MANAGERS = ['DAF', 'RESPONSABLE_BU']
-
-function isImageIcon(value?: string | null) {
-  return !!value && (/^data:image\//.test(value) || /^https?:\/\//.test(value))
-}
 
 function resizeIconImage(file: File): Promise<string> {
   if (!file.type.startsWith('image/')) {
@@ -99,36 +86,6 @@ function resizeIconImage(file: File): Promise<string> {
   })
 }
 
-function TabIcon({
-  value,
-  className = 'w-8 h-8',
-  imageClassName = 'rounded-lg',
-}: {
-  value?: string | null
-  className?: string
-  imageClassName?: string
-}) {
-  if (isImageIcon(value)) {
-    return (
-      <span
-        className={`${className} inline-flex shrink-0 items-center justify-center overflow-hidden`}
-      >
-        <img
-          src={value ?? ''}
-          alt=""
-          className={`w-full h-full object-contain ${imageClassName}`}
-        />
-      </span>
-    )
-  }
-
-  return (
-    <span className={`${className} inline-flex shrink-0 items-center justify-center text-2xl`}>
-      {value || '🔗'}
-    </span>
-  )
-}
-
 export function TabsManager({ initialTabs, userRole, userBuId, buList, canManageAll }: Props) {
   const [tabs, setTabs] = useState<Tab[]>(initialTabs)
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; tab?: Tab } | null>(null)
@@ -158,7 +115,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
       name: tab.name,
       url: tab.url,
       description: tab.description ?? '',
-      icon: tab.icon ?? '🔗',
+      icon: tab.icon ?? DEFAULT_TAB_ICON,
       color: tab.color ?? '#F28C38',
       businessUnitId: tab.businessUnitId ?? '',
     })
@@ -335,24 +292,28 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                   <div className="flex gap-1 flex-shrink-0">
                     <button
                       onClick={() => toggleActive(tab)}
-                      className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-700 transition-colors text-xs"
+                      className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-700 transition-colors"
                       title={tab.isActive ? 'Désactiver' : 'Activer'}
                     >
-                      {tab.isActive ? '●' : '○'}
+                      {tab.isActive ? (
+                        <ToggleRight className="w-4 h-4" strokeWidth={1.75} />
+                      ) : (
+                        <ToggleLeft className="w-4 h-4" strokeWidth={1.75} />
+                      )}
                     </button>
                     <button
                       onClick={() => openEdit(tab)}
-                      className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-[#F28C38] transition-colors text-xs"
+                      className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-[#F28C38] transition-colors"
                       title="Modifier"
                     >
-                      ✎
+                      <Pencil className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                     <button
                       onClick={() => handleDelete(tab)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors text-xs"
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
                       title="Supprimer"
                     >
-                      ✕
+                      <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   </div>
                 )}
@@ -479,16 +440,19 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                 Icône
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
-                {ICON_PRESETS.map((ico) => (
-                  <button
-                    key={ico}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, icon: ico }))}
-                    className={`text-xl w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${form.icon === ico ? 'bg-[#F28C38]/10 ring-1 ring-[#F28C38]' : 'hover:bg-gray-100'}`}
-                  >
-                    {ico}
-                  </button>
-                ))}
+                {ICON_PRESETS.map((ico) => {
+                  const Icon = TAB_ICON_REGISTRY[ico]
+                  return (
+                    <button
+                      key={ico}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, icon: ico }))}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${form.icon === ico ? 'bg-[#F28C38]/10 ring-1 ring-[#F28C38] text-[#F28C38]' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                      <Icon className="w-4 h-4" strokeWidth={1.75} />
+                    </button>
+                  )
+                })}
                 <label
                   htmlFor="tab-icon-image"
                   className={`w-8 h-8 rounded-lg flex items-center justify-center border text-xs font-semibold cursor-pointer transition-colors ${
@@ -515,7 +479,7 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                 <div className="text-[11px] text-gray-400 leading-snug">
                   {isImageIcon(form.icon)
                     ? 'Image redimensionnée automatiquement.'
-                    : 'Emoji, symbole ou image.'}
+                    : 'Icône de la palette ou image.'}
                 </div>
               </div>
               <input
@@ -526,12 +490,12 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                 disabled={iconIsDataImage}
                 className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
                 maxLength={100000}
-                placeholder="Emoji ou URL image"
+                placeholder="Nom d'icône ou URL image"
               />
               {iconIsDataImage && (
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, icon: '🔗' }))}
+                  onClick={() => setForm((f) => ({ ...f, icon: DEFAULT_TAB_ICON }))}
                   className="mt-1.5 text-[11px] font-semibold text-gray-400 hover:text-red-500"
                 >
                   Retirer l'image

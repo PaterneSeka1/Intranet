@@ -5,6 +5,7 @@ import { presenceApi, type ScheduleGroup } from '@/lib/presence'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { Modal } from '@/components/ui/Modal'
+import { Moon, Sun, DoorOpen } from 'lucide-react'
 
 type PoleOption = { id: string; name: string }
 
@@ -183,9 +184,17 @@ export function ScheduleGroupsManager({
                     {g.expectedArrivalTime}
                   </span>
                   <span
-                    className={`text-[8px] font-medium ${g.isNightShift ? 'text-indigo-400' : 'text-[#F28C38]/60'}`}
+                    className={`flex items-center gap-1 text-[8px] font-medium ${g.isNightShift ? 'text-indigo-400' : 'text-[#F28C38]/60'}`}
                   >
-                    {g.isNightShift ? '🌙 Nuit' : '☀️ Jour'}
+                    {g.isNightShift ? (
+                      <>
+                        <Moon className="w-3.5 h-3.5" strokeWidth={1.75} /> Nuit
+                      </>
+                    ) : (
+                      <>
+                        <Sun className="w-3.5 h-3.5" strokeWidth={1.75} /> Jour
+                      </>
+                    )}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -200,8 +209,8 @@ export function ScheduleGroupsManager({
                       </span>
                     )}
                     {g.expectedDepartureTime && (
-                      <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                        🚪 {g.expectedDepartureTime}
+                      <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                        <DoorOpen className="w-3.5 h-3.5" strokeWidth={1.75} /> {g.expectedDepartureTime}
                       </span>
                     )}
                   </div>

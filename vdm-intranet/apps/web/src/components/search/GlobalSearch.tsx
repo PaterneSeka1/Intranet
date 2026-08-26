@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { User, LayoutGrid, Megaphone, type LucideIcon } from 'lucide-react'
 import { searchApi, type SearchResult } from '@/lib/search'
 
-const ICONS: Record<SearchResult['type'], string> = {
-  user: '👤',
-  tab: '📑',
-  announcement: '📢',
+const ICONS: Record<SearchResult['type'], LucideIcon> = {
+  user: User,
+  tab: LayoutGrid,
+  announcement: Megaphone,
 }
 
 const DEBOUNCE_MS = 300
@@ -86,9 +87,10 @@ export function GlobalSearch({ dark = false }: { dark?: boolean }) {
           )}
           {!loading &&
             results.map((r) => {
+              const Icon = ICONS[r.type]
               const content = (
                 <div className="px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-start gap-2.5">
-                  <span className="text-base shrink-0">{ICONS[r.type]}</span>
+                  <Icon className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" strokeWidth={1.75} />
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">{r.label}</div>
                     {r.sublabel && (

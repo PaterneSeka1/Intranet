@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { X } from 'lucide-react'
 
 const SIZES = {
   sm: 'max-w-sm',
@@ -141,9 +142,9 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Fermer"
-            className="shrink-0 ml-4 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors text-[22px] leading-none pb-0.5"
+            className="shrink-0 ml-4 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            ×
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 

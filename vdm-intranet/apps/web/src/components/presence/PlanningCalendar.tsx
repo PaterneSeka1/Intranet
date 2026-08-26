@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { presenceApi } from '@/lib/presence'
@@ -553,9 +554,9 @@ export function PlanningCalendar({ users, scheduleGroups }: Props) {
                       e.stopPropagation()
                       handleClearDay(mandate)
                     }}
-                    className="absolute top-1 right-1 text-gray-300 hover:text-red-500 text-xs leading-none"
+                    className="absolute top-1 right-1 text-gray-300 hover:text-red-500"
                   >
-                    ×
+                    <X className="w-3 h-3" strokeWidth={2} />
                   </button>
                 )}
               </div>

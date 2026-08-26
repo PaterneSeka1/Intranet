@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { MapPin } from 'lucide-react'
 import { ROLE_LABELS } from '@/types/user'
 import { presenceApi, canMandateUser, type PresenceRow } from '@/lib/presence'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -239,9 +240,10 @@ export function PresenceTable({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap"
+            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap inline-flex items-center gap-1"
           >
-            📍 Carte
+            <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+            Carte
           </a>
         ) : (
           <span className="text-gray-200">—</span>
@@ -286,9 +288,10 @@ export function PresenceTable({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap"
+            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap inline-flex items-center gap-1"
           >
-            📍 Carte
+            <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+            Carte
           </a>
         ) : (
           <span className="text-gray-200">—</span>

@@ -34,6 +34,7 @@ import {
   type DateRange,
 } from '@/lib/excel-export'
 import { downloadPdfBlob } from '@/lib/pdf-export'
+import { CalendarDays, ClipboardList, Plug, BarChart3, Download, type LucideIcon } from 'lucide-react'
 
 type ReportKey = 'presence' | 'activity' | 'connections' | 'general'
 
@@ -95,7 +96,7 @@ type ReportConfig = {
   key: ReportKey
   label: string
   description: string
-  icon: string
+  icon: LucideIcon
   filename: string
   hasDateRange: boolean
 }
@@ -105,7 +106,7 @@ const REPORTS: ReportConfig[] = [
     key: 'presence',
     label: 'Présences / absences',
     description: 'Statuts de présence, retards et absences des employés.',
-    icon: '📅',
+    icon: CalendarDays,
     filename: 'presences.xlsx',
     hasDateRange: true,
   },
@@ -113,7 +114,7 @@ const REPORTS: ReportConfig[] = [
     key: 'activity',
     label: "Journal d'activité",
     description: 'Actions effectuées dans le portail (créations, modifications, exports).',
-    icon: '📋',
+    icon: ClipboardList,
     filename: 'activite.xlsx',
     hasDateRange: true,
   },
@@ -121,7 +122,7 @@ const REPORTS: ReportConfig[] = [
     key: 'connections',
     label: 'Connexions',
     description: 'Historique des connexions avec adresses IP et géolocalisation.',
-    icon: '🔌',
+    icon: Plug,
     filename: 'connexions.xlsx',
     hasDateRange: true,
   },
@@ -129,7 +130,7 @@ const REPORTS: ReportConfig[] = [
     key: 'general',
     label: 'Rapport général',
     description: 'Vue consolidée : utilisateurs actifs, BU, groupes horaires et statistiques.',
-    icon: '📊',
+    icon: BarChart3,
     filename: 'rapport-general.xlsx',
     hasDateRange: true,
   },
@@ -414,7 +415,7 @@ export function PilotageClient({ role }: Props) {
                 {/* En-tête carte */}
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-xl shrink-0">
-                    {report.icon}
+                    <report.icon className="w-5 h-5" strokeWidth={1.75} />
                   </div>
                   <div className="min-w-0 pt-0.5">
                     <div className="font-semibold text-gray-900 text-sm leading-tight">
@@ -479,7 +480,7 @@ export function PilotageClient({ role }: Props) {
                       </>
                     ) : (
                       <>
-                        <span className="text-sm leading-none">↓</span>Excel
+                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />Excel
                       </>
                     )}
                   </button>
@@ -495,7 +496,7 @@ export function PilotageClient({ role }: Props) {
                       </>
                     ) : (
                       <>
-                        <span className="text-sm leading-none">↓</span>PDF
+                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />PDF
                       </>
                     )}
                   </button>

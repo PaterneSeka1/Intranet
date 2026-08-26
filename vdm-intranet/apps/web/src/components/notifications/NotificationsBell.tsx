@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { io } from 'socket.io-client'
+import { Bell, X } from 'lucide-react'
 import { API_BASE } from '@/lib/api-base'
 import { notificationsApi, type NotificationItem } from '@/lib/notifications'
 
@@ -124,7 +125,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
             : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
         }`}
       >
-        <span className="text-lg">🔔</span>
+        <Bell className="w-[18px] h-[18px]" strokeWidth={1.75} />
         {unreadCount > 0 && (
           <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#F28C38] text-white text-[10px] font-bold flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -180,7 +181,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                   aria-label="Supprimer la notification"
                   className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                 >
-                  ✕
+                  <X className="w-3.5 h-3.5" strokeWidth={2} />
                 </button>
               </div>
             ))}

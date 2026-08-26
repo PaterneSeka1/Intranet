@@ -1,5 +1,6 @@
 'use client'
 
+import { MapPin } from 'lucide-react'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 
 export type ConnectionLog = {
@@ -82,9 +83,9 @@ const columns: Column<ConnectionLog>[] = [
           href={l.mapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap"
+          className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap inline-flex items-center gap-1"
         >
-          📍{' '}
+          <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
           {l.address ? l.address.slice(0, 28) + (l.address.length > 28 ? '…' : '') : 'Voir carte'}
         </a>
       ) : (

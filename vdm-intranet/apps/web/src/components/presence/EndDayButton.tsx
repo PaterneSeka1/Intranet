@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DoorOpen } from 'lucide-react'
 import { presenceApi, type EndDayPayload } from '@/lib/presence'
 import { confirm } from '@/lib/confirm'
 import { toast } from '@/lib/toast'
@@ -73,13 +74,18 @@ export function EndDayButton() {
       <button
         onClick={handleClick}
         disabled={isLoading}
-        className="w-full sm:w-auto bg-gray-900 hover:bg-black active:bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full sm:w-auto bg-gray-900 hover:bg-black active:bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
       >
-        {state === 'requesting'
-          ? 'Localisation en cours…'
-          : state === 'sending'
-            ? 'Enregistrement…'
-            : '🚪 Terminer ma journée'}
+        {state === 'requesting' ? (
+          'Localisation en cours…'
+        ) : state === 'sending' ? (
+          'Enregistrement…'
+        ) : (
+          <>
+            <DoorOpen className="w-4 h-4" strokeWidth={1.75} />
+            Terminer ma journée
+          </>
+        )}
       </button>
       {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
     </div>

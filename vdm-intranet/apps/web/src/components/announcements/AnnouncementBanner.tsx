@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Pin, X } from 'lucide-react'
 
 const LS_KEY = 'vdm_dismissed_announcements'
 
@@ -57,7 +58,18 @@ export function AnnouncementBanner({ announcements }: Props) {
   }, [])
 
   const visible = announcements.filter((a) => a.isPinned && dismissed[a.id] !== fingerprint(a))
-  const text = visible.map((a) => `📌 ${a.title} — ${a.body}`).join('   ·   ')
+  const text = visible.map((a) => `${a.title} — ${a.body}`).join('   ·   ')
+
+  const renderPinnedItems = (prefix: string) =>
+    visible.map((a, i) => (
+      <span key={`${prefix}-${a.id}`} className="inline-flex items-center gap-1">
+        <Pin className="w-3.5 h-3.5" strokeWidth={1.75} />
+        <span>
+          {a.title} — {a.body}
+        </span>
+        {i < visible.length - 1 && <span className="mx-3">·</span>}
+      </span>
+    ))
 
   useEffect(() => {
     const el = trackRef.current
@@ -89,16 +101,16 @@ export function AnnouncementBanner({ announcements }: Props) {
     <div className="relative bg-[#F28C38] text-white text-xs font-medium overflow-hidden h-8 flex items-center shrink-0">
       <div className="overflow-hidden flex-1">
         <div ref={trackRef} className="flex whitespace-nowrap will-change-transform">
-          <span className="pr-24">{text}</span>
-          <span className="pr-24">{text}</span>
+          <span className="inline-flex items-center pr-24">{renderPinnedItems('a')}</span>
+          <span className="inline-flex items-center pr-24">{renderPinnedItems('b')}</span>
         </div>
       </div>
       <button
         onClick={dismiss}
-        className="shrink-0 px-3 text-white/70 hover:text-white text-base leading-none"
+        className="shrink-0 px-3 text-white/70 hover:text-white flex items-center"
         aria-label="Fermer la bannière"
       >
-        ×
+        <X className="w-3.5 h-3.5" strokeWidth={2} />
       </button>
     </div>
   )

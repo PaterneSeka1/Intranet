@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { User as UserIcon, KeyRound, Building2, Clock, CalendarDays, type LucideIcon } from 'lucide-react'
 import { ROLE_LABELS, type Role, type User } from '@/types/user'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
@@ -126,10 +127,10 @@ const INPUT =
   'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-shadow'
 const SELECT = `${INPUT} bg-white`
 
-function SectionHeader({ icon, title }: { icon: string; title: string }) {
+function SectionHeader({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
   return (
     <div className="flex items-center gap-2 pt-1">
-      <span className="text-base">{icon}</span>
+      <Icon className="w-4 h-4 text-gray-400" strokeWidth={1.75} />
       <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</span>
       <div className="flex-1 h-px bg-gray-100" />
     </div>
@@ -583,7 +584,7 @@ export function UsersManager({
           {/* Identité — masquée pour un responsable de pôle en édition scopée (planning uniquement) */}
           {(!scopedEdit || scopedAdminFieldsAllowed) && (
             <div className="space-y-3">
-              <SectionHeader icon="👤" title="Identité" />
+              <SectionHeader icon={UserIcon} title="Identité" />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
@@ -628,7 +629,7 @@ export function UsersManager({
           {/* Compte — masqué pour un responsable de pôle en édition scopée (planning uniquement) */}
           {(!scopedEdit || scopedAdminFieldsAllowed) && (
             <div className="space-y-3">
-              <SectionHeader icon="🔑" title="Compte" />
+              <SectionHeader icon={KeyRound} title="Compte" />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
@@ -664,7 +665,7 @@ export function UsersManager({
           {/* Rôle & Organisation — jamais modifiable en édition scopée (DAF/RESPONSABLE_BU/RESPONSABLE_POLE) */}
           {!scopedEdit && (
             <div className="space-y-3">
-              <SectionHeader icon="🏢" title="Rôle & Organisation" />
+              <SectionHeader icon={Building2} title="Rôle & Organisation" />
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
@@ -769,7 +770,7 @@ export function UsersManager({
 
           {/* Horaires */}
           <div className="space-y-3">
-            <SectionHeader icon="🕐" title="Horaires" />
+            <SectionHeader icon={Clock} title="Horaires" />
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
@@ -817,7 +818,7 @@ export function UsersManager({
 
           {/* Jours de travail récurrents */}
           <div className="space-y-3">
-            <SectionHeader icon="📅" title="Jours de travail récurrents" />
+            <SectionHeader icon={CalendarDays} title="Jours de travail récurrents" />
             <div className="flex flex-wrap gap-2">
               {WEEKDAY_OPTIONS.map((wd) => {
                 const active = form.workingDays.includes(wd.value)

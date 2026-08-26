@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { CheckCircle2, XCircle, AlertTriangle, Info, X, type LucideIcon } from 'lucide-react'
 import { subscribeToasts, dismissToast, type ToastItem, type ToastType } from '@/lib/toast'
 
 // ---------------------------------------------------------------------------
@@ -11,7 +12,7 @@ const CONFIG: Record<
   ToastType,
   {
     bar: string
-    icon: string
+    icon: LucideIcon
     iconBg: string
     iconColor: string
     title: string
@@ -19,30 +20,30 @@ const CONFIG: Record<
 > = {
   success: {
     bar: 'bg-green-500',
-    icon: '✓',
+    icon: CheckCircle2,
     iconBg: 'bg-green-100',
     iconColor: 'text-green-600',
     title: 'Succès',
   },
   error: {
     bar: 'bg-red-500',
-    icon: '✕',
+    icon: XCircle,
     iconBg: 'bg-red-100',
     iconColor: 'text-red-600',
     title: 'Erreur',
   },
   info: {
     bar: 'bg-blue-500',
-    icon: 'ℹ',
+    icon: Info,
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-600',
     title: 'Information',
   },
   warning: {
     bar: 'bg-amber-500',
-    icon: '⚠',
+    icon: AlertTriangle,
     iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
+    iconColor: 'text-amber-500',
     title: 'Attention',
   },
 }
@@ -104,7 +105,7 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
       <div
         className={`shrink-0 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${cfg.iconBg} ${cfg.iconColor}`}
       >
-        {cfg.icon}
+        <cfg.icon className="w-5 h-5" strokeWidth={1.75} />
       </div>
 
       {/* Content */}
@@ -118,10 +119,10 @@ function ToastCard({ item, onDone }: { item: ToastItem; onDone: () => void }) {
       {/* Close button */}
       <button
         onClick={startExit}
-        className="shrink-0 -mt-0.5 -mr-1 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors text-base leading-none"
+        className="shrink-0 -mt-0.5 -mr-1 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors"
         aria-label="Fermer"
       >
-        ×
+        <X className="w-3.5 h-3.5" strokeWidth={2} />
       </button>
 
       {/* Progress bar */}

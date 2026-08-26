@@ -1,6 +1,16 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useState } from 'react'
+import {
+  Sun,
+  CloudSun,
+  CloudFog,
+  CloudDrizzle,
+  CloudRain,
+  Snowflake,
+  CloudLightning,
+  type LucideIcon,
+} from 'lucide-react'
 import type { Announcement } from '@/lib/announcements'
 import { publicHolidaysApi, findHolidayForDate, type PublicHoliday } from '@/lib/public-holidays'
 import { leavesApi, type EmployeeOnLeave } from '@/lib/leaves'
@@ -13,15 +23,15 @@ type WeatherData = {
   windspeed: number
 }
 
-function wmoLabel(code: number): { label: string; icon: string } {
-  if (code === 0) return { label: 'Ensoleillé', icon: '☀️' }
-  if (code <= 3) return { label: 'Nuageux', icon: '⛅' }
-  if (code <= 48) return { label: 'Brouillard', icon: '🌫️' }
-  if (code <= 57) return { label: 'Bruine', icon: '🌦️' }
-  if (code <= 67) return { label: 'Pluie', icon: '🌧️' }
-  if (code <= 77) return { label: 'Neige', icon: '❄️' }
-  if (code <= 82) return { label: 'Averses', icon: '⛈️' }
-  return { label: 'Orage', icon: '⛈️' }
+function wmoLabel(code: number): { label: string; icon: LucideIcon } {
+  if (code === 0) return { label: 'Ensoleillé', icon: Sun }
+  if (code <= 3) return { label: 'Nuageux', icon: CloudSun }
+  if (code <= 48) return { label: 'Brouillard', icon: CloudFog }
+  if (code <= 57) return { label: 'Bruine', icon: CloudDrizzle }
+  if (code <= 67) return { label: 'Pluie', icon: CloudRain }
+  if (code <= 77) return { label: 'Neige', icon: Snowflake }
+  if (code <= 82) return { label: 'Averses', icon: CloudLightning }
+  return { label: 'Orage', icon: CloudLightning }
 }
 
 const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
@@ -412,9 +422,9 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
   for (let d = 1; d <= daysInMonth; d++) calCells.push(d)
   while (calCells.length % 7 !== 0) calCells.push(null)
 
-  const { label: weatherLabel, icon: weatherIcon } = weather
+  const { label: weatherLabel, icon: WeatherIcon } = weather
     ? wmoLabel(weather.weatherCode)
-    : { label: '', icon: '' }
+    : { label: '', icon: null }
   const timeWidgetsVisible = visible.clock || visible.calendar || visible.weather
 
   return (
@@ -500,7 +510,12 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
                 <div className="w-5 h-5 border-2 border-[#F28C38] border-t-transparent rounded-full animate-spin mt-2" />
               ) : (
                 <>
-                  <div className="text-4xl mt-1">{weatherIcon}</div>
+                  {WeatherIcon && (
+                    <WeatherIcon
+                      className="w-9 h-9 mt-1 text-[#F28C38]"
+                      strokeWidth={1.5}
+                    />
+                  )}
                   <div className="text-2xl font-bold text-gray-900 leading-tight">
                     {weather.temperature} °C
                   </div>

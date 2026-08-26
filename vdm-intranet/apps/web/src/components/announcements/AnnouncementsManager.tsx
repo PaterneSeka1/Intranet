@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { Pin } from 'lucide-react'
 import { announcementsApi, type Announcement } from '@/lib/announcements'
 import { ServerPagination } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'
@@ -302,8 +303,8 @@ export function AnnouncementsManager({ initialAnnouncements, buList, scopedBu = 
               className={`bg-white rounded-2xl border p-5 flex flex-col gap-4 sm:flex-row ${a.isPinned ? 'border-[#F28C38]/30' : 'border-gray-100'}`}
             >
               {a.isPinned && (
-                <div className="mt-0.5 text-[#F28C38] text-lg" title="Épinglée">
-                  📌
+                <div className="mt-0.5 text-[#F28C38]" title="Épinglée">
+                  <Pin className="w-5 h-5" strokeWidth={1.75} />
                 </div>
               )}
               <div className="flex-1 min-w-0">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { ArrowUpDown, ChevronUp, ChevronDown, Search, X } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -154,8 +155,8 @@ export function DataTable<T>({
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           {searchable && (
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm pointer-events-none">
-                ⌕
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none">
+                <Search className="w-4 h-4" strokeWidth={1.75} />
               </span>
               <input
                 type="text"
@@ -175,9 +176,9 @@ export function DataTable<T>({
                     setSearch('')
                     goToPage(1)
                   }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-lg leading-none"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
                 >
-                  ×
+                  <X className="w-3.5 h-3.5" strokeWidth={2} />
                 </button>
               )}
             </div>
@@ -391,9 +392,11 @@ export function DataTable<T>({
 // ---------------------------------------------------------------------------
 
 function SortIndicator({ dir }: { dir: 'asc' | 'desc' | null }) {
-  if (dir === 'asc') return <span className="text-[#F28C38] text-[9px]">▲</span>
-  if (dir === 'desc') return <span className="text-[#F28C38] text-[9px]">▼</span>
-  return <span className="text-gray-200 text-[9px]">⬍</span>
+  if (dir === 'asc')
+    return <ChevronUp className="w-3.5 h-3.5 text-[#F28C38]" strokeWidth={2} />
+  if (dir === 'desc')
+    return <ChevronDown className="w-3.5 h-3.5 text-[#F28C38]" strokeWidth={2} />
+  return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
 }
 
 function NavBtn({

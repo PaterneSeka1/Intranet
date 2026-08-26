@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Download } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { downloadEmployeeExcelBlob, triggerDownload, getMonthStart, getToday } from '@/lib/excel-export'
 import { downloadEmployeePdfBlob } from '@/lib/pdf-export'
@@ -129,7 +130,7 @@ export function EmployeeReportPanel({ userId, username }: Props) {
             </>
           ) : (
             <>
-              <span className="text-sm leading-none">↓</span>Excel
+              <Download className="w-3.5 h-3.5" strokeWidth={1.75} />Excel
             </>
           )}
         </button>
@@ -145,7 +146,7 @@ export function EmployeeReportPanel({ userId, username }: Props) {
             </>
           ) : (
             <>
-              <span className="text-sm leading-none">↓</span>PDF
+              <Download className="w-3.5 h-3.5" strokeWidth={1.75} />PDF
             </>
           )}
         </button>

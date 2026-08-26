@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
+import { Clock, MapPin, Pin } from 'lucide-react'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab } from '@/lib/tabs'
 import { EndDayButton } from '@/components/presence/EndDayButton'
+import { TabIcon } from '@/components/tabs/tab-icons'
 import { ACCUEIL_ONLY_ROLES, ROLE_LABELS } from '@/types/user'
 
 const STATUS_STYLE: Record<string, string> = {
@@ -103,7 +105,7 @@ export default async function AccueilPage() {
               {user.businessUnit ? ` · ${user.businessUnit.name}` : ''}
             </p>
             <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
-              {greeting()}, {displayName} 👋
+              {greeting()}, {displayName}
             </h1>
             <p className="text-sm text-white/60 mt-1.5 capitalize">{formatDate()}</p>
           </div>
@@ -114,8 +116,8 @@ export default async function AccueilPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-base">
-              🕒
+            <span className="w-8 h-8 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-[#F28C38]">
+              <Clock className="w-4 h-4" strokeWidth={1.75} />
             </span>
             Ma journée
           </h2>
@@ -164,8 +166,9 @@ export default async function AccueilPage() {
         </div>
 
         {showGeolocation && presence?.address && (
-          <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-            📍 {presence.address}
+          <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+            {presence.address}
           </div>
         )}
 
@@ -211,8 +214,9 @@ export default async function AccueilPage() {
             </div>
 
             {showGeolocation && presence.departureAddress && (
-              <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                📍 {presence.departureAddress}
+              <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+                {presence.departureAddress}
               </div>
             )}
 
@@ -229,8 +233,8 @@ export default async function AccueilPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-base">
-              📌
+            <span className="w-8 h-8 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-[#F28C38]">
+              <Pin className="w-4 h-4" strokeWidth={1.75} />
             </span>
             Mes ressources
           </h2>
@@ -261,8 +265,8 @@ export default async function AccueilPage() {
                 rel="noopener noreferrer"
                 className="w-40 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center gap-3 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
               >
-                <span className="w-14 h-14 rounded-2xl bg-[#F28C38]/10 flex items-center justify-center text-3xl group-hover:bg-[#F28C38]/15 transition-colors">
-                  {tab.icon ?? '🔗'}
+                <span className="w-14 h-14 rounded-2xl bg-[#F28C38]/10 flex items-center justify-center text-[#F28C38] group-hover:bg-[#F28C38]/15 transition-colors">
+                  <TabIcon value={tab.icon} className="w-8 h-8" />
                 </span>
                 <span className="text-sm font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
                   {tab.name}

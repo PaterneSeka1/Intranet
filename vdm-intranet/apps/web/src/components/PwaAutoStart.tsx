@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { CheckCircle2, Download } from 'lucide-react'
 
 type OS = 'macos' | 'windows' | 'other'
 type Phase = 'idle' | 'ask' | 'downloading' | 'done'
@@ -165,7 +166,9 @@ export function PwaAutoStart() {
           {/* ── Demande initiale ── */}
           {phase === 'ask' && (
             <>
-              <div className="as-check">✓</div>
+              <div className="as-check">
+                <CheckCircle2 size={28} strokeWidth={1.75} />
+              </div>
               <h2 className="as-title">Application installée !</h2>
               <p className="as-desc">
                 Voulez-vous que <strong>VDM Intranet</strong> s&rsquo;ouvre automatiquement à chaque
@@ -193,7 +196,9 @@ export function PwaAutoStart() {
           {/* ── Instructions finales ── */}
           {phase === 'done' && (
             <>
-              <div className="as-check">↓</div>
+              <div className="as-check">
+                <Download size={28} strokeWidth={1.75} />
+              </div>
               <h2 className="as-title">Une dernière étape</h2>
               <p className="as-desc">
                 Le fichier <code className="as-code">{instructionFile}</code> a été téléchargé.
