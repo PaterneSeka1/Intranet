@@ -10,7 +10,9 @@ import {
   TAB_ICON_REGISTRY,
   TAB_ICON_PRESETS,
   DEFAULT_TAB_ICON,
+  DEFAULT_TAB_COLOR,
   isImageIcon,
+  withAlpha,
   TabIcon,
 } from '@/components/tabs/tab-icons'
 
@@ -274,7 +276,12 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <TabIcon value={tab.icon} className="w-8 h-8" />
+                  <span
+                    style={{ background: withAlpha(tab.color || DEFAULT_TAB_COLOR, '1A') }}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  >
+                    <TabIcon value={tab.icon} color={tab.color} className="w-5 h-5" />
+                  </span>
                   <div className="min-w-0">
                     <div className="font-semibold text-gray-800 text-sm truncate">{tab.name}</div>
                     {tab.businessUnit ? (
@@ -442,12 +449,23 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {ICON_PRESETS.map((ico) => {
                   const Icon = TAB_ICON_REGISTRY[ico]
+                  const selected = form.icon === ico
+                  const activeColor = form.color || DEFAULT_TAB_COLOR
                   return (
                     <button
                       key={ico}
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, icon: ico }))}
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${form.icon === ico ? 'bg-[#F28C38]/10 ring-1 ring-[#F28C38] text-[#F28C38]' : 'text-gray-500 hover:bg-gray-100'}`}
+                      style={
+                        selected
+                          ? {
+                              background: withAlpha(activeColor, '1A'),
+                              color: activeColor,
+                              boxShadow: `inset 0 0 0 1px ${activeColor}`,
+                            }
+                          : undefined
+                      }
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${selected ? '' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
                       <Icon className="w-4 h-4" strokeWidth={1.75} />
                     </button>
@@ -455,10 +473,17 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                 })}
                 <label
                   htmlFor="tab-icon-image"
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center border text-xs font-semibold cursor-pointer transition-colors ${
+                  style={
                     isImageIcon(form.icon)
-                      ? 'bg-[#F28C38]/10 ring-1 ring-[#F28C38] border-[#F28C38]/30 text-[#F28C38]'
-                      : 'border-gray-200 text-gray-500 hover:bg-gray-100'
+                      ? {
+                          background: withAlpha(form.color || DEFAULT_TAB_COLOR, '1A'),
+                          color: form.color || DEFAULT_TAB_COLOR,
+                          boxShadow: `inset 0 0 0 1px ${form.color || DEFAULT_TAB_COLOR}`,
+                        }
+                      : undefined
+                  }
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center border text-xs font-semibold cursor-pointer transition-colors ${
+                    isImageIcon(form.icon) ? 'border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-100'
                   }`}
                   title="Choisir une image"
                 >
@@ -473,8 +498,11 @@ export function TabsManager({ initialTabs, userRole, userBuId, buList, canManage
                 />
               </div>
               <div className="mb-2 flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
-                  <TabIcon value={form.icon} className="w-8 h-8" />
+                <div
+                  style={{ background: withAlpha(form.color || DEFAULT_TAB_COLOR, '1A') }}
+                  className="w-10 h-10 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden"
+                >
+                  <TabIcon value={form.icon} color={form.color} className="w-6 h-6" />
                 </div>
                 <div className="text-[11px] text-gray-400 leading-snug">
                   {isImageIcon(form.icon)

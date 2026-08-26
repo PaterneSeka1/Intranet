@@ -4,7 +4,7 @@ import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab } from '@/lib/tabs'
 import { EndDayButton } from '@/components/presence/EndDayButton'
-import { TabIcon } from '@/components/tabs/tab-icons'
+import { TabIcon, DEFAULT_TAB_COLOR, withAlpha } from '@/components/tabs/tab-icons'
 import { ACCUEIL_ONLY_ROLES, ROLE_LABELS } from '@/types/user'
 
 const STATUS_STYLE: Record<string, string> = {
@@ -265,8 +265,11 @@ export default async function AccueilPage() {
                 rel="noopener noreferrer"
                 className="w-40 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center gap-3 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
               >
-                <span className="w-14 h-14 rounded-2xl bg-[#F28C38]/10 flex items-center justify-center text-[#F28C38] group-hover:bg-[#F28C38]/15 transition-colors">
-                  <TabIcon value={tab.icon} className="w-8 h-8" />
+                <span
+                  style={{ background: withAlpha(tab.color || DEFAULT_TAB_COLOR, '1A') }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:brightness-95"
+                >
+                  <TabIcon value={tab.icon} color={tab.color} className="w-8 h-8" />
                 </span>
                 <span className="text-sm font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
                   {tab.name}
