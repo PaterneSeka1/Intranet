@@ -7,6 +7,7 @@ dist/
 build/
 .next/
 out/
+*.tsbuildinfo
 
 # Environment
 .env
@@ -34,3 +35,7 @@ Thumbs.db
 
 # PM2
 ecosystem.config.js.bak
+pm2-logs/
+
+# Next.js — variables NEXT_PUBLIC_*/COOKIE_NAME générées depuis le .env racine (scripts/copy-web-env.js)
+apps/web/.env.production.local

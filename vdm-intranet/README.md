@@ -145,15 +145,45 @@ Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` d
 - **Actualisation annonces** : Socket.IO signale les changements et le client recharge l'API authentifiée
 - **Manager direct** : seuls `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` et `RESPONSABLE_POLE` sont proposés comme managers directs ; ce rattachement hiérarchique ne remplace pas le périmètre BU utilisé pour les onglets
 
-## Déploiement OVH (TODO)
+## Déploiement OVH
+
+Sur le VPS (première installation) :
 
 ```bash
-# PM2
-pm2 start ecosystem.config.js
+# 1. Cloner le dépôt et installer les dépendances
+git clone <repo-url> vdm-intranet && cd vdm-intranet
+npm ci
 
-# Nginx (configuration à créer)
-# SSL via Let's Encrypt
+# 2. Créer et remplir le .env de production (jamais committé — voir .env.example)
+cp .env.example .env
+# Remplir DATABASE_URL/JWT_SECRET (≥32 caractères aléatoires)/SMTP_*/CORS_ORIGINS/
+# NEXT_PUBLIC_API_URL/NEXT_PUBLIC_APP_URL/COOKIE_DOMAIN/COOKIE_SECURE/CONGE_* avec les vraies
+# valeurs de production directement sur le serveur.
+
+# 3. Base de données
+docker compose up -d
+npm run db:generate
+npm run db:migrate      # prisma migrate deploy — historique de migrations validé sur base neuve
+npm run db:seed         # à sauter si vous ne voulez pas des comptes de démo
+
+# 4. Builds (npm run build:web copie automatiquement les NEXT_PUBLIC_*/COOKIE_NAME du .env
+# racine vers apps/web/.env.production.local — voir scripts/copy-web-env.js — avant d'appeler
+# next build, faute de quoi Next.js ne les verrait jamais et retomberait sur localhost)
+npm run build:api
+npm run build:web
+
+# 5. PM2 (ecosystem.config.js à la racine — voir ce fichier pour le détail des 2 process)
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup   # une seule fois, pour survivre à un reboot du VPS
+
+# 6. Nginx — voir deployment/nginx/vdm-intranet.conf (reverse proxy + support WebSocket
+# Socket.IO), à adapter avec les vrais domaines puis à activer via certbot pour le SSL.
 ```
+
+Pour un redéploiement (mise à jour de code existante) : `git pull`, `npm ci`, étapes 3 (uniquement `db:migrate` si nouvelles migrations) et 4, puis `pm2 restart ecosystem.config.js`.
+
+**Puppeteer (exports PDF)** : installer les dépendances système Chromium sur le VPS avant le premier export (`apt-get install -y libnss3 libatk-bridge2.0-0 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2` sur Debian/Ubuntu — liste indicative, `puppeteer.launch()` échoue explicitement dans les logs PM2 si une lib manque).
 
 ### Checklist intégration Congés (VEDEM/CONGE — déjà en ligne)
 
@@ -167,11 +197,14 @@ L'app CONGE (dépôt séparé, Next.js/Prisma/MongoDB) est **déjà déployée e
 ## Validation
 
 ```bash
+npx prettier --check "**/*.{ts,tsx,json,yaml,md}" --ignore-path .gitignore
 npm run type-check --workspace=apps/api
 npm run type-check --workspace=apps/web
+npm run test:api
 npm run build:api
 rm -rf apps/web/.next   # recommandé avant build web si cache Next/PWA incohérent
 npm run build:web
+npm audit --omit=dev    # informatif — voir TACHE.md pour l'état connu des dépendances vulnérables
 ```
 
 ## Prochaines étapes

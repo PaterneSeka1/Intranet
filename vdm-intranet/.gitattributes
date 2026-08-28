@@ -1,0 +1,13 @@
+# Normalise les fins de ligne en LF dans le dépôt, quel que soit core.autocrlf sur le poste du
+# contributeur (le CI Linux et le VPS de prod attendent du LF ; un commit accidentel en CRLF
+# depuis un poste Windows ferait échouer `prettier --check` en CI sans rapport avec le vrai
+# changement).
+* text=auto eol=lf
+
+# Binaires : jamais de conversion de fin de ligne.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

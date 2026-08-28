@@ -12,6 +12,7 @@
     "predev:api": "npm run db:up",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
+    "prebuild:web": "node scripts/copy-web-env.js",
     "build:web": "npm run build --workspace=apps/web",
     "build:api": "npm run build --workspace=apps/api",
     "test:api": "npm run test --workspace=apps/api",
