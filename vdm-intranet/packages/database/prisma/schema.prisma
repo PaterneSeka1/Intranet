@@ -305,8 +305,9 @@ model Announcement {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
-  createdBy    User          @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  businessUnit  BusinessUnit?  @relation(fields: [businessUnitId], references: [id])
+  createdBy     User           @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  notifications Notification[]
 
   @@map("announcements")
 }
@@ -372,18 +373,22 @@ enum NotificationType {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType @default(GENERAL)
-  title     String
-  body      String
-  link      String?
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
+  id             String           @id @default(cuid())
+  userId         String
+  type           NotificationType @default(GENERAL)
+  title          String
+  body           String
+  link           String?
+  isRead         Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  announcementId String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Supprimer une annonce supprime automatiquement les notifications qui y sont liées.
+  announcement Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
+  @@index([announcementId])
   @@map("notifications")
 }

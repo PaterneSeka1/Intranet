@@ -8,6 +8,7 @@ export type NotifyPayload = {
   title: string
   body: string
   link?: string | null
+  announcementId?: string | null
 }
 
 @Injectable()

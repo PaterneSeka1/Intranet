@@ -141,6 +141,7 @@ export class AnnouncementsService {
           title: 'Nouvelle annonce',
           body: title,
           link: '/annonces',
+          announcementId: announcement.id,
         }
       )
     }
