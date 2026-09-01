@@ -16,6 +16,10 @@
  * cache de l'intégration Congés (LeaveSyncService) et la diffusion Socket.IO (annonces,
  * notifications) sont tous en mémoire process — un mode cluster sans adaptateur partagé (ex.
  * Redis) donnerait un état incohérent entre workers. À revisiter si la charge l'exige un jour.
+ *
+ * Port vdm-web forcé à 3003 (au lieu du 3000 par défaut de Next.js) : ce VPS héberge déjà
+ * d'autres apps sur 3000/3001/3002 (rhvedem, ticketing, decryptage) — voir aussi API_PORT=3004
+ * dans le .env racine et deployment/nginx/vdm-intranet.conf, qui doivent rester cohérents.
  */
 module.exports = {
   apps: [
@@ -39,7 +43,7 @@ module.exports = {
       name: 'vdm-web',
       cwd: './apps/web',
       script: 'node_modules/next/dist/bin/next',
-      args: 'start -p 3000',
+      args: 'start -p 3003',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,

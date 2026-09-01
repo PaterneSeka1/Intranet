@@ -37,5 +37,8 @@ Thumbs.db
 ecosystem.config.js.bak
 pm2-logs/
 
+# Docker Compose override local à un hôte donné (ex: port déjà occupé par une autre app)
+docker-compose.override.yml
+
 # Next.js — variables NEXT_PUBLIC_*/COOKIE_NAME générées depuis le .env racine (scripts/copy-web-env.js)
 apps/web/.env.production.local
