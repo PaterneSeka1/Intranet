@@ -66,13 +66,13 @@ export default function LandingPage() {
 
 const CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; background: #0B121C; }
+html, body { height: 100%; overflow: hidden; background: #0E1826; }
 
 /* ─── Scène ─── */
 .scene {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: #0B121C;
+  background: #0E1826;
   animation: scene-out 0.5s ease 3.6s both;
 }
 @keyframes scene-out {
@@ -122,7 +122,7 @@ html, body { height: 100%; overflow: hidden; background: #0B121C; }
 /* ─── Surface de la porte ─── */
 .door-surface {
   position: absolute; inset: 0;
-  background: linear-gradient(160deg, #24354A 0%, #1B293C 55%, #131D2A 100%);
+  background: linear-gradient(160deg, #24354C 0%, #1B2A3D 55%, #101A28 100%);
   border-top: 1px solid rgba(255,255,255,.04);
   border-bottom: 1px solid rgba(0,0,0,.4);
   display: flex; flex-direction: column;
@@ -146,7 +146,7 @@ html, body { height: 100%; overflow: hidden; background: #0B121C; }
   position: absolute;
   left: 0;
   width: 12px; height: 32px;
-  background: linear-gradient(90deg, #2a3a4a, #3d5060, #2a3a4a);
+  background: linear-gradient(90deg, #1B2A3D, #2F4666, #1B2A3D);
   border-radius: 2px;
   transform: translateY(-50%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 2px 4px rgba(0,0,0,.5);
@@ -159,12 +159,12 @@ html, body { height: 100%; overflow: hidden; background: #0B121C; }
   width: 10px; height: 56px;
   border-radius: 5px;
   background: linear-gradient(180deg,
-    #8a6a40 0%, #C8904A 30%, #E8A85A 50%, #C8904A 70%, #8a6a40 100%);
+    #A85A1D 0%, #F28C38 30%, #FFB066 50%, #F28C38 70%, #A85A1D 100%);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.3),
     inset 0 -1px 0 rgba(0,0,0,.3),
     0 4px 12px rgba(0,0,0,.5),
-    0 0 20px rgba(200,144,74,.15);
+    0 0 20px rgba(242,140,56,.25);
   transform: translateY(-50%);
 }
 .handle-r { right: 20px; }
@@ -209,7 +209,7 @@ html, body { height: 100%; overflow: hidden; background: #0B121C; }
   display: flex; flex-direction: column; align-items: center;
   padding: 30px 40px;
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(11,18,28,.7) 0%, rgba(11,18,28,.88) 100%);
+  background: linear-gradient(180deg, rgba(27,42,61,.72) 0%, rgba(20,32,47,.9) 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,.07);
