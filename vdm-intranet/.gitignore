@@ -9,6 +9,9 @@ build/
 out/
 *.tsbuildinfo
 
+# Dumps de base de données (données personnelles employés, jamais committées)
+backups/
+
 # Environment
 .env
 .env.local
