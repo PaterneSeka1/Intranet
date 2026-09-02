@@ -74,12 +74,6 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         type: 'image/png',
         purpose: 'maskable',
       },
-      {
-        src: '/icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'any',
-      },
     ],
   }
 }

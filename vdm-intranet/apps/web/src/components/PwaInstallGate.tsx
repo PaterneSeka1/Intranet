@@ -67,25 +67,7 @@ export function PwaInstallGate() {
         <div className="pwa-backdrop" onClick={handleDismiss} />
         <div className="pwa-card">
           <div className="pwa-icon">
-            <svg
-              viewBox="0 0 48 48"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <rect width="48" height="48" rx="11" fill="#F28C38" />
-              <text
-                x="24"
-                y="35"
-                textAnchor="middle"
-                fontFamily="system-ui,-apple-system,sans-serif"
-                fontSize="28"
-                fontWeight="800"
-                fill="white"
-              >
-                V
-              </text>
-            </svg>
+            <img src="/icon-192.png" alt="Veilleur des Médias" />
           </div>
 
           <h2 className="pwa-title">Installer VDM Intranet</h2>
@@ -165,7 +147,7 @@ const CSS = `
   margin-bottom: 20px;
   flex-shrink: 0;
 }
-.pwa-icon svg { width: 100%; height: 100%; display: block; }
+.pwa-icon img { width: 100%; height: 100%; display: block; object-fit: cover; }
 
 .pwa-title {
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
