@@ -38,6 +38,7 @@ const SCOPED_WRITE_FORBIDDEN_TARGET_ROLES: Role[] = [
 const SAFE_SELECT = {
   id: true,
   username: true,
+  matricule: true,
   firstName: true,
   lastName: true,
   fullName: true,
@@ -109,7 +110,7 @@ export class UsersService {
       })
     } catch (err: unknown) {
       if (isPrismaCode(err, 'P2002')) {
-        throw new BadRequestException('Identifiant ou adresse e-mail déjà utilisé.')
+        throw new BadRequestException('Identifiant, matricule ou adresse e-mail déjà utilisé.')
       }
       throw err
     }
@@ -151,7 +152,7 @@ export class UsersService {
       if ((err as { code?: string }).code === 'P2025')
         throw new NotFoundException('Utilisateur introuvable.')
       if (isPrismaCode(err, 'P2002')) {
-        throw new BadRequestException('Identifiant ou adresse e-mail déjà utilisé.')
+        throw new BadRequestException('Identifiant, matricule ou adresse e-mail déjà utilisé.')
       }
       throw err
     }
@@ -298,7 +299,7 @@ export class UsersService {
       if ((err as { code?: string }).code === 'P2025')
         throw new NotFoundException('Utilisateur introuvable.')
       if (isPrismaCode(err, 'P2002')) {
-        throw new BadRequestException('Identifiant ou adresse e-mail déjà utilisé.')
+        throw new BadRequestException('Identifiant, matricule ou adresse e-mail déjà utilisé.')
       }
       throw err
     }

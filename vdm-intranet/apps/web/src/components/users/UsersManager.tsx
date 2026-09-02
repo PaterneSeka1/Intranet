@@ -34,6 +34,7 @@ interface Props {
 
 type FormData = {
   username: string
+  matricule: string
   password: string
   firstName: string
   lastName: string
@@ -50,6 +51,7 @@ type FormData = {
 
 const EMPTY_FORM: FormData = {
   username: '',
+  matricule: '',
   password: '',
   firstName: '',
   lastName: '',
@@ -242,6 +244,7 @@ export function UsersManager({
     if (!emp) return
     f({
       username: emp.matricule,
+      matricule: emp.matricule,
       firstName: emp.firstName,
       lastName: emp.lastName,
       email: emp.email ?? '',
@@ -260,6 +263,7 @@ export function UsersManager({
     setEditing(u)
     setForm({
       username: u.username,
+      matricule: u.matricule ?? '',
       password: '',
       firstName: u.firstName ?? '',
       lastName: u.lastName ?? '',
@@ -328,6 +332,7 @@ export function UsersManager({
         firstName: form.firstName || undefined,
         lastName: form.lastName || undefined,
         email: form.email || undefined,
+        matricule: form.role === 'STAGIAIRE' ? null : form.matricule || null,
         role: form.role,
         businessUnitId: form.businessUnitId || null,
         poleId: form.poleId || null,
@@ -613,15 +618,20 @@ export function UsersManager({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Email
+                  Email *
                 </label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => f({ email: e.target.value })}
+                  required
                   className={INPUT}
                   placeholder="prenom.nom@veilleurdesmedias.com"
                 />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Obligatoire pour tout le monde — identifiant de connexion des stagiaires (pas de
+                  matricule) et canal de réinitialisation de mot de passe pour tous les rôles.
+                </p>
               </div>
             </div>
           )}
@@ -659,6 +669,23 @@ export function UsersManager({
                   />
                 </div>
               </div>
+              {form.role !== 'STAGIAIRE' && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Matricule{' '}
+                    <span className="text-gray-300 normal-case font-normal">
+                      (optionnel — sert à la connexion)
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.matricule}
+                    onChange={(e) => f({ matricule: e.target.value })}
+                    className={INPUT}
+                    placeholder="Ex : EMP-0231"
+                  />
+                </div>
+              )}
             </div>
           )}
 

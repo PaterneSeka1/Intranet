@@ -27,6 +27,16 @@ export class CreateUserDto {
   @MaxLength(50)
   username!: string
 
+  @ApiPropertyOptional({
+    example: 'EMP-0231',
+    description:
+      'Identifiant de connexion (matricule). Laisser vide pour un stagiaire — il se connecte avec son email.',
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  matricule?: string
+
   @ApiProperty({ example: 'MotDePasse8+' })
   @IsString()
   @MinLength(8)
@@ -46,10 +56,13 @@ export class CreateUserDto {
   @MaxLength(100)
   lastName?: string
 
-  @ApiPropertyOptional({ example: 'jean@vdm.ci' })
+  @ApiProperty({
+    example: 'jean@vdm.ci',
+    description: 'Obligatoire pour tout le monde sans exception (identifiant de connexion des stagiaires).',
+  })
   @IsEmail()
-  @IsOptional()
-  email?: string
+  @IsNotEmpty()
+  email!: string
 
   @ApiProperty({ enum: Role })
   @IsEnum(Role)

@@ -69,14 +69,14 @@ export function ForgotPasswordClient({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <p className="text-sm text-gray-500 mb-4">
-                Indiquez votre identifiant ou votre email : si un compte correspond, vous recevrez
+                Indiquez votre matricule ou votre email : si un compte correspond, vous recevrez
                 un lien pour choisir un nouveau mot de passe.
               </p>
               <label
                 htmlFor="fp-identifier"
                 className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
               >
-                Identifiant ou email
+                Matricule ou email
               </label>
               <input
                 id="fp-identifier"
@@ -84,7 +84,7 @@ export function ForgotPasswordClient({
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-all placeholder-gray-300"
-                placeholder="Ex : CTO"
+                placeholder="Ex : EMP-0231 ou prenom.nom@veilleurdesmedias.com"
                 required
                 autoFocus
               />

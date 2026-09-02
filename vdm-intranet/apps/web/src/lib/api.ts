@@ -12,10 +12,10 @@ export interface LoginResponse {
 
 export const api = {
   auth: {
-    login: (username: string, password: string) =>
+    login: (identifier: string, password: string) =>
       apiFetch<LoginResponse>('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ identifier, password }),
         skipAuthRedirect: true,
       }),
     logout: () => apiFetch<{ message: string }>('/auth/logout', { method: 'POST' }),

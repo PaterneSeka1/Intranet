@@ -125,11 +125,18 @@ model ScheduleGroup {
 model User {
   id                              String    @id @default(cuid())
   username                        String    @unique
+  // Identifiant de connexion pour les employés (matricule RH). NULL pour les stagiaires, qui
+  // n'ont pas de matricule et se connectent avec leur email — voir AuthService.login (matricule
+  // OU email, jamais username). Distinct de `username`, conservé comme identifiant technique
+  // interne (aligné historiquement sur le matricule CONGE, voir leave-match.util.ts).
+  matricule                       String?   @unique
   passwordHash                    String
   firstName                       String?
   lastName                        String?
   fullName                        String?
-  email                           String?   @unique
+  // Obligatoire pour tout le monde sans exception : identifiant de connexion pour les stagiaires
+  // (pas de matricule) et canal de réinitialisation de mot de passe pour tous les rôles.
+  email                           String    @unique
   role                            Role
   businessUnitId                  String?
   poleId                          String?

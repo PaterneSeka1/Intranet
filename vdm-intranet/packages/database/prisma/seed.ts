@@ -128,6 +128,8 @@ async function main() {
     managerUsername?: string
     groupCode?: string
     individualExpectedArrivalTime?: string
+    /** Optionnel — sinon dérivé de `username` (email obligatoire pour tout le monde sans exception). */
+    email?: string
   }
 
   const userDefs: UserDef[] = [
@@ -278,6 +280,7 @@ async function main() {
       buCode: 'EREP',
       managerUsername: 'RBU_EREP',
       groupCode: 'JOUR_0900',
+      email: 'stag.erep.1@vdm.local',
     },
     // SCI — équipe Qualité & Service Client, rattachée directement au responsable de BU
     // (pas de rôle RESPONSABLE_POLE dédié pour POLE_QSC)
@@ -341,6 +344,7 @@ async function main() {
       poleCode: 'POLE_IA_DEV',
       managerUsername: 'CTO',
       groupCode: 'JOUR_0900',
+      email: 'stag.tech.1@vdm.local',
     },
     {
       username: 'GLENN_BOLDCODE',
@@ -356,16 +360,26 @@ async function main() {
 
   for (const u of userDefs) {
     const fullName = `${u.firstName} ${u.lastName}`
+    // Email obligatoire pour tout le monde sans exception — dérivé de `username` si non précisé.
+    const email = u.email ?? `${u.username.toLowerCase()}@vdm.local`
     await prisma.user.upsert({
       where: { username: u.username },
       update: {
         fullName,
         role: u.role,
+        // Stagiaire : pas de matricule, l'email est son seul identifiant de connexion.
+        matricule: u.role === 'STAGIAIRE' ? null : u.username,
+        email,
         scheduleGroupId: u.groupCode ? groups[u.groupCode] : null,
         individualExpectedArrivalTime: u.individualExpectedArrivalTime ?? null,
       },
       create: {
         username: u.username,
+        // Connexion locale/dev : matricule aligné sur username pour que les identifiants de seed
+        // (ex: "CTO") continuent de fonctionner tels quels — cf. AuthService.login (matricule ou
+        // email, jamais username). Absent pour un stagiaire, qui se connecte avec son email.
+        matricule: u.role === 'STAGIAIRE' ? undefined : u.username,
+        email,
         passwordHash: pwd,
         firstName: u.firstName,
         lastName: u.lastName,

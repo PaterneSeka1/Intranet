@@ -21,6 +21,7 @@ const DUMMY_PASSWORD_HASH = '$2b$12$HXZCb0hKybfZviyWhzG7OuCBpE5Q1sPotwOIqU6koYWq
 const USER_SELECT = {
   id: true,
   username: true,
+  matricule: true,
   firstName: true,
   lastName: true,
   fullName: true,
@@ -44,8 +45,12 @@ export class AuthService {
     private readonly mailService: MailService
   ) {}
 
-  async login(username: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { username } })
+  // Identifiants de connexion acceptés : matricule (employés) ou email (stagiaires, qui n'ont
+  // pas de matricule) — jamais `username`, conservé comme champ technique interne uniquement.
+  async login(identifier: string, password: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ matricule: identifier }, { email: identifier }] },
+    })
     const now = new Date()
 
     if (user?.lockoutUntil && user.lockoutUntil > now) {
@@ -86,7 +91,7 @@ export class AuthService {
 
   async forgotPassword(identifier: string) {
     const user = await this.prisma.user.findFirst({
-      where: { OR: [{ username: identifier }, { email: identifier }] },
+      where: { OR: [{ matricule: identifier }, { email: identifier }] },
     })
 
     // Réponse volontairement générique — ne jamais révéler si le compte existe ou a un email.

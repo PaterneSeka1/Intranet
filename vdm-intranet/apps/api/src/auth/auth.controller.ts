@@ -20,7 +20,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Connexion — retourne le cookie JWT' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const { token, user, requiresFirstLoginGeolocation } = await this.authService.login(
-      dto.username,
+      dto.identifier,
       dto.password
     )
     res.cookie(this.authService.cookieName(), token, this.authService.cookieOptions())

@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 interface Props {
-  username: string
+  displayName: string
   onComplete: () => void
 }
 
-export function LoginAnimation({ username, onComplete }: Props) {
+export function LoginAnimation({ displayName, onComplete }: Props) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -19,7 +19,9 @@ export function LoginAnimation({ username, onComplete }: Props) {
 
   if (!mounted) return null
 
-  const display = username ? username.charAt(0).toUpperCase() + username.slice(1).toLowerCase() : ''
+  const display = displayName
+    ? displayName.charAt(0).toUpperCase() + displayName.slice(1).toLowerCase()
+    : ''
 
   return createPortal(
     <>

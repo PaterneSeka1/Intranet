@@ -24,6 +24,8 @@ export interface Pole {
 export interface User {
   id: string
   username: string
+  /** Identifiant de connexion (matricule). NULL pour un stagiaire — il se connecte avec son email. */
+  matricule?: string | null
   firstName?: string | null
   lastName?: string | null
   fullName?: string | null

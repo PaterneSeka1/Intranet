@@ -23,6 +23,15 @@ export class UpdateUserDto {
   @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(100) firstName?: string
   @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(100) lastName?: string
   @ApiPropertyOptional() @IsEmail() @IsOptional() email?: string
+  @ApiPropertyOptional({
+    example: 'EMP-0231',
+    description:
+      'Identifiant de connexion (matricule). Laisser vide pour un stagiaire — il se connecte avec son email.',
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  matricule?: string
   @ApiPropertyOptional({ enum: Role }) @IsEnum(Role) @IsOptional() role?: Role
   @ApiPropertyOptional() @IsString() @IsOptional() businessUnitId?: string
   @ApiPropertyOptional() @IsString() @IsOptional() poleId?: string

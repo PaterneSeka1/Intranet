@@ -27,8 +27,9 @@ export function LoginClient({
   initialLogo,
 }: Props) {
   const [step, setStep] = useState<Step>('form')
-  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -59,9 +60,10 @@ export function LoginClient({
     setLoading(true)
     try {
       const { user, requiresFirstLoginGeolocation } = await api.auth.login(
-        username.trim(),
+        identifier.trim(),
         password
       )
+      setDisplayName(user.firstName || user.fullName || identifier.trim())
 
       // La géolocalisation de 1ère connexion du jour est prioritaire sur le
       // changement de mot de passe obligatoire : sinon la présence du jour
@@ -108,7 +110,7 @@ export function LoginClient({
   }
 
   if (step === 'animating') {
-    return <LoginAnimation username={username} onComplete={handleAnimationComplete} />
+    return <LoginAnimation displayName={displayName} onComplete={handleAnimationComplete} />
   }
 
   if (step === 'geo') {
@@ -135,18 +137,18 @@ export function LoginClient({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
-              htmlFor="login-username"
+              htmlFor="login-identifier"
               className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
             >
-              Identifiant
+              Matricule ou email
             </label>
             <input
-              id="login-username"
+              id="login-identifier"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-all placeholder-gray-300"
-              placeholder="Ex : CTO"
+              placeholder="Ex : EMP-0231 ou prenom.nom@veilleurdesmedias.com"
               required
               autoFocus
               autoComplete="username"
