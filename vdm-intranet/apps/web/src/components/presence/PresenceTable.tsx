@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, AlertTriangle } from 'lucide-react'
-import { ROLE_LABELS } from '@/types/user'
+import { AlertTriangle } from 'lucide-react'
 import { presenceApi, canMandateUser, type PresenceRow } from '@/lib/presence'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Modal } from '@/components/ui/Modal'
@@ -25,13 +24,6 @@ const STATUS_LABEL: Record<string, string> = {
   EN_CONGE: 'En congé',
   REPOS: 'Repos',
   EN_ATTENTE: 'En attente',
-}
-
-const SOURCE_LABEL: Record<string, string> = {
-  mandate: 'Mandat',
-  group: 'Groupe',
-  individual: 'Individuel',
-  none: '—',
 }
 
 function fmtTime(iso: string | null | undefined): string {
@@ -137,57 +129,6 @@ export function PresenceTable({
       ),
     },
     {
-      key: 'role',
-      label: 'Rôle',
-      sortable: true,
-      sortValue: (r) => r.user.role,
-      render: (r) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
-          {ROLE_LABELS[r.user.role as keyof typeof ROLE_LABELS] ?? r.user.role}
-        </span>
-      ),
-    },
-    {
-      key: 'bu',
-      label: 'BU',
-      sortable: true,
-      sortValue: (r) => r.user.businessUnit?.name ?? '',
-      render: (r) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
-          {r.user.businessUnit?.name ?? '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'pole',
-      label: 'Pôle',
-      sortable: true,
-      sortValue: (r) => r.user.pole?.name ?? '',
-      render: (r) => (
-        <span className="text-xs text-gray-500 whitespace-nowrap">{r.user.pole?.name ?? '—'}</span>
-      ),
-    },
-    {
-      key: 'scheduleSource',
-      label: 'Source',
-      render: (r) => (
-        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 whitespace-nowrap">
-          {SOURCE_LABEL[r.scheduleSource] ?? r.scheduleSource}
-        </span>
-      ),
-    },
-    {
-      key: 'expectedArrivalTime',
-      label: 'Heure attendue',
-      sortable: true,
-      sortValue: (r) => r.expectedArrivalTime ?? '',
-      render: (r) => (
-        <span className="font-mono text-sm text-gray-700 whitespace-nowrap">
-          {r.expectedArrivalTime ?? '—'}
-        </span>
-      ),
-    },
-    {
       key: 'officialArrivalTime',
       label: 'Arrivée',
       sortable: true,
@@ -263,25 +204,6 @@ export function PresenceTable({
       },
     },
     {
-      key: 'location',
-      label: 'Localisation',
-      render: (r) =>
-        r.presence?.mapsUrl ? (
-          <a
-            href={r.presence.mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap inline-flex items-center gap-1"
-          >
-            <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
-            Carte
-          </a>
-        ) : (
-          <span className="text-gray-200">—</span>
-        ),
-    },
-    {
       key: 'officialDepartureTime',
       label: 'Départ',
       sortable: true,
@@ -291,43 +213,6 @@ export function PresenceTable({
           {fmtTime(r.presence?.officialDepartureTime)}
         </span>
       ),
-    },
-    {
-      key: 'departureDelayMinutes',
-      label: 'Écart départ',
-      sortable: true,
-      sortValue: (r) => r.presence?.departureDelayMinutes ?? 0,
-      render: (r) => {
-        const d = r.presence?.departureDelayMinutes
-        if (!r.presence?.officialDepartureTime) return <span className="text-gray-200">—</span>
-        if (!d) return <span className="text-gray-400 text-sm">À l'heure</span>
-        return (
-          <span
-            className={`font-semibold text-sm whitespace-nowrap ${d > 0 ? 'text-orange-600' : 'text-blue-600'}`}
-          >
-            {d > 0 ? `+${d} min` : `${d} min`}
-          </span>
-        )
-      },
-    },
-    {
-      key: 'departureLocation',
-      label: 'Localisation départ',
-      render: (r) =>
-        r.presence?.departureMapsUrl ? (
-          <a
-            href={r.presence.departureMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap inline-flex items-center gap-1"
-          >
-            <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
-            Carte
-          </a>
-        ) : (
-          <span className="text-gray-200">—</span>
-        ),
     },
   ]
 
