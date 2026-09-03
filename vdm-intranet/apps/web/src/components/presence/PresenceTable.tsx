@@ -231,35 +231,52 @@ export function PresenceTable({
       ),
     },
     {
+      // Statut sur site/à distance toujours visible (badge), pour ne pas avoir à ouvrir la carte
+      // et juger soi-même de la distance à chaque ligne — cf. distanceFromWorkplaceMeters calculé
+      // côté serveur une fois pour toutes à la première connexion du jour.
+      key: 'siteStatus',
+      label: 'Présence',
+      sortable: true,
+      // À distance en premier au tri croissant (0), puis sur site (1), puis non vérifié (2).
+      sortValue: (r) =>
+        r.presence?.isOffSite == null ? 2 : r.presence.isOffSite ? 0 : 1,
+      render: (r) => {
+        if (!r.presence || r.presence.isOffSite == null) {
+          return <span className="text-gray-200 text-xs">—</span>
+        }
+        return r.presence.isOffSite ? (
+          <span
+            title={
+              r.presence.distanceFromWorkplaceMeters != null
+                ? `À ${r.presence.distanceFromWorkplaceMeters} m du lieu de travail configuré`
+                : 'Hors du lieu de travail configuré'
+            }
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full whitespace-nowrap"
+          >
+            <AlertTriangle className="w-3 h-3 shrink-0" strokeWidth={2} />À distance
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+            Sur site
+          </span>
+        )
+      },
+    },
+    {
       key: 'location',
       label: 'Localisation',
       render: (r) =>
         r.presence?.mapsUrl ? (
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <a
-              href={r.presence.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="text-[#F28C38] text-xs underline underline-offset-2 inline-flex items-center gap-1"
-            >
-              <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
-              Carte
-            </a>
-            {r.presence.isOffSite && (
-              <span
-                title={
-                  r.presence.distanceFromWorkplaceMeters != null
-                    ? `À ${r.presence.distanceFromWorkplaceMeters} m du lieu de travail configuré`
-                    : 'Hors du lieu de travail configuré'
-                }
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full"
-              >
-                <AlertTriangle className="w-3 h-3 shrink-0" strokeWidth={2} />
-                Hors site
-              </span>
-            )}
-          </div>
+          <a
+            href={r.presence.mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap inline-flex items-center gap-1"
+          >
+            <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+            Carte
+          </a>
         ) : (
           <span className="text-gray-200">—</span>
         ),
