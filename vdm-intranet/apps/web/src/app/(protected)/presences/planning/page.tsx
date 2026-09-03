@@ -31,7 +31,7 @@ async function fetchScheduleGroups(token: string, cookieName: string): Promise<S
       cache: 'no-store',
     })
     if (!res.ok) return []
-    return res.json()
+    return await res.json()
   } catch {
     return []
   }
@@ -44,7 +44,7 @@ async function fetchPoles(token: string, cookieName: string): Promise<PoleOption
       cache: 'no-store',
     })
     if (!res.ok) return []
-    return res.json()
+    return await res.json()
   } catch {
     return []
   }

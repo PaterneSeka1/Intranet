@@ -19,7 +19,7 @@ async function fetchPresences(
       cache: 'no-store',
     })
     if (!res.ok) return []
-    return res.json()
+    return await res.json()
   } catch {
     return []
   }
@@ -32,7 +32,7 @@ async function fetchMandates(token: string, cookieName: string, date: string): P
       cache: 'no-store',
     })
     if (!res.ok) return []
-    return res.json()
+    return await res.json()
   } catch {
     return []
   }
@@ -45,7 +45,7 @@ async function fetchHolidays(token: string, cookieName: string): Promise<PublicH
       cache: 'no-store',
     })
     if (!res.ok) return []
-    return res.json()
+    return await res.json()
   } catch {
     return []
   }

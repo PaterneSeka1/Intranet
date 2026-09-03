@@ -27,7 +27,7 @@ async function getActiveAnnouncements(): Promise<Announcement[]> {
       cache: 'no-store',
     })
     if (!res.ok) return []
-    return res.json()
+    return await res.json()
   } catch {
     return []
   }
