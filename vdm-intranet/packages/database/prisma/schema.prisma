@@ -61,6 +61,7 @@ enum LogAction {
   SCHEDULE_GROUP_UPDATED
   SCHEDULE_GROUP_DELETED
   DAY_ENDED
+  WORKPLACE_LOCATION_UPDATED
 }
 
 // ============================================================
@@ -170,6 +171,7 @@ model User {
   activityLogs         ActivityLog[]
   passwordResetTokens  PasswordResetToken[]
   notifications        Notification[]
+  workplaceLocationUpdates WorkplaceLocation[]
 
   @@map("users")
 }
@@ -212,6 +214,12 @@ model Presence {
   departureAccuracy     Float?
   departureAddress      String?
   departureMapsUrl      String?
+  // Écart par rapport au lieu de travail de référence (WorkplaceLocation), calculé une seule fois
+  // à la première connexion du jour (seul moment où la géolocalisation est obligatoire — voir
+  // PresenceService.processFirstLogin). null tant qu'aucun lieu de travail n'est configuré :
+  // ne signifie jamais "sur site", à distinguer de isOffSite=false.
+  isOffSite                   Boolean?
+  distanceFromWorkplaceMeters Float?
   sourceConnectionLogId String?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
@@ -246,6 +254,29 @@ model ConnectionLog {
 
   @@index([userId, date, type])
   @@map("connection_logs")
+}
+
+// ============================================================
+// LIEU DE TRAVAIL DE RÉFÉRENCE (géofencing présence)
+// ============================================================
+
+// Singleton applicatif : un seul lieu de travail global pour toute l'agence (voir
+// PresenceService.getWorkplaceLocation/upsertWorkplaceLocation, qui met à jour l'unique ligne
+// existante au lieu d'en créer une nouvelle). Sert de point de référence pour détecter une
+// première connexion du jour hors site (cf. Presence.isOffSite).
+model WorkplaceLocation {
+  id           String   @id @default(cuid())
+  label        String
+  latitude     Float
+  longitude    Float
+  radiusMeters Int      @default(150)
+  updatedById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  updatedBy User? @relation(fields: [updatedById], references: [id])
+
+  @@map("workplace_locations")
 }
 
 // ============================================================

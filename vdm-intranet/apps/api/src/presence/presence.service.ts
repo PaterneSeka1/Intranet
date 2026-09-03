@@ -10,6 +10,7 @@ import { PublicHolidaysService } from '../public-holidays/public-holidays.servic
 import { FirstLoginDto } from './dto/first-login.dto'
 import { LoginLogDto } from './dto/login-log.dto'
 import { EndDayDto } from './dto/end-day.dto'
+import { UpsertWorkplaceLocationDto } from './dto/upsert-workplace-location.dto'
 import { CreateMandateDto } from './dto/create-mandate.dto'
 import { BulkCreateMandateDto } from './dto/bulk-create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
@@ -25,6 +26,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { LeaveSyncService, type ActiveLeave } from '../leaves/leave-sync.service'
 import { matchLeaveToUser, leaveTypeLabel } from '../leaves/leave-match.util'
 import { isRecurringWorkDay } from '../common/working-days.util'
+import { haversineDistanceMeters } from '../common/geo.util'
 
 type Requester = {
   id: string
@@ -89,6 +91,8 @@ type GeolocatedPresence = {
   departureAccuracy?: number | null
   departureAddress?: string | null
   departureMapsUrl?: string | null
+  isOffSite?: boolean | null
+  distanceFromWorkplaceMeters?: number | null
 }
 
 @Injectable()
@@ -261,6 +265,19 @@ export class PresenceService {
     // mapsUrl toujours construit côté serveur — jamais depuis le client
     const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
 
+    // Écart au lieu de travail de référence — comparé uniquement à la première connexion du jour
+    // (seul moment où la géolocalisation est obligatoire). null tant qu'aucun WorkplaceLocation
+    // n'est configuré : ne veut jamais dire "sur site", cf. redactPresenceForRole/type GeolocatedPresence.
+    const workplace = await this.prisma.workplaceLocation.findFirst({
+      orderBy: { createdAt: 'asc' },
+    })
+    const distanceFromWorkplaceMeters = workplace
+      ? Math.round(
+          haversineDistanceMeters(dto.latitude, dto.longitude, workplace.latitude, workplace.longitude)
+        )
+      : null
+    const isOffSite = workplace ? distanceFromWorkplaceMeters! > workplace.radiusMeters : null
+
     const connectionLogData = {
       userId,
       type: 'LOGIN' as const,
@@ -310,6 +327,8 @@ export class PresenceService {
             accuracy: dto.accuracy,
             address: dto.address,
             mapsUrl,
+            isOffSite,
+            distanceFromWorkplaceMeters,
             sourceConnectionLogId: logEntry.id,
           },
         })
@@ -497,6 +516,48 @@ export class PresenceService {
 
       return updated
     })
+  }
+
+  // ----------------------------------------------------------------
+  // Lieu de travail de référence (géofencing présence)
+  // ----------------------------------------------------------------
+
+  getWorkplaceLocation() {
+    return this.prisma.workplaceLocation.findFirst({ orderBy: { createdAt: 'asc' } })
+  }
+
+  /**
+   * Singleton applicatif : met à jour l'unique lieu de travail existant au lieu d'en créer un
+   * second (cf. commentaire sur le modèle WorkplaceLocation). Réservé au CTO_ADMIN — vérifié dans
+   * le contrôleur, comme pour les autres réglages globaux (CAN_MANAGE_SETTINGS).
+   */
+  async upsertWorkplaceLocation(dto: UpsertWorkplaceLocationDto, requester: Requester) {
+    const existing = await this.prisma.workplaceLocation.findFirst({
+      orderBy: { createdAt: 'asc' },
+    })
+    const data = {
+      label: dto.label,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      radiusMeters: dto.radiusMeters ?? 150,
+      updatedById: requester.id,
+    }
+
+    const workplace = existing
+      ? await this.prisma.workplaceLocation.update({ where: { id: existing.id }, data })
+      : await this.prisma.workplaceLocation.create({ data })
+
+    await this.prisma.activityLog.create({
+      data: {
+        userId: requester.id,
+        action: 'WORKPLACE_LOCATION_UPDATED',
+        entity: 'WorkplaceLocation',
+        entityId: workplace.id,
+        details: dto as object,
+      },
+    })
+
+    return workplace
   }
 
   // ----------------------------------------------------------------
@@ -1007,6 +1068,8 @@ export class PresenceService {
     presence.departureAccuracy = null
     presence.departureAddress = null
     presence.departureMapsUrl = null
+    presence.isOffSite = null
+    presence.distanceFromWorkplaceMeters = null
 
     return presence
   }

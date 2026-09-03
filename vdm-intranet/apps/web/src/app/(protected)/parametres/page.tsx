@@ -37,6 +37,16 @@ type ScheduleGroup = {
   _count: { users: number }
 }
 type Holiday = { id: string; date: string; label: string; isRecurring: boolean }
+type WorkplaceLocation = {
+  id: string
+  label: string
+  latitude: number
+  longitude: number
+  radiusMeters: number
+  updatedById: string | null
+  createdAt: string
+  updatedAt: string
+}
 
 export default async function ParametresPage() {
   const user = await getCurrentUser()
@@ -47,12 +57,15 @@ export default async function ParametresPage() {
   // structure organisationnelle dans l'outil). Tout autre rôle reste refusé.
   if (user.role !== 'CTO_ADMIN' && user.role !== 'PDG') redirect('/acces-refuse')
 
-  const [groups, buList, poleList, settingsList, holidays] = await Promise.all([
+  const [groups, buList, poleList, settingsList, holidays, workplaceLocation] = await Promise.all([
     serverFetch<ScheduleGroup[]>('/presence/schedule-groups') ?? [],
     serverFetch<Bu[]>('/tabs/business-units') ?? [],
     serverFetch<Pole[]>('/tabs/poles') ?? [],
     fetchSettings(),
     serverFetch<Holiday[]>('/public-holidays') ?? [],
+    // Réservé au CTO_ADMIN côté API (CAN_MANAGE_SETTINGS) — jamais chargé pour le PDG en lecture
+    // seule ci-dessous, qui n'a pas accès à ce réglage.
+    user.role === 'CTO_ADMIN' ? serverFetch<WorkplaceLocation>('/presence/workplace-location') : null,
   ])
 
   if (user.role === 'PDG') {
@@ -78,6 +91,7 @@ export default async function ParametresPage() {
         initialPoles={poleList ?? []}
         initialSettings={initialSettings}
         initialHolidays={holidays ?? []}
+        initialWorkplaceLocation={workplaceLocation ?? null}
       />
     </div>
   )

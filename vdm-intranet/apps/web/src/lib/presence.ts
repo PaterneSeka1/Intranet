@@ -34,9 +34,30 @@ export interface Presence {
   departureAccuracy: number | null
   departureAddress: string | null
   departureMapsUrl: string | null
+  // null = aucun lieu de travail configuré au moment de la première connexion (jamais "sur site")
+  isOffSite: boolean | null
+  distanceFromWorkplaceMeters: number | null
   sourceConnectionLogId: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface WorkplaceLocation {
+  id: string
+  label: string
+  latitude: number
+  longitude: number
+  radiusMeters: number
+  updatedById: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkplaceLocationPayload {
+  label: string
+  latitude: number
+  longitude: number
+  radiusMeters?: number
 }
 
 export interface ScheduleSource {
@@ -208,4 +229,10 @@ export const presenceApi = {
     presenceReq<{ deleted: boolean }>(`/mandates/${id}`, { method: 'DELETE' }),
   myConnections: (limit = 20) =>
     presenceReq<ConnectionLogEntry[]>(`/my-connections?limit=${limit}`),
+  getWorkplaceLocation: () => presenceReq<WorkplaceLocation | null>('/workplace-location'),
+  saveWorkplaceLocation: (data: WorkplaceLocationPayload) =>
+    presenceReq<WorkplaceLocation>('/workplace-location', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 }

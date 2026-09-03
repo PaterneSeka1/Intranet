@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin } from 'lucide-react'
+import { MapPin, AlertTriangle } from 'lucide-react'
 import { ROLE_LABELS } from '@/types/user'
 import { presenceApi, canMandateUser, type PresenceRow } from '@/lib/presence'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -235,16 +235,31 @@ export function PresenceTable({
       label: 'Localisation',
       render: (r) =>
         r.presence?.mapsUrl ? (
-          <a
-            href={r.presence.mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="text-[#F28C38] text-xs underline underline-offset-2 whitespace-nowrap inline-flex items-center gap-1"
-          >
-            <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
-            Carte
-          </a>
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <a
+              href={r.presence.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[#F28C38] text-xs underline underline-offset-2 inline-flex items-center gap-1"
+            >
+              <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+              Carte
+            </a>
+            {r.presence.isOffSite && (
+              <span
+                title={
+                  r.presence.distanceFromWorkplaceMeters != null
+                    ? `À ${r.presence.distanceFromWorkplaceMeters} m du lieu de travail configuré`
+                    : 'Hors du lieu de travail configuré'
+                }
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full"
+              >
+                <AlertTriangle className="w-3 h-3 shrink-0" strokeWidth={2} />
+                Hors site
+              </span>
+            )}
+          </div>
         ) : (
           <span className="text-gray-200">—</span>
         ),

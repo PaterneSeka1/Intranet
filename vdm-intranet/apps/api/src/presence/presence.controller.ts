@@ -23,10 +23,12 @@ import { CreateMandateDto } from './dto/create-mandate.dto'
 import { BulkCreateMandateDto } from './dto/bulk-create-mandate.dto'
 import { CreateScheduleGroupDto } from './dto/create-schedule-group.dto'
 import { UpdateScheduleGroupDto } from './dto/update-schedule-group.dto'
+import { UpsertWorkplaceLocationDto } from './dto/upsert-workplace-location.dto'
 import {
   CAN_MANAGE_MANDATES,
   CAN_MANAGE_SCHEDULE_GROUPS,
   CAN_MANAGE_SCHEDULE_GROUPS_BU_SCOPE,
+  CAN_MANAGE_SETTINGS,
 } from '../common/permissions'
 
 type AuthUser = {
@@ -73,6 +75,22 @@ export class PresenceController {
   @Post('end-day')
   endDay(@CurrentUser() user: AuthUser, @Body() dto: EndDayDto, @Req() req: Request) {
     return this.presenceService.processEndDay(user.id, dto, this.getIp(req), user.role)
+  }
+
+  // ----------------------------------------------------------------
+  // Lieu de travail de référence (géofencing présence)
+  // ----------------------------------------------------------------
+
+  @Get('workplace-location')
+  getWorkplaceLocation(@CurrentUser() user: AuthUser) {
+    if (!CAN_MANAGE_SETTINGS.includes(user.role)) throw new ForbiddenException()
+    return this.presenceService.getWorkplaceLocation()
+  }
+
+  @Patch('workplace-location')
+  upsertWorkplaceLocation(@CurrentUser() user: AuthUser, @Body() dto: UpsertWorkplaceLocationDto) {
+    if (!CAN_MANAGE_SETTINGS.includes(user.role)) throw new ForbiddenException()
+    return this.presenceService.upsertWorkplaceLocation(dto, user)
   }
 
   // ----------------------------------------------------------------

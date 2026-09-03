@@ -8,7 +8,8 @@ import { Modal } from '@/components/ui/Modal'
 import { apiFetch } from '@/lib/http'
 import { saveSettings, deleteSetting } from '@/lib/settings'
 import { escapeCssString, opacityPercentToCss, opacitySettingToPercent } from '@/lib/theme-settings'
-import { Moon, Sun, DoorOpen, CalendarDays, Check } from 'lucide-react'
+import { Moon, Sun, DoorOpen, CalendarDays, Check, MapPin, LocateFixed } from 'lucide-react'
+import { presenceApi, type WorkplaceLocation, type WorkplaceLocationPayload } from '@/lib/presence'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -172,6 +173,7 @@ interface Props {
   initialPoles?: Pole[]
   initialSettings?: Record<string, string>
   initialHolidays?: Holiday[]
+  initialWorkplaceLocation?: WorkplaceLocation | null
 }
 
 const EMPTY_BU: BuForm = { name: '', code: '', description: '' }
@@ -184,8 +186,9 @@ export function ParametresClient({
   initialPoles = [],
   initialSettings = {},
   initialHolidays = [],
+  initialWorkplaceLocation = null,
 }: Props) {
-  const [tab, setTab] = useState<'bg' | 'groups' | 'org' | 'holidays'>('bg')
+  const [tab, setTab] = useState<'bg' | 'groups' | 'org' | 'holidays' | 'workplace'>('bg')
 
   // --- Fond d'écran ---
   const [appBg, setAppBg] = useState(initialSettings['vdm_app_bg'] ?? '')
@@ -566,7 +569,7 @@ export function ParametresClient({
 
       {/* Onglets */}
       <div className="flex flex-wrap gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
-        {(['bg', 'groups', 'holidays', 'org'] as const).map((t) => (
+        {(['bg', 'groups', 'holidays', 'workplace', 'org'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -580,7 +583,9 @@ export function ParametresClient({
                 ? 'Groupes horaires'
                 : t === 'holidays'
                   ? 'Jours fériés'
-                  : 'Organisation'}
+                  : t === 'workplace'
+                    ? 'Lieu de travail'
+                    : 'Organisation'}
           </button>
         ))}
       </div>
@@ -1129,6 +1134,11 @@ export function ParametresClient({
           </Modal>
         </div>
       )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Tab : Lieu de travail */}
+      {/* ------------------------------------------------------------------ */}
+      {tab === 'workplace' && <WorkplaceLocationPanel initial={initialWorkplaceLocation} />}
 
       {/* ------------------------------------------------------------------ */}
       {/* Tab : Jours fériés */}
@@ -2492,6 +2502,222 @@ function PolesSection({
             {search || filterBu ? 'Aucun pôle correspondant.' : 'Aucun pôle défini.'}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Lieu de travail de référence (géofencing présence)
+// ---------------------------------------------------------------------------
+
+const GEO_ERRORS: Record<number, string> = {
+  1: "Accès à la localisation refusé — autorisez-la dans les paramètres de votre navigateur.",
+  2: 'Position introuvable — vérifiez que le GPS est activé.',
+  3: 'La demande de localisation a expiré, réessayez.',
+}
+
+function WorkplaceLocationPanel({ initial }: { initial: WorkplaceLocation | null }) {
+  const [label, setLabel] = useState(initial?.label ?? '')
+  const [latitude, setLatitude] = useState(initial ? String(initial.latitude) : '')
+  const [longitude, setLongitude] = useState(initial ? String(initial.longitude) : '')
+  const [radiusMeters, setRadiusMeters] = useState(String(initial?.radiusMeters ?? 150))
+  const [locating, setLocating] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(initial)
+
+  function useCurrentPosition() {
+    if (!navigator.geolocation) {
+      setError("La géolocalisation n'est pas supportée par ce navigateur.")
+      return
+    }
+    setLocating(true)
+    setError('')
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(String(position.coords.latitude))
+        setLongitude(String(position.coords.longitude))
+        setLocating(false)
+      },
+      (posError) => {
+        setError(GEO_ERRORS[posError.code] ?? 'Erreur de localisation inconnue.')
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    )
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+
+    const lat = Number(latitude)
+    const lng = Number(longitude)
+    const radius = Number(radiusMeters)
+    if (!label.trim()) {
+      setError('Le nom du lieu est obligatoire.')
+      return
+    }
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      setError('Latitude invalide (entre -90 et 90).')
+      return
+    }
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+      setError('Longitude invalide (entre -180 et 180).')
+      return
+    }
+    if (!Number.isFinite(radius) || radius < 10 || radius > 5000) {
+      setError('Rayon de tolérance invalide (entre 10 et 5000 m).')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const payload: WorkplaceLocationPayload = { label: label.trim(), latitude: lat, longitude: lng, radiusMeters: radius }
+      const updated = await presenceApi.saveWorkplaceLocation(payload)
+      setSaved(updated)
+      toast.success('Lieu de travail enregistré.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4 max-w-xl">
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-bold text-gray-900">Lieu de travail de référence</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            À la première connexion de la journée, la position de l&apos;employé est comparée à ce
+            lieu. Au-delà du rayon de tolérance, la présence est marquée « hors site » (visible des
+            responsables sur la page Présences).
+          </p>
+        </div>
+
+        {saved && (
+          <div className="bg-gray-50 rounded-xl p-3.5 text-xs text-gray-600 flex items-center justify-between gap-3">
+            <div>
+              <span className="font-semibold text-gray-800">{saved.label}</span> · rayon toléré{' '}
+              {saved.radiusMeters} m
+            </div>
+            <a
+              href={`https://maps.google.com/?q=${saved.latitude},${saved.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#F28C38] underline underline-offset-2 inline-flex items-center gap-1 whitespace-nowrap"
+            >
+              <MapPin className="w-3.5 h-3.5" strokeWidth={1.75} />
+              Voir sur la carte
+            </a>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="wp-label"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Nom du lieu *
+            </label>
+            <input
+              id="wp-label"
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="ex: Siège Abidjan - Cocody"
+              required
+              className={INPUT}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="wp-lat"
+                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+              >
+                Latitude *
+              </label>
+              <input
+                id="wp-lat"
+                type="text"
+                inputMode="decimal"
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                placeholder="ex: 5.345317"
+                required
+                className={INPUT}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="wp-lng"
+                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+              >
+                Longitude *
+              </label>
+              <input
+                id="wp-lng"
+                type="text"
+                inputMode="decimal"
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                placeholder="ex: -4.024429"
+                required
+                className={INPUT}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={useCurrentPosition}
+            disabled={locating}
+            className="text-xs font-medium text-[#F28C38] hover:underline inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <LocateFixed className="w-3.5 h-3.5" strokeWidth={1.75} />
+            {locating ? 'Localisation en cours…' : 'Utiliser ma position actuelle'}
+          </button>
+
+          <div>
+            <label
+              htmlFor="wp-radius"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Rayon de tolérance (mètres)
+            </label>
+            <input
+              id="wp-radius"
+              type="number"
+              min={10}
+              max={5000}
+              value={radiusMeters}
+              onChange={(e) => setRadiusMeters(e.target.value)}
+              className={INPUT}
+            />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Marge d&apos;imprécision GPS incluse — 150 m convient pour la plupart des sites.
+            </p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </form>
       </div>
     </div>
   )
