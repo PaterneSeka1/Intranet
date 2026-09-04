@@ -151,17 +151,20 @@ function windowsScript(appUrl: string, appName: string): string {
     ":: pour pouvoir s'auto-désactiver en cas de désinstallation.",
     'set "VDM_DIR=%LocalAppData%\\VDM Intranet"',
     'set "LAUNCHER=%VDM_DIR%\\vdm-launch.bat"',
-    // Chrome place les raccourcis des PWA installées dans le sous-dossier
-    // "Chrome Apps", jamais directement dans Programs\ — un chemin sans ce
-    // sous-dossier ne correspond jamais à rien : le test "if not exist"
-    // est alors toujours vrai et vdm-launch.bat supprime sa propre entrée
-    // de démarrage dès le premier redémarrage (démarrage auto qui ne
-    // fonctionne jamais, sans erreur visible).
-    'set "SHORTCUT=%AppData%\\Microsoft\\Windows\\Start Menu\\Programs\\Chrome Apps\\%VDM_APP_NAME%.lnk"',
+    // Chrome place le raccourci de la PWA installée dans un sous-dossier de
+    // Start Menu\Programs\ dont le nom dépend de la langue de Chrome
+    // ("Chrome Apps" en anglais, "Applications Chrome" en français, etc.) —
+    // deviner ce sous-dossier est fragile (constaté sur un poste Chrome FR :
+    // le chemin anglais ne correspondait jamais, donc vdm-launch.bat
+    // supprimait sa propre entrée de démarrage dès le premier redémarrage,
+    // sans erreur visible). On cherche le fichier récursivement sous
+    // Programs\ à l'exécution plutôt que de fiabiliser un chemin exact.
+    'set "SHORTCUT_NAME=%VDM_APP_NAME%.lnk"',
     'mkdir "%VDM_DIR%" >nul 2>&1',
     '',
     'echo @echo off> "%LAUNCHER%"',
-    'echo if not exist "%SHORTCUT%" goto :cleanup>>"%LAUNCHER%"',
+    'echo dir /s /b /a-d "%AppData%\\Microsoft\\Windows\\Start Menu\\Programs\\%SHORTCUT_NAME%" ^>nul 2^>nul>>"%LAUNCHER%"',
+    'echo if errorlevel 1 goto :cleanup>>"%LAUNCHER%"',
     'echo start "" "%CHROME%" --app="%VDM_URL%" --start-fullscreen>>"%LAUNCHER%"',
     'echo exit /b 0>>"%LAUNCHER%"',
     'echo :cleanup>>"%LAUNCHER%"',
