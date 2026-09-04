@@ -10,6 +10,10 @@
 - `vdm-kiosk.bat` — lanceur alternatif en mode kiosque plein écran (Chrome ou
   Edge), à utiliser directement si l'installation automatique n'est pas
   souhaitée.
+- `desinstaller.ps1` — retire tout ce que `installer-demarrage.ps1` a mis en
+  place (démarrage automatique + politique Chrome). La PWA elle-même reste
+  installée dans Chrome (à désinstaller séparément depuis `chrome://apps` si
+  besoin).
 
 ## Procédure d'installation
 
@@ -20,6 +24,15 @@
 
 ```
 .\installer-demarrage.ps1 -VdmUrl "http://192.168.1.10:3000"
+```
+
+## Désinstallation
+
+Clic droit sur `desinstaller.ps1` → **Exécuter avec PowerShell** (en
+Administrateur), ou :
+
+```
+.\desinstaller.ps1
 ```
 
 ## ⚠️ Piège connu : « Contrôle intelligent des applications » bloque les fichiers

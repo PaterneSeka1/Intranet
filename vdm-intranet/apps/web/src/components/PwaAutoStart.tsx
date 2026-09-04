@@ -8,6 +8,12 @@ type OS = 'macos' | 'windows' | 'other'
 type Phase = 'idle' | 'ask' | 'downloading' | 'done'
 
 const STORAGE_KEY = 'vdm_autostart_done'
+const DEFAULT_APP_NAME = 'VDM Intranet'
+
+// Support limité (Chrome/Edge desktop) — absent sur Firefox/Safari.
+interface NavigatorWithRelatedApps extends Navigator {
+  getInstalledRelatedApps?: () => Promise<unknown[]>
+}
 
 function detectOS(): OS {
   const ua = navigator.userAgent
@@ -16,18 +22,73 @@ function detectOS(): OS {
   return 'other'
 }
 
+/**
+ * Vérifie si l'application est toujours installée (via le manifeste
+ * auto-référencé dans manifest.ts). Retourne `null` si le navigateur ne
+ * supporte pas l'API — dans ce cas on ne peut pas savoir, donc on ne
+ * touche à rien plutôt que de se tromper.
+ */
+async function isAppStillInstalled(): Promise<boolean | null> {
+  const nav = navigator as NavigatorWithRelatedApps
+  if (!nav.getInstalledRelatedApps) return null
+  try {
+    const related = await nav.getInstalledRelatedApps()
+    return related.length > 0
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Récupère le nom d'affichage courant de l'application (personnalisable via
+ * les paramètres) — c'est le nom que Chrome utilise pour le raccourci créé
+ * à l'installation (Menu Démarrer sous Windows, dossier Chrome Apps sous
+ * macOS), indispensable pour vérifier plus tard si l'app est toujours là.
+ */
+async function fetchAppName(): Promise<string> {
+  try {
+    const res = await fetch('/manifest.webmanifest')
+    const manifest = await res.json()
+    if (typeof manifest?.name === 'string' && manifest.name.trim()) return manifest.name.trim()
+  } catch {
+    // Repli silencieux ci-dessous
+  }
+  return document.title || DEFAULT_APP_NAME
+}
+
 /* ── Génère le script macOS (.command) ──────────────────────────── */
-function macosScript(appUrl: string): string {
-  // Le fichier .command s'ouvre directement dans Terminal au double-clic
+function macosScript(appUrl: string, appName: string): string {
+  const safeName = appName.replace(/[/:]/g, '-')
   const lines = [
     '#!/bin/bash',
     `APP_URL='${appUrl}'`,
+    'SUPPORT_DIR="$HOME/Library/Application Support/VDM Intranet"',
+    'LAUNCHER="$SUPPORT_DIR/vdm-launch.sh"',
     'PLIST="$HOME/Library/LaunchAgents/com.vdm.intranet.plist"',
     '',
     'echo "Configuration du démarrage automatique VDM Intranet..."',
-    'mkdir -p "$HOME/Library/LaunchAgents"',
+    'mkdir -p "$SUPPORT_DIR"',
     '',
-    '# Écrire le LaunchAgent',
+    "# Script de lancement exécuté à chaque connexion : vérifie d'abord que",
+    "# l'application est toujours installée avant de l'ouvrir. Si elle a été",
+    '# désinstallée, il retire lui-même le démarrage automatique.',
+    "cat > \"$LAUNCHER\" <<'LAUNCHER_CONTENT'",
+    '#!/bin/bash',
+    `APP_PATH="$HOME/Applications/Chrome Apps/${safeName}.app"`,
+    'PLIST_PATH="$HOME/Library/LaunchAgents/com.vdm.intranet.plist"',
+    '',
+    'if [ ! -d "$APP_PATH" ]; then',
+    '  launchctl unload "$PLIST_PATH" 2>/dev/null || true',
+    '  rm -f "$PLIST_PATH"',
+    '  exit 0',
+    'fi',
+    '',
+    'sleep 8',
+    'open "$APP_PATH"',
+    'LAUNCHER_CONTENT',
+    'chmod +x "$LAUNCHER"',
+    '',
+    '# Écrire le LaunchAgent (exécute le script de lancement à chaque connexion)',
     'cat > "$PLIST" <<PLIST_CONTENT',
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
@@ -37,8 +98,7 @@ function macosScript(appUrl: string): string {
     '  <key>ProgramArguments</key>',
     '  <array>',
     '    <string>/bin/bash</string>',
-    '    <string>-c</string>',
-    `    <string>sleep 8 \&\& open '${appUrl}'</string>`,
+    '    <string>$LAUNCHER</string>',
     '  </array>',
     '  <key>RunAtLoad</key><true/>',
     '</dict>',
@@ -58,7 +118,8 @@ function macosScript(appUrl: string): string {
 }
 
 /* ── Génère le script Windows (.bat) ────────────────────────────── */
-function windowsScript(appUrl: string): string {
+function windowsScript(appUrl: string, appName: string): string {
+  const safeName = appName.replace(/[\\/:*?"<>|]/g, '').trim() || DEFAULT_APP_NAME
   const lines = [
     '@echo off',
     'chcp 65001 >nul',
@@ -68,6 +129,7 @@ function windowsScript(appUrl: string): string {
     'echo.',
     '',
     'set "VDM_URL=' + appUrl + '"',
+    'set "VDM_APP_NAME=' + safeName + '"',
     'set "CHROME="',
     '',
     'if exist "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" (',
@@ -83,10 +145,26 @@ function windowsScript(appUrl: string): string {
     '  pause & exit /b 1',
     ')',
     '',
-    ':: Ajouter au démarrage Windows',
+    ':: Script de lancement (exécuté à chaque démarrage) : vérifie que',
+    ":: l'application est toujours installée avant de l'ouvrir. On le place",
+    ':: dans le démarrage Windows plutôt que la commande Chrome directement,',
+    ":: pour pouvoir s'auto-désactiver en cas de désinstallation.",
+    'set "VDM_DIR=%LocalAppData%\\VDM Intranet"',
+    'set "LAUNCHER=%VDM_DIR%\\vdm-launch.bat"',
+    'set "SHORTCUT=%AppData%\\Microsoft\\Windows\\Start Menu\\Programs\\%VDM_APP_NAME%.lnk"',
+    'mkdir "%VDM_DIR%" >nul 2>&1',
+    '',
+    'echo @echo off> "%LAUNCHER%"',
+    'echo if not exist "%SHORTCUT%" goto :cleanup>>"%LAUNCHER%"',
+    'echo start "" "%CHROME%" --app="%VDM_URL%" --start-fullscreen>>"%LAUNCHER%"',
+    'echo exit /b 0>>"%LAUNCHER%"',
+    'echo :cleanup>>"%LAUNCHER%"',
+    'echo reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "VDM Intranet" /f>>"%LAUNCHER%"',
+    '',
+    ':: Ajouter le lanceur au démarrage Windows',
     'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" ^',
     '  /v "VDM Intranet" /t REG_SZ ^',
-    '  /d "\\"%CHROME%\\" --app=\\"%VDM_URL%\\" --start-fullscreen" /f >nul',
+    '  /d "\\"%LAUNCHER%\\"" /f >nul',
     '',
     "echo ✓ VDM Intranet s'ouvrira automatiquement au prochain démarrage.",
     'echo.',
@@ -117,26 +195,49 @@ export function PwaAutoStart() {
 
   useEffect(() => {
     setMounted(true)
-    if (localStorage.getItem(STORAGE_KEY)) return
+    let active = true
+    let handler: (() => void) | null = null
 
-    const handler = () => {
-      setOs(detectOS())
-      // Laisser 1.5s pour que l'animation d'installation se termine
-      setTimeout(() => setPhase('ask'), 1500)
+    async function init() {
+      // La proposition a déjà été traitée (oui ou non) lors d'une précédente
+      // installation. Si l'application a depuis été désinstallée, on
+      // réinitialise le drapeau pour pouvoir la proposer à nouveau au
+      // moment d'une future réinstallation.
+      if (localStorage.getItem(STORAGE_KEY)) {
+        const stillInstalled = await isAppStillInstalled()
+        if (stillInstalled === false) {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      }
+
+      if (!active || localStorage.getItem(STORAGE_KEY)) return
+
+      handler = () => {
+        setOs(detectOS())
+        // Laisser 1.5s pour que l'animation d'installation se termine
+        setTimeout(() => setPhase('ask'), 1500)
+      }
+      window.addEventListener('appinstalled', handler)
     }
 
-    window.addEventListener('appinstalled', handler)
-    return () => window.removeEventListener('appinstalled', handler)
+    init()
+
+    return () => {
+      active = false
+      if (handler) window.removeEventListener('appinstalled', handler)
+    }
   }, [])
 
-  function handleYes() {
+  async function handleYes() {
     const appUrl = window.location.origin
     setPhase('downloading')
 
+    const appName = await fetchAppName()
+
     if (os === 'macos') {
-      downloadScript(macosScript(appUrl), 'vdm-demarrage-auto.command')
+      downloadScript(macosScript(appUrl, appName), 'vdm-demarrage-auto.command')
     } else if (os === 'windows') {
-      downloadScript(windowsScript(appUrl), 'vdm-demarrage-auto.bat')
+      downloadScript(windowsScript(appUrl, appName), 'vdm-demarrage-auto.bat')
     }
 
     localStorage.setItem(STORAGE_KEY, '1')

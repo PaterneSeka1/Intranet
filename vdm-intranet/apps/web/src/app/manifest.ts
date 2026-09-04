@@ -45,6 +45,15 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     background_color: '#060A0F',
     theme_color: '#F28C38',
     categories: ['business', 'productivity'],
+    // Auto-référence permettant à navigator.getInstalledRelatedApps() de
+    // détecter si la PWA est toujours installée (utilisé pour réinitialiser
+    // la proposition de démarrage automatique après une désinstallation).
+    related_applications: [
+      {
+        platform: 'webapp',
+        url: '/manifest.webmanifest',
+      },
+    ],
     icons: [
       ...(customIcon
         ? [
