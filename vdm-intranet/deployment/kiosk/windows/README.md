@@ -18,15 +18,17 @@
 ## Procédure d'installation
 
 1. Copier ce dossier sur le poste kiosque.
-2. Ouvrir PowerShell en Administrateur dans ce dossier et lancer, **en
-   précisant toujours `-VdmUrl`** (paramètre obligatoire, sans valeur par
-   défaut — voir piège ci-dessous) :
-
-   ```
-   .\installer-demarrage.ps1 -VdmUrl "https://intranet.veilleurdesmedias.org"
-   ```
-
+2. Clic droit sur `installer-demarrage.ps1` → **Exécuter avec PowerShell**
+   (en Administrateur). Aucun paramètre requis : l'URL de prod
+   (`https://intranet.veilleurdesmedias.org`) est appliquée automatiquement.
 3. Redémarrer le poste pour vérifier le démarrage automatique.
+
+Pour un poste qui doit pointer ailleurs (cas particulier), surcharger
+l'URL par défaut :
+
+```
+.\installer-demarrage.ps1 -VdmUrl "https://autre-adresse"
+```
 
 ## Désinstallation
 
@@ -37,19 +39,21 @@ Administrateur), ou :
 .\desinstaller.ps1
 ```
 
-## ⚠️ Piège connu : oubli de `-VdmUrl` → une fenêtre Chrome ouvre « localhost »
+## ⚠️ Piège connu (corrigé) : l'ancien défaut pointait sur « localhost »
 
-**Symptôme** : après installation, la PWA ne se lance pas au démarrage — une
-fenêtre Chrome s'ouvre bien à chaque redémarrage, mais elle affiche une page
-vide/inaccessible sur `localhost`.
+**Symptôme observé avant correctif** : après installation, la PWA ne se
+lance pas au démarrage — une fenêtre Chrome s'ouvre bien à chaque
+redémarrage, mais elle affiche une page vide/inaccessible sur `localhost`.
 
-**Cause** : `-VdmUrl` était auparavant optionnel avec `http://localhost:3000`
-comme valeur par défaut. Lancer `installer-demarrage.ps1` sans ce paramètre
-grave cette URL locale dans la politique Chrome **et** dans le script de
-démarrage automatique — rien n'y répond sur le poste kiosque, d'où la page
-vide. `-VdmUrl` est désormais **obligatoire** (plus de valeur par défaut),
-mais si l'installation a déjà eu lieu avec l'ancienne version du script, il
-faut nettoyer avant de recommencer :
+**Cause** : `-VdmUrl` avait `http://localhost:3000` comme valeur par défaut.
+Lancer `installer-demarrage.ps1` sans préciser ce paramètre gravait cette
+URL locale dans la politique Chrome **et** dans le script de démarrage
+automatique — rien n'y répond sur le poste kiosque, d'où la page vide.
+Corrigé : le défaut est maintenant l'URL de prod réelle
+(`https://intranet.veilleurdesmedias.org`), donc une installation sans
+paramètre fonctionne correctement. Si un poste a été installé avec
+l'ancienne version du script (avant ce correctif), il faut nettoyer avant
+de recommencer :
 
 1. `.\desinstaller.ps1` (en Administrateur) — retire le raccourci de
    démarrage et la politique Chrome erronés.
