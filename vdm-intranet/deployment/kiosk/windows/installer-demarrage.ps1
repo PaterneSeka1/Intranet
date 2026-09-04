@@ -10,6 +10,15 @@ $ErrorActionPreference = "Stop"
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AppName    = "VDM Intranet"
 
+# Débloquer les fichiers du dossier (chrome-policy.reg, vdm-kiosk.bat) si ce
+# script a été copié/téléchargé depuis Internet ou un partage réseau : ces
+# fichiers portent alors la marque "Internet" (Zone.Identifier) et le
+# Contrôle intelligent des applications de Windows 11 les bloque à
+# l'exécution ("Ce fichier a été bloqué, car les fichiers de ce type
+# provenant d'Internet peuvent être dangereux"). Voir le README du dossier.
+Get-ChildItem -Path $ScriptDir -File -ErrorAction SilentlyContinue |
+    Unblock-File -ErrorAction SilentlyContinue
+
 Write-Host "╔══════════════════════════════════════════╗"
 Write-Host "║   VDM Intranet — Installation kiosque   ║"
 Write-Host "╚══════════════════════════════════════════╝"
