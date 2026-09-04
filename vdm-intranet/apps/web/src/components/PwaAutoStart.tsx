@@ -256,7 +256,7 @@ export function PwaAutoStart() {
   const instructionNote =
     os === 'macos'
       ? "Si macOS bloque l'ouverture : clic droit → Ouvrir → Ouvrir"
-      : 'Double-cliquez sur le fichier dans vos Téléchargements'
+      : 'Si Windows affiche « Contrôle intelligent des applications a bloqué un fichier potentiellement dangereux » : clic droit sur le fichier → Propriétés → cocher Débloquer → OK, puis redouble-cliquez dessus.'
 
   return createPortal(
     <>
@@ -305,7 +305,9 @@ export function PwaAutoStart() {
                 Le fichier <code className="as-code">{instructionFile}</code> a été téléchargé.
                 Double-cliquez dessus pour activer le démarrage automatique.
               </p>
-              {os === 'macos' && <div className="as-note">{instructionNote}</div>}
+              {(os === 'macos' || os === 'windows') && (
+                <div className="as-note">{instructionNote}</div>
+              )}
               <button className="as-btn-yes" onClick={() => setPhase('idle')}>
                 Compris
               </button>
