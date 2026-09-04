@@ -151,7 +151,13 @@ function windowsScript(appUrl: string, appName: string): string {
     ":: pour pouvoir s'auto-désactiver en cas de désinstallation.",
     'set "VDM_DIR=%LocalAppData%\\VDM Intranet"',
     'set "LAUNCHER=%VDM_DIR%\\vdm-launch.bat"',
-    'set "SHORTCUT=%AppData%\\Microsoft\\Windows\\Start Menu\\Programs\\%VDM_APP_NAME%.lnk"',
+    // Chrome place les raccourcis des PWA installées dans le sous-dossier
+    // "Chrome Apps", jamais directement dans Programs\ — un chemin sans ce
+    // sous-dossier ne correspond jamais à rien : le test "if not exist"
+    // est alors toujours vrai et vdm-launch.bat supprime sa propre entrée
+    // de démarrage dès le premier redémarrage (démarrage auto qui ne
+    // fonctionne jamais, sans erreur visible).
+    'set "SHORTCUT=%AppData%\\Microsoft\\Windows\\Start Menu\\Programs\\Chrome Apps\\%VDM_APP_NAME%.lnk"',
     'mkdir "%VDM_DIR%" >nul 2>&1',
     '',
     'echo @echo off> "%LAUNCHER%"',
