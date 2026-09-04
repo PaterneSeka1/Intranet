@@ -1,8 +1,8 @@
 @echo off
 :: VDM Intranet — Lancement en mode kiosque (Windows)
-:: Remplacez l'URL ci-dessous par votre URL de déploiement
+:: Remplacez l'URL ci-dessous si ce poste ne doit pas pointer vers la prod
 
-set VDM_URL=http://localhost:3000
+set VDM_URL=https://intranet.veilleurdesmedias.org
 
 :: Attendre 10 secondes que le réseau soit prêt
 timeout /t 10 /nobreak > nul

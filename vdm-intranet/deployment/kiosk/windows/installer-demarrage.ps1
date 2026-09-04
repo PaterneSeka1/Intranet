@@ -1,9 +1,15 @@
 # VDM Intranet — Installation complète (Windows)
 # Exécuter en Administrateur : clic droit → "Exécuter avec PowerShell"
-# Usage : .\installer-demarrage.ps1 -VdmUrl "http://192.168.1.10:3000"
+# Usage : .\installer-demarrage.ps1 -VdmUrl "https://intranet.veilleurdesmedias.org"
 
 param(
-    [string]$VdmUrl = "http://localhost:3000"
+    # Obligatoire (pas de valeur par défaut) : un oubli de ce paramètre a déjà
+    # provoqué un déploiement silencieux pointant vers "http://localhost:3000"
+    # (rien sur le poste kiosque à cette adresse) — l'installation semblait
+    # réussir mais le démarrage automatique ouvrait une page vide à chaque
+    # redémarrage. PowerShell demandera désormais la valeur si elle est omise.
+    [Parameter(Mandatory = $true)]
+    [string]$VdmUrl
 )
 
 $ErrorActionPreference = "Stop"
