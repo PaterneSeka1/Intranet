@@ -5,14 +5,10 @@ Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
 
-; ── INSTALLATION SILENCIEUSE DE LA PWA ──────────────────────────────────────
-; Chrome installe l'app automatiquement au premier lancement, sans interaction
-"WebAppInstallForceList"="[{\"url\":\"http://localhost:3000\",\"default_launch_container\":\"window\",\"create_desktop_shortcut\":true,\"fallback_app_name\":\"VDM Intranet\"}]"
-
-; Ouvre la PWA toujours dans sa propre fenêtre (sans barre navigateur)
-"WebAppSettings"="[{\"manifest_id\":\"http://localhost:3000/\",\"display_mode\":\"standalone\"}]"
-
 ; ── RESTRICTIONS ─────────────────────────────────────────────────────────────
+; Le lancement se fait directement en Chrome --kiosk sur l'URL (voir
+; installer-demarrage.ps1) : pas besoin d'installer de PWA au préalable,
+; d'où l'absence de WebAppInstallForceList/WebAppSettings ici.
 "NewTabPageLocation"="http://localhost:3000"
 "DeveloperToolsAvailability"=dword:00000002
 "IncognitoModeAvailability"=dword:00000001

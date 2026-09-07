@@ -14,7 +14,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
-$AppName    = "VDM Intranet"
 
 # Débloquer les fichiers du dossier (chrome-policy.reg, vdm-kiosk.bat) si ce
 # script a été copié/téléchargé depuis Internet ou un partage réseau : ces
@@ -31,7 +30,8 @@ Write-Host "╚═════════════════════�
 Write-Host "  URL : $VdmUrl"
 Write-Host ""
 
-# ── 1. Politique Chrome (installation silencieuse de la PWA) ─────
+# ── 1. Politique Chrome (verrouillage : devtools, incognito, impression,
+#       téléchargements, historique, gestionnaire de mots de passe...) ──
 Write-Host "→ [1/3] Application de la politique Chrome..."
 $RegFile = Join-Path $ScriptDir "chrome-policy.reg"
 (Get-Content $RegFile) -replace "http://localhost:3000", $VdmUrl |
@@ -55,29 +55,19 @@ if (-not $Chrome) {
 # ── 3. Démarrage automatique ──────────────────────────────────────
 Write-Host "→ [3/3] Configuration du démarrage automatique..."
 
-# Script PowerShell qui ouvre la PWA installée (ou Chrome en mode app en secours)
+# Chrome en vrai mode kiosque (verrouillé, plein écran, sans barre
+# d'adresse) à chaque démarrage — mêmes options que vdm-kiosk.bat.
+# Ne dépend plus d'une PWA installée au préalable (l'ancienne version
+# cherchait une PWA via son icône dans le profil Chrome pour l'ouvrir par
+# --app-id : fragile, et inutile ici puisque --kiosk fonctionne directement
+# sur l'URL sans PWA installée).
 $LaunchScript = @"
-`$AppName = "$AppName"
-`$VdmUrl  = "$VdmUrl"
-`$Chrome  = "$Chrome"
-
-# Chercher la PWA installée dans le profil Chrome
-`$ProfileBase = "`$env:LOCALAPPDATA\Google\Chrome\User Data"
-`$PwaApp = Get-ChildItem "`$ProfileBase\Default\Web Applications\*" -Recurse `
-    -Filter "*.ico" -ErrorAction SilentlyContinue |
-    Where-Object { `$_.DirectoryName -match "VDM" } |
-    Select-Object -First 1
-
-`$AppId = if (`$PwaApp) { Split-Path (Split-Path `$PwaApp.FullName -Parent) -Leaf } else { `$null }
+`$VdmUrl = "$VdmUrl"
+`$Chrome = "$Chrome"
 
 Start-Sleep -Seconds 8
 
-if (`$AppId) {
-    Start-Process `$Chrome "--app-id=`$AppId"
-} else {
-    # PWA pas encore installée → Chrome avec mode app (la politique l'installera)
-    Start-Process `$Chrome "--app=`$VdmUrl --start-fullscreen --no-first-run"
-}
+Start-Process `$Chrome "--kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-translate --no-first-run --disable-features=TranslateUI --disable-pinch --overscroll-history-navigation=0 `$VdmUrl"
 "@
 
 $LaunchFile = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\vdm-launch.ps1"
@@ -99,8 +89,8 @@ Write-Host ""
 Write-Host "✓ Installation terminée."
 Write-Host ""
 Write-Host "  Ce qui va se passer :"
-Write-Host "  1. Au prochain démarrage de Chrome → la PWA s'installe seule"
-Write-Host "  2. À chaque démarrage de l'ordinateur → la PWA s'ouvre automatiquement"
-Write-Host "  3. Aucune interaction utilisateur requise"
+Write-Host "  1. À chaque démarrage de l'ordinateur → Chrome s'ouvre en mode kiosque"
+Write-Host "     (plein écran verrouillé, sans barre d'adresse) sur $VdmUrl"
+Write-Host "  2. Aucune interaction utilisateur requise"
 Write-Host ""
 Write-Host "  → Redémarrez l'ordinateur pour tester."
