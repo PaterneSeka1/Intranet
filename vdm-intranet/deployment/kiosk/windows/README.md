@@ -3,17 +3,42 @@
 ## Contenu du dossier
 
 - `installer-demarrage.ps1` — installation complète en une fois : applique la
-  politique Chrome (`chrome-policy.reg`) puis configure le démarrage
-  automatique de la PWA à l'ouverture de session.
-- `chrome-policy.reg` — politique Chrome permettant l'installation silencieuse
-  de la PWA VDM Intranet.
+  politique Chrome de verrouillage (`chrome-policy.reg`) puis configure le
+  démarrage automatique en vrai mode kiosque (`--kiosk`, plein écran
+  verrouillé) à l'ouverture de session.
+- `chrome-policy.reg` — politique Chrome de verrouillage (devtools,
+  incognito, impression, téléchargements, historique, gestionnaire de mots
+  de passe...).
 - `vdm-kiosk.bat` — lanceur alternatif en mode kiosque plein écran (Chrome ou
   Edge), à utiliser directement si l'installation automatique n'est pas
   souhaitée.
 - `desinstaller.ps1` — retire tout ce que `installer-demarrage.ps1` a mis en
-  place (démarrage automatique + politique Chrome). La PWA elle-même reste
-  installée dans Chrome (à désinstaller séparément depuis `chrome://apps` si
-  besoin).
+  place (démarrage automatique + politique Chrome).
+
+## Téléchargement en ligne
+
+Ce dossier est aussi distribué en `.zip` depuis le site (accès réservé aux
+employés connectés — le middleware de l'intranet protège cette URL comme le
+reste du site) :
+
+```
+https://intranet.veilleurdesmedias.org/downloads/vdm-kiosk-windows.zip
+```
+
+**À régénérer après toute modification d'un fichier de ce dossier** (le zip
+n'est pas généré automatiquement) :
+
+```bash
+python3 -c "
+import zipfile, os
+src = 'deployment/kiosk/windows'
+out = 'apps/web/public/downloads/vdm-kiosk-windows.zip'
+files = ['README.md', 'chrome-policy.reg', 'desinstaller.ps1', 'installer-demarrage.ps1', 'vdm-kiosk.bat']
+with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
+    for f in files:
+        z.write(os.path.join(src, f), f)
+"
+```
 
 ## Procédure d'installation
 
@@ -41,9 +66,9 @@ Administrateur), ou :
 
 ## ⚠️ Piège connu (corrigé) : l'ancien défaut pointait sur « localhost »
 
-**Symptôme observé avant correctif** : après installation, la PWA ne se
-lance pas au démarrage — une fenêtre Chrome s'ouvre bien à chaque
-redémarrage, mais elle affiche une page vide/inaccessible sur `localhost`.
+**Symptôme observé avant correctif** : après installation, Chrome s'ouvre
+bien à chaque redémarrage, mais affiche une page vide/inaccessible sur
+`localhost`.
 
 **Cause** : `-VdmUrl` avait `http://localhost:3000` comme valeur par défaut.
 Lancer `installer-demarrage.ps1` sans préciser ce paramètre gravait cette
@@ -57,11 +82,9 @@ de recommencer :
 
 1. `.\desinstaller.ps1` (en Administrateur) — retire le raccourci de
    démarrage et la politique Chrome erronés.
-2. Dans Chrome : `chrome://apps` → clic droit sur l'icône « VDM Intranet »
-   (si présente, installée sur la mauvaise URL) → **Désinstaller**.
-3. Relancer l'installation avec la bonne URL :
-   `.\installer-demarrage.ps1 -VdmUrl "https://intranet.veilleurdesmedias.org"`.
-4. Redémarrer le poste pour vérifier.
+2. Relancer l'installation (aucun paramètre requis désormais) :
+   `.\installer-demarrage.ps1`.
+3. Redémarrer le poste pour vérifier.
 
 ## ⚠️ Piège connu : « Contrôle intelligent des applications » bloque les fichiers
 
@@ -102,7 +125,10 @@ lui-même bloqué à l'exécution, il faut d'abord le débloquer manuellement
 **Solution durable** (évite le blocage à la source) : transférer ce dossier
 vers le poste kiosque par clé USB ou partage réseau local plutôt que de le
 télécharger depuis un navigateur — ces fichiers ne reçoivent alors jamais la
-marque « Internet ».
+marque « Internet ». Le téléchargement en ligne (section ci-dessus) est
+plus pratique mais **déclenche systématiquement ce blocage** (le fichier
+vient bien d'Internet) — prévoir le déblocage à chaque fois avec cette
+méthode.
 
 **Dernier recours**, réservé à des postes kiosques dédiés (décision DSI —
 irréversible sans réinstallation complète de Windows) : désactiver le
