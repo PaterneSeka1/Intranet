@@ -166,7 +166,13 @@ function windowsScript(appUrl: string, appName: string): string {
     'echo dir /s /b /a-d "%AppData%\\Microsoft\\Windows\\Start Menu\\Programs\\%SHORTCUT_NAME%" ^>nul 2^>nul>>"%LAUNCHER%"',
     'echo if errorlevel 1 goto :cleanup>>"%LAUNCHER%"',
     'echo start "" "%CHROME%" --app="%VDM_URL%" --start-fullscreen>>"%LAUNCHER%"',
-    'echo exit /b 0>>"%LAUNCHER%"',
+    // Espace obligatoire avant ">>" : "0>>" (chiffre collé au symbole de
+    // redirection) est interprété par cmd.exe comme une redirection du flux
+    // numéro 0, pas comme le chiffre "0" à écrire — cette ligne disparaissait
+    // silencieusement du fichier généré. Sans elle, l'exécution retombe
+    // toujours dans :cleanup juste après avoir lancé Chrome, qui supprime la
+    // clé de démarrage : l'app s'ouvre une fois puis plus jamais.
+    'echo exit /b 0 >>"%LAUNCHER%"',
     'echo :cleanup>>"%LAUNCHER%"',
     'echo reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "VDM Intranet" /f>>"%LAUNCHER%"',
     '',
