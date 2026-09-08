@@ -22,8 +22,6 @@ interface Props {
 }
 
 export function LoginClient({
-  initialAppName = 'VDM Intranet',
-  initialAppSubtitle = 'Veilleur des Médias — Abidjan',
   initialLogo,
 }: Props) {
   const [step, setStep] = useState<Step>('form')
@@ -130,8 +128,6 @@ export function LoginClient({
             alt="Veilleur des Médias"
             className="h-12 w-auto mx-auto mb-4"
           />
-          <h1 className="text-lg font-bold text-gray-900">{initialAppName}</h1>
-          <p className="text-xs text-gray-400 mt-0.5">{initialAppSubtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -148,7 +144,7 @@ export function LoginClient({
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-all placeholder-gray-300"
-              placeholder="Ex : EMP-0231 ou prenom.nom@veilleurdesmedias.com"
+              placeholder="Ex : 001 ou email@veilleurdesmedias.com"
               required
               autoFocus
               autoComplete="username"

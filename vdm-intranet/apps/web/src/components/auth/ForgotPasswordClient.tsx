@@ -12,8 +12,6 @@ interface Props {
 }
 
 export function ForgotPasswordClient({
-  initialAppName = 'VDM Intranet',
-  initialAppSubtitle = 'Veilleur des Médias — Abidjan',
   initialLogo,
 }: Props) {
   const [identifier, setIdentifier] = useState('')
@@ -48,8 +46,6 @@ export function ForgotPasswordClient({
             alt="Veilleur des Médias"
             className="h-12 w-auto mx-auto mb-4"
           />
-          <h1 className="text-lg font-bold text-gray-900">{initialAppName}</h1>
-          <p className="text-xs text-gray-400 mt-0.5">{initialAppSubtitle}</p>
         </div>
 
         {sent ? (
