@@ -1,5 +1,19 @@
 import { apiFetch } from './http'
 
+export type TabFolder = {
+  id: string
+  name: string
+  icon?: string | null
+  color?: string | null
+  order: number
+  businessUnitId: string | null
+  createdById: string
+  createdAt: string
+  updatedAt: string
+  businessUnit: { id: string; name: string; code: string } | null
+  createdBy: { id: string; username: string; fullName?: string | null }
+}
+
 export type Tab = {
   id: string
   name: string
@@ -9,10 +23,13 @@ export type Tab = {
   color?: string | null
   isActive: boolean
   businessUnitId: string | null
+  folderId: string | null
+  order: number
   createdById: string
   createdAt: string
   updatedAt: string
   businessUnit: { id: string; name: string; code: string } | null
+  folder: { id: string; name: string; icon?: string | null; color?: string | null } | null
   createdBy: { id: string; username: string; fullName?: string | null }
 }
 
@@ -23,6 +40,7 @@ export type CreateTabPayload = {
   icon?: string
   color?: string
   businessUnitId?: string
+  folderId?: string
 }
 
 export type UpdateTabPayload = Partial<{
@@ -32,7 +50,25 @@ export type UpdateTabPayload = Partial<{
   icon: string
   color: string
   isActive: boolean
+  folderId: string | null
 }>
+
+export type CreateTabFolderPayload = {
+  name: string
+  icon?: string
+  color?: string
+  businessUnitId?: string
+}
+
+export type UpdateTabFolderPayload = Partial<{
+  name: string
+  icon: string
+  color: string
+}>
+
+// { id, order } pour un dossier, ou { id, order, folderId } pour un onglet — folderId omis =
+// onglet non déplacé entre dossiers, folderId: null = retiré de tout dossier.
+export type ReorderItem = { id: string; order: number; folderId?: string | null }
 
 function req<T>(path: string, init?: RequestInit): Promise<T> {
   return apiFetch<T>(path, init)
@@ -48,4 +84,23 @@ export const tabsApi = {
   update: (id: string, payload: UpdateTabPayload): Promise<Tab> =>
     req<Tab>(`/tabs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   remove: (id: string): Promise<void> => req<void>(`/tabs/${id}`, { method: 'DELETE' }),
+  reorder: (items: ReorderItem[]): Promise<{ updated: number }> =>
+    req<{ updated: number }>('/tabs/reorder', { method: 'PATCH', body: JSON.stringify({ items }) }),
+}
+
+export const tabFoldersApi = {
+  list: (buId?: string): Promise<TabFolder[]> => {
+    const qs = buId ? `?businessUnitId=${encodeURIComponent(buId)}` : ''
+    return req<TabFolder[]>(`/tabs/folders${qs}`)
+  },
+  create: (payload: CreateTabFolderPayload): Promise<TabFolder> =>
+    req<TabFolder>('/tabs/folders', { method: 'POST', body: JSON.stringify(payload) }),
+  update: (id: string, payload: UpdateTabFolderPayload): Promise<TabFolder> =>
+    req<TabFolder>(`/tabs/folders/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  remove: (id: string): Promise<void> => req<void>(`/tabs/folders/${id}`, { method: 'DELETE' }),
+  reorder: (items: ReorderItem[]): Promise<{ updated: number }> =>
+    req<{ updated: number }>('/tabs/folders/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ items }),
+    }),
 }

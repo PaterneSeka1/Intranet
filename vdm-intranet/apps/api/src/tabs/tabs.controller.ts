@@ -16,6 +16,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { TabsService } from './tabs.service'
 import { CreateTabDto } from './dto/create-tab.dto'
 import { UpdateTabDto } from './dto/update-tab.dto'
+import { CreateTabFolderDto } from './dto/create-tab-folder.dto'
+import { UpdateTabFolderDto } from './dto/update-tab-folder.dto'
+import { ReorderTabsDto } from './dto/reorder-tabs.dto'
+import { ReorderTabFoldersDto } from './dto/reorder-tab-folders.dto'
 import { CreateBusinessUnitDto } from './dto/create-business-unit.dto'
 import { UpdateBusinessUnitDto } from './dto/update-business-unit.dto'
 import { CreatePoleDto } from './dto/create-pole.dto'
@@ -97,6 +101,46 @@ export class TabsController {
     return this.tabsService.deletePole(id)
   }
 
+  // ---- Dossiers d'onglets (routes statiques déclarées avant `:id` des onglets) ----
+
+  @Get('folders')
+  @ApiOperation({ summary: "Liste des dossiers d'onglets selon le périmètre" })
+  findAllFolders(@CurrentUser() user: AuthUser, @Query('businessUnitId') buId?: string) {
+    return this.tabsService.findAllFolders(user, buId)
+  }
+
+  @Post('folders')
+  @ApiOperation({ summary: 'Créer un dossier (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)' })
+  createFolder(@CurrentUser() user: AuthUser, @Body() dto: CreateTabFolderDto) {
+    return this.tabsService.createFolder(user, dto)
+  }
+
+  @Patch('folders/reorder')
+  @ApiOperation({ summary: 'Réordonner les dossiers (drag & drop)' })
+  reorderFolders(@CurrentUser() user: AuthUser, @Body() dto: ReorderTabFoldersDto) {
+    return this.tabsService.reorderFolders(user, dto)
+  }
+
+  @Patch('folders/:id')
+  @ApiOperation({ summary: 'Modifier un dossier (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)' })
+  updateFolder(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateTabFolderDto
+  ) {
+    return this.tabsService.updateFolder(user, id, dto)
+  }
+
+  @Delete('folders/:id')
+  @ApiOperation({
+    summary: 'Supprimer un dossier — les onglets sont conservés, non regroupés (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)',
+  })
+  removeFolder(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.tabsService.removeFolder(user, id)
+  }
+
+  // ---- Onglets ----
+
   @Get()
   @ApiOperation({ summary: 'Liste des onglets selon le périmètre' })
   findAll(@CurrentUser() user: AuthUser, @Query('businessUnitId') buId?: string) {
@@ -107,6 +151,12 @@ export class TabsController {
   @ApiOperation({ summary: 'Créer un onglet (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateTabDto) {
     return this.tabsService.create(user, dto)
+  }
+
+  @Patch('reorder')
+  @ApiOperation({ summary: 'Réordonner les onglets et/ou les déplacer entre dossiers (drag & drop)' })
+  reorderTabs(@CurrentUser() user: AuthUser, @Body() dto: ReorderTabsDto) {
+    return this.tabsService.reorderTabs(user, dto)
   }
 
   @Patch(':id')

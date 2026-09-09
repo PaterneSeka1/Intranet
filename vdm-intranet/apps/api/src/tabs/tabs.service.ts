@@ -8,6 +8,10 @@ import { LogAction, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateTabDto } from './dto/create-tab.dto'
 import { UpdateTabDto } from './dto/update-tab.dto'
+import { CreateTabFolderDto } from './dto/create-tab-folder.dto'
+import { UpdateTabFolderDto } from './dto/update-tab-folder.dto'
+import { ReorderTabsDto } from './dto/reorder-tabs.dto'
+import { ReorderTabFoldersDto } from './dto/reorder-tab-folders.dto'
 import {
   CAN_MANAGE_TABS,
   CAN_MANAGE_TABS_GLOBAL,
@@ -29,6 +33,23 @@ const TAB_SELECT = {
   icon: true,
   color: true,
   isActive: true,
+  businessUnitId: true,
+  folderId: true,
+  order: true,
+  createdById: true,
+  createdAt: true,
+  updatedAt: true,
+  businessUnit: { select: { id: true, name: true, code: true } },
+  folder: { select: { id: true, name: true, icon: true, color: true } },
+  createdBy: { select: { id: true, username: true, fullName: true } },
+} as const
+
+const FOLDER_SELECT = {
+  id: true,
+  name: true,
+  icon: true,
+  color: true,
+  order: true,
   businessUnitId: true,
   createdById: true,
   createdAt: true,
@@ -205,7 +226,7 @@ export class TabsService {
       return this.prisma.portalTab.findMany({
         where,
         select: TAB_SELECT,
-        orderBy: [{ businessUnit: { name: 'asc' } }, { name: 'asc' }],
+        orderBy: [{ order: 'asc' }, { name: 'asc' }],
         take: 200,
       })
     }
@@ -222,7 +243,7 @@ export class TabsService {
       return this.prisma.portalTab.findMany({
         where,
         select: TAB_SELECT,
-        orderBy: [{ businessUnit: { name: 'asc' } }, { name: 'asc' }],
+        orderBy: [{ order: 'asc' }, { name: 'asc' }],
         take: 200,
       })
     }
@@ -257,6 +278,9 @@ export class TabsService {
       if (existing) throw new BadRequestException('Cet URL existe déjà pour cette BU.')
     }
 
+    const folderId = await this.resolveFolderId(dto.folderId ?? null, targetBuId)
+    const order = await this.nextTabOrder(folderId ?? null, targetBuId)
+
     const tab = await this.prisma.portalTab.create({
       data: {
         name: dto.name,
@@ -265,6 +289,8 @@ export class TabsService {
         icon: dto.icon,
         color: dto.color,
         businessUnitId: targetBuId,
+        folderId,
+        order,
         createdById: requester.id,
       },
       select: TAB_SELECT,
@@ -278,6 +304,12 @@ export class TabsService {
   async update(requester: Requester, id: string, dto: UpdateTabDto) {
     const tab = await this.findTabOrFail(id)
     this.assertCanManage(requester, tab.businessUnitId)
+
+    if (dto.folderId !== undefined) {
+      // Valide la portée (folder de même BU/global que l'onglet) ; la valeur elle-même est
+      // déjà celle de dto.folderId, réutilisée telle quelle dans `data: dto` ci-dessous.
+      await this.resolveFolderId(dto.folderId, tab.businessUnitId)
+    }
 
     if (dto.url && dto.url !== tab.url) {
       // Même contrôle manuel que create() : @@unique([businessUnitId, url]) ignore les NULL,
@@ -337,6 +369,251 @@ export class TabsService {
     return { deleted: true }
   }
 
+  // ---- Dossiers d'onglets ----
+
+  async findAllFolders(requester: Requester, buId?: string) {
+    if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
+      const where = buId ? { OR: [{ businessUnitId: buId }, { businessUnitId: null }] } : {}
+      return this.prisma.portalTabFolder.findMany({
+        where,
+        select: FOLDER_SELECT,
+        orderBy: [{ order: 'asc' }, { name: 'asc' }],
+        take: 200,
+      })
+    }
+
+    if (
+      CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) ||
+      CAN_VIEW_TABS_OWN_BU.includes(requester.role)
+    ) {
+      const orConditions = requester.businessUnitId
+        ? [{ businessUnitId: requester.businessUnitId }, { businessUnitId: null }]
+        : [{ businessUnitId: null }]
+      return this.prisma.portalTabFolder.findMany({
+        where: { OR: orConditions },
+        select: FOLDER_SELECT,
+        orderBy: [{ order: 'asc' }, { name: 'asc' }],
+        take: 200,
+      })
+    }
+
+    return []
+  }
+
+  async createFolder(requester: Requester, dto: CreateTabFolderDto) {
+    if (!CAN_MANAGE_TABS.includes(requester.role)) {
+      throw new ForbiddenException('Vous ne pouvez pas créer un dossier.')
+    }
+
+    let targetBuId: string | null
+    if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
+      targetBuId = dto.businessUnitId ?? null
+    } else {
+      if (!requester.businessUnitId) throw new ForbiddenException('Aucune BU assignée.')
+      targetBuId = requester.businessUnitId
+    }
+
+    const max = await this.prisma.portalTabFolder.aggregate({
+      where: { businessUnitId: targetBuId },
+      _max: { order: true },
+    })
+
+    const folder = await this.prisma.portalTabFolder.create({
+      data: {
+        name: dto.name,
+        icon: dto.icon,
+        color: dto.color,
+        businessUnitId: targetBuId,
+        order: (max._max.order ?? -1) + 1,
+        createdById: requester.id,
+      },
+      select: FOLDER_SELECT,
+    })
+
+    await this.log(
+      requester.id,
+      LogAction.TAB_FOLDER_CREATED,
+      folder.id,
+      { name: folder.name },
+      'PortalTabFolder'
+    )
+
+    return folder
+  }
+
+  async updateFolder(requester: Requester, id: string, dto: UpdateTabFolderDto) {
+    const folder = await this.findFolderOrFail(id)
+    this.assertCanManageFolder(requester, folder.businessUnitId)
+
+    try {
+      const updated = await this.prisma.portalTabFolder.update({
+        where: { id },
+        data: dto,
+        select: FOLDER_SELECT,
+      })
+      await this.log(requester.id, LogAction.TAB_FOLDER_UPDATED, id, dto as object, 'PortalTabFolder')
+      return updated
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException('Dossier introuvable.')
+      throw err
+    }
+  }
+
+  async removeFolder(requester: Requester, id: string) {
+    const folder = await this.findFolderOrFail(id)
+    this.assertCanManageFolder(requester, folder.businessUnitId)
+
+    try {
+      // Les onglets du dossier ne sont jamais supprimés : la FK folderId passe à NULL
+      // (onDelete: SetNull, cf. schema.prisma) et ils réapparaissent hors dossier.
+      await this.prisma.portalTabFolder.delete({ where: { id } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException('Dossier introuvable.')
+      throw err
+    }
+    await this.log(
+      requester.id,
+      LogAction.TAB_FOLDER_DELETED,
+      id,
+      { name: folder.name },
+      'PortalTabFolder'
+    )
+
+    return { deleted: true }
+  }
+
+  async reorderFolders(requester: Requester, dto: ReorderTabFoldersDto) {
+    const ids = dto.items.map((i) => i.id)
+    const folders = await this.prisma.portalTabFolder.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, businessUnitId: true },
+    })
+    if (folders.length !== ids.length) throw new NotFoundException('Dossier introuvable.')
+    for (const folder of folders) this.assertCanManageFolder(requester, folder.businessUnitId)
+
+    await this.prisma.$transaction(
+      dto.items.map((item) =>
+        this.prisma.portalTabFolder.update({ where: { id: item.id }, data: { order: item.order } })
+      )
+    )
+    await this.log(
+      requester.id,
+      LogAction.TAB_FOLDER_REORDERED,
+      'bulk',
+      { count: dto.items.length },
+      'PortalTabFolder'
+    )
+
+    return { updated: dto.items.length }
+  }
+
+  async reorderTabs(requester: Requester, dto: ReorderTabsDto) {
+    const ids = dto.items.map((i) => i.id)
+    const tabs = await this.prisma.portalTab.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, businessUnitId: true },
+    })
+    if (tabs.length !== ids.length) throw new NotFoundException('Onglet introuvable.')
+    const tabById = new Map(tabs.map((t) => [t.id, t]))
+
+    // Résout les dossiers cibles une seule fois, pour vérifier que chaque onglet ne rejoint
+    // qu'un dossier de la même portée (globale ou même BU) que lui.
+    const targetFolderIds = [
+      ...new Set(
+        dto.items
+          .filter((i) => i.folderId !== undefined && i.folderId !== null)
+          .map((i) => i.folderId as string)
+      ),
+    ]
+    const folders = targetFolderIds.length
+      ? await this.prisma.portalTabFolder.findMany({
+          where: { id: { in: targetFolderIds } },
+          select: { id: true, businessUnitId: true },
+        })
+      : []
+    const folderById = new Map(folders.map((f) => [f.id, f]))
+
+    for (const item of dto.items) {
+      const tab = tabById.get(item.id)!
+      this.assertCanManage(requester, tab.businessUnitId)
+      if (item.folderId !== undefined && item.folderId !== null) {
+        const folder = folderById.get(item.folderId)
+        if (!folder) throw new NotFoundException('Dossier introuvable.')
+        if (folder.businessUnitId !== tab.businessUnitId) {
+          throw new BadRequestException(
+            "Un onglet ne peut être déplacé que dans un dossier de la même portée (global ou même BU)."
+          )
+        }
+      }
+    }
+
+    await this.prisma.$transaction(
+      dto.items.map((item) =>
+        this.prisma.portalTab.update({
+          where: { id: item.id },
+          data: {
+            order: item.order,
+            ...(item.folderId !== undefined ? { folderId: item.folderId } : {}),
+          },
+        })
+      )
+    )
+    await this.log(requester.id, LogAction.TAB_REORDERED, 'bulk', { count: dto.items.length })
+
+    return { updated: dto.items.length }
+  }
+
+  private async findFolderOrFail(id: string) {
+    const folder = await this.prisma.portalTabFolder.findUnique({
+      where: { id },
+      select: { id: true, name: true, businessUnitId: true },
+    })
+    if (!folder) throw new NotFoundException('Dossier introuvable.')
+    return folder
+  }
+
+  private assertCanManageFolder(requester: Requester, folderBuId: string | null) {
+    if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) return
+    if (folderBuId === null)
+      throw new ForbiddenException('Seuls les administrateurs peuvent gérer les dossiers globaux.')
+    if (CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) && requester.businessUnitId === folderBuId)
+      return
+    throw new ForbiddenException('Accès refusé à ce dossier.')
+  }
+
+  /**
+   * Valide qu'un folderId cible partage la portée (globale ou même BU) de l'onglet concerné.
+   * undefined = champ non fourni (aucun changement) ; null = retire l'onglet de son dossier.
+   */
+  private async resolveFolderId(
+    folderId: string | null | undefined,
+    expectedBuId: string | null
+  ): Promise<string | null | undefined> {
+    if (folderId === undefined) return undefined
+    if (folderId === null) return null
+    const folder = await this.prisma.portalTabFolder.findUnique({
+      where: { id: folderId },
+      select: { id: true, businessUnitId: true },
+    })
+    if (!folder) throw new BadRequestException('Dossier introuvable.')
+    if (folder.businessUnitId !== expectedBuId) {
+      throw new BadRequestException(
+        "Ce dossier n'appartient pas à la même portée (globale ou même BU) que l'onglet."
+      )
+    }
+    return folderId
+  }
+
+  private async nextTabOrder(folderId: string | null, businessUnitId: string | null) {
+    const max = await this.prisma.portalTab.aggregate({
+      where: { folderId, businessUnitId },
+      _max: { order: true },
+    })
+    return (max._max.order ?? -1) + 1
+  }
+
   private async findTabOrFail(id: string) {
     const tab = await this.prisma.portalTab.findUnique({
       where: { id },
@@ -355,9 +632,15 @@ export class TabsService {
     throw new ForbiddenException('Accès refusé à cet onglet.')
   }
 
-  private async log(userId: string, action: LogAction, entityId: string, details: object) {
+  private async log(
+    userId: string,
+    action: LogAction,
+    entityId: string,
+    details: object,
+    entity: string = 'PortalTab'
+  ) {
     await this.prisma.activityLog.create({
-      data: { userId, action, entity: 'PortalTab', entityId, details },
+      data: { userId, action, entity, entityId, details },
     })
   }
 }

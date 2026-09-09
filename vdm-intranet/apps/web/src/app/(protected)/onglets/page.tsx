@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import { TabsManager } from '@/components/tabs/TabsManager'
-import type { Tab } from '@/lib/tabs'
+import type { Tab, TabFolder } from '@/lib/tabs'
 
 const CAN_VIEW = ['CTO_ADMIN', 'PDG', 'DAF', 'RESPONSABLE_BU']
 
@@ -11,11 +11,13 @@ export default async function OngletsPage() {
   if (!CAN_VIEW.includes(user.role)) redirect('/acces-refuse')
 
   type BuOption = { id: string; name: string; code: string }
-  const [tabsRaw, buListRaw] = await Promise.all([
+  const [tabsRaw, foldersRaw, buListRaw] = await Promise.all([
     serverFetch<Tab[]>('/tabs'),
+    serverFetch<TabFolder[]>('/tabs/folders'),
     serverFetch<BuOption[]>('/tabs/business-units'),
   ])
   const tabs = tabsRaw ?? []
+  const folders = foldersRaw ?? []
   const buList = (buListRaw ?? []).sort((a, b) => a.name.localeCompare(b.name))
 
   const canManageAll = ['CTO_ADMIN', 'PDG'].includes(user.role)
@@ -33,6 +35,7 @@ export default async function OngletsPage() {
 
       <TabsManager
         initialTabs={tabs}
+        initialFolders={folders}
         userRole={user.role}
         userBuId={user.businessUnit?.id ?? null}
         buList={buList}

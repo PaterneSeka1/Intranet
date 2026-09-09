@@ -30,4 +30,9 @@ export class CreateTabDto {
   @IsOptional()
   @IsString()
   businessUnitId?: string
+
+  // Dossier de regroupement, doit être de la même portée (globale ou même BU) que l'onglet.
+  @IsOptional()
+  @IsString()
+  folderId?: string
 }

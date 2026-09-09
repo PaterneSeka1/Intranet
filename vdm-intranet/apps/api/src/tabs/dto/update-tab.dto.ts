@@ -29,4 +29,10 @@ export class UpdateTabDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean
+
+  // Dossier de regroupement ; null = retire l'onglet de son dossier (doit rester dans la même
+  // portée BU/globale, cf. TabsService.resolveFolderId).
+  @IsOptional()
+  @IsString()
+  folderId?: string | null
 }

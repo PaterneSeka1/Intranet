@@ -48,6 +48,11 @@ enum LogAction {
   TAB_DELETED
   TAB_ENABLED
   TAB_DISABLED
+  TAB_REORDERED
+  TAB_FOLDER_CREATED
+  TAB_FOLDER_UPDATED
+  TAB_FOLDER_DELETED
+  TAB_FOLDER_REORDERED
   REPORT_EXPORTED
   PRESENCE_REPORT_EXPORTED
   ACTIVITY_REPORT_EXPORTED
@@ -81,6 +86,7 @@ model BusinessUnit {
   poles          Pole[]
   scheduleGroups ScheduleGroup[]
   tabs           PortalTab[]
+  tabFolders     PortalTabFolder[]
   announcements  Announcement[]
 
   @@map("business_units")
@@ -167,6 +173,7 @@ model User {
   mandates             DailyMandate[]       @relation("MandateSubject")
   createdMandates      DailyMandate[]       @relation("MandateCreator")
   createdTabs          PortalTab[]          @relation("TabCreator")
+  createdTabFolders    PortalTabFolder[]    @relation("TabFolderCreator")
   createdAnnouncements Announcement[]       @relation("AnnouncementCreator")
   activityLogs         ActivityLog[]
   passwordResetTokens  PasswordResetToken[]
@@ -314,16 +321,41 @@ model PortalTab {
   icon           String?
   color          String?
   businessUnitId String?
+  // Dossier optionnel de regroupement. Rang manuel (drag & drop) : `order` n'est significatif
+  // qu'au sein d'un même groupe (mêmes folderId) — pas d'unicité ni de suite globale exigée.
+  folderId       String?
+  order          Int      @default(0)
   createdById    String
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
-  createdBy    User          @relation("TabCreator", fields: [createdById], references: [id])
+  businessUnit BusinessUnit?    @relation(fields: [businessUnitId], references: [id])
+  // Suppression d'un dossier = les onglets redeviennent "sans dossier" (jamais supprimés).
+  folder       PortalTabFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  createdBy    User             @relation("TabCreator", fields: [createdById], references: [id])
 
   @@unique([businessUnitId, url])
   @@map("portal_tabs")
+}
+
+model PortalTabFolder {
+  id             String   @id @default(cuid())
+  name           String
+  icon           String?
+  color          String?
+  businessUnitId String?
+  // Rang manuel (drag & drop) parmi les dossiers du même périmètre (même businessUnitId).
+  order          Int      @default(0)
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
+  createdBy    User          @relation("TabFolderCreator", fields: [createdById], references: [id])
+  tabs         PortalTab[]
+
+  @@map("portal_tab_folders")
 }
 
 // ============================================================
