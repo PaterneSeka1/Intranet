@@ -15,6 +15,7 @@ import { BgImageLayer } from '@/components/ui/BgImageLayer'
 import { ServiceUnavailablePage } from '@/components/ui/ServiceUnavailablePage'
 import { fetchSettings } from '@/lib/settings'
 import { NotificationsBell } from '@/components/notifications/NotificationsBell'
+import { ChatWidget } from '@/components/chat/ChatWidget'
 
 async function getActiveAnnouncements(): Promise<Announcement[]> {
   try {
@@ -95,6 +96,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         </header>
         <LiveAnnouncements initialAnnouncements={announcements} showWidgets />
         <main className="flex-1 p-6">{children}</main>
+        <ChatWidget currentUserId={user.id} />
       </div>
     )
   }
@@ -109,6 +111,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     >
       <MustChangePasswordGuard mustChangePassword={!!user.mustChangePassword} />
       {children}
+      <ChatWidget currentUserId={user.id} />
     </MobileSidebarToggle>
   )
 }

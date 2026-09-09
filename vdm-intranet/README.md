@@ -144,6 +144,10 @@ Tous les comptes seedés utilisent le mot de passe défini par `SEED_PASSWORD` d
 - **Widget annonces** : affiche toutes les annonces actives (épinglées en tête) dans une liste unique scrollable plafonnée en hauteur ; chaque ligne n'affiche que le titre, cliquable, et ouvre une modale avec les détails complets
 - **Actualisation annonces** : Socket.IO signale les changements et le client recharge l'API authentifiée
 - **Manager direct** : seuls `CTO_ADMIN`, `PDG`, `DAF`, `RESPONSABLE_BU` et `RESPONSABLE_POLE` sont proposés comme managers directs ; ce rattachement hiérarchique ne remplace pas le périmètre BU utilisé pour les onglets
+- **Messagerie (chat)** : tout utilisateur actif peut démarrer une conversation directe ou de groupe avec n'importe quel autre utilisateur actif, sans restriction de rôle ni de BU/pôle (contrairement à `/users`, volontairement scopé)
+- **Groupes** : seuls le créateur et les participants marqués `isAdmin` peuvent renommer le groupe ou ajouter/retirer des participants ; chacun peut se retirer lui-même (quitter le groupe) sans droit particulier
+- **Pièces jointes chat** : stockées sur disque côté API (`CHAT_UPLOADS_DIR`, défaut `apps/api/uploads/chat/`, jamais committé), jamais servies en fichier statique — uniquement via `GET /chat/attachments/:id`, qui vérifie l'appartenance à la conversation avant de streamer le fichier ; extensions exécutables/scripts refusées à l'upload (liste noire), 15 Mo et 5 fichiers par message maximum
+- **Présence en ligne et saisie (chat)** : gérées uniquement en mémoire côté gateway `/chat` (aucune colonne DB, pas de sens au-delà d'une connexion) — comme les gateways `/notifications` et `/announcements`, suppose une API en instance unique (voir `ecosystem.config.js`)
 
 ## Déploiement OVH
 

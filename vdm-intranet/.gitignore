@@ -12,6 +12,9 @@ out/
 # Dumps de base de données (données personnelles employés, jamais committées)
 backups/
 
+# Pièces jointes de la messagerie interne (contenu utilisateur, jamais committé)
+apps/api/uploads/
+
 # Environment
 .env
 .env.local

@@ -17,6 +17,7 @@ import { PublicHolidaysModule } from './public-holidays/public-holidays.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { SearchModule } from './search/search.module'
 import { LeavesModule } from './leaves/leaves.module'
+import { ChatModule } from './chat/chat.module'
 import { validateEnv } from './config/env.validation'
 
 @Module({
@@ -40,6 +41,7 @@ import { validateEnv } from './config/env.validation'
     NotificationsModule,
     SearchModule,
     LeavesModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

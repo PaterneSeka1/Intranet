@@ -179,6 +179,9 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   notifications        Notification[]
   workplaceLocationUpdates WorkplaceLocation[]
+  createdConversations       Conversation[]            @relation("ConversationCreator")
+  conversationParticipations ConversationParticipant[]
+  messages                   Message[]
 
   @@map("users")
 }
@@ -461,4 +464,88 @@ model Notification {
   @@index([userId, createdAt])
   @@index([announcementId])
   @@map("notifications")
+}
+
+// ============================================================
+// MESSAGERIE INTERNE (CHAT)
+// ============================================================
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+model Conversation {
+  id          String           @id @default(cuid())
+  type        ConversationType
+  // Nom du groupe uniquement (DIRECT : construit côté client à partir des participants).
+  name        String?
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  createdBy    User                      @relation("ConversationCreator", fields: [createdById], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  // Groupe uniquement : peut renommer le groupe et gérer les participants.
+  isAdmin        Boolean   @default(false)
+  joinedAt       DateTime  @default(now())
+  // Lu/non-lu dérivé de cette date plutôt qu'une table de statuts par message : un message est
+  // non lu pour ce participant si createdAt > lastReadAt (ou lastReadAt null).
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+enum MessageType {
+  TEXT
+  FILE
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  senderId       String
+  type           MessageType @default(TEXT)
+  body           String?
+  isEdited       Boolean     @default(false)
+  isDeleted      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                @relation(fields: [senderId], references: [id])
+  attachments  MessageAttachment[]
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  fileName   String
+  mimeType   String
+  size       Int
+  // Chemin relatif sur le disque du serveur API (sous CHAT_UPLOADS_DIR) — jamais servi en fichier
+  // statique, uniquement via un endpoint authentifié qui vérifie l'appartenance à la conversation.
+  storageKey String
+  createdAt  DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_attachments")
 }

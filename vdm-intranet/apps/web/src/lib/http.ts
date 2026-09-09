@@ -34,10 +34,13 @@ async function rawFetch(path: string, opts: RequestOptions = {}): Promise<Respon
     ? setTimeout(() => controller.abort(), timeoutMs ?? DEFAULT_TIMEOUT_MS)
     : null
   try {
+    // FormData (upload de pièces jointes) : laisser le navigateur poser son propre Content-Type
+    // multipart avec la boundary — le forcer à application/json casserait l'envoi.
+    const isFormData = typeof FormData !== 'undefined' && requestInit.body instanceof FormData
     return await fetch(`${API_BASE}/api${path}`, {
       credentials: 'include',
       ...requestInit,
-      headers: { 'Content-Type': 'application/json', ...requestInit.headers },
+      headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...requestInit.headers },
       signal: signal ?? controller?.signal,
     })
   } finally {
