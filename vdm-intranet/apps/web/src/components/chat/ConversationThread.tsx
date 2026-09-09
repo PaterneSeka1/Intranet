@@ -6,6 +6,7 @@ import {
   Check,
   CheckCheck,
   Info,
+  MoreVertical,
   Paperclip,
   Pencil,
   Send,
@@ -79,6 +80,10 @@ export function ConversationThread({
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
+  // Menu d'actions (Modifier/Supprimer) d'un message : un seul ouvert à la fois, contrôlé par clic
+  // plutôt que par survol — évite qu'il se referme tout seul avant même d'avoir pu cliquer dessus.
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null)
+  const actionsMenuRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<number | null>(null)
@@ -88,6 +93,22 @@ export function ConversationThread({
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length, conversation.id])
+
+  useEffect(() => {
+    if (!openActionsId) return
+    function handleClick(e: MouseEvent) {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) setOpenActionsId(null)
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpenActionsId(null)
+    }
+    window.addEventListener('mousedown', handleClick)
+    window.addEventListener('keydown', handleKey)
+    return () => {
+      window.removeEventListener('mousedown', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [openActionsId])
 
   const other = conversation.type === 'DIRECT' ? conversation.participants.find((p) => p.userId !== currentUserId) : null
   const isOnline = other ? onlineUserIds.has(other.userId) : false
@@ -235,23 +256,54 @@ export function ConversationThread({
                   d'atteindre les boutons, les rendant quasi impossibles à cliquer. */}
               <div className="group flex items-center gap-1 max-w-[80%]">
                 {!message.isDeleted && isMine && !isEditing && (
-                  <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                    {message.type === 'TEXT' && (
-                      <button
-                        onClick={() => startEdit(message)}
-                        aria-label="Modifier"
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" strokeWidth={2} />
-                      </button>
-                    )}
+                  <div
+                    className="relative shrink-0"
+                    ref={openActionsId === message.id ? actionsMenuRef : undefined}
+                  >
                     <button
-                      onClick={() => handleDelete(message.id)}
-                      aria-label="Supprimer"
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      onClick={() => setOpenActionsId((prev) => (prev === message.id ? null : message.id))}
+                      aria-label="Actions du message"
+                      aria-haspopup="menu"
+                      aria-expanded={openActionsId === message.id}
+                      className={`w-7 h-7 rounded-full items-center justify-center transition-colors ${
+                        openActionsId === message.id
+                          ? 'flex bg-gray-100 text-gray-700'
+                          : 'hidden group-hover:flex text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                      <MoreVertical className="w-4 h-4" strokeWidth={2} />
                     </button>
+                    {openActionsId === message.id && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full mt-1 w-36 py-1 bg-white rounded-xl border border-gray-100 shadow-xl z-10 overflow-hidden"
+                      >
+                        {message.type === 'TEXT' && (
+                          <button
+                            role="menuitem"
+                            onClick={() => {
+                              setOpenActionsId(null)
+                              startEdit(message)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" strokeWidth={2} />
+                            Modifier
+                          </button>
+                        )}
+                        <button
+                          role="menuitem"
+                          onClick={() => {
+                            setOpenActionsId(null)
+                            handleDelete(message.id)
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className={`flex flex-col min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
