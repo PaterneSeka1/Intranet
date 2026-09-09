@@ -15,11 +15,15 @@ import {
 } from 'lucide-react'
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   closestCenter,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -157,6 +161,18 @@ function buildContainers(tabs: Tab[], folders: TabFolder[]): Record<string, stri
   }
   return map
 }
+
+function findContainerOf(tabId: string, items: Record<string, string[]>): string | undefined {
+  return Object.keys(items).find((key) => items[key].includes(tabId))
+}
+
+/** Préfixé pour ne jamais entrer en collision avec un id de dossier/onglet (cuid) ou "none". */
+const containerDndId = (key: string) => `container:${key}`
+
+type TabDragData = { type: 'tab'; tabId: string; container: string }
+type FolderDragData = { type: 'folder'; folderId: string }
+type ContainerDropData = { type: 'container'; container: string }
+type DragData = TabDragData | FolderDragData | ContainerDropData
 
 function IconPickerField({
   value,
@@ -377,6 +393,7 @@ function TabCardContent({
 
 function SortableTabCard({
   tab,
+  containerKey,
   disabled,
   canManageThis,
   onToggle,
@@ -384,6 +401,7 @@ function SortableTabCard({
   onDelete,
 }: {
   tab: Tab
+  containerKey: string
   disabled: boolean
   canManageThis: boolean
   onToggle: () => void
@@ -393,6 +411,7 @@ function SortableTabCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
     disabled,
+    data: { type: 'tab', tabId: tab.id, container: containerKey } as TabDragData,
   })
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -413,12 +432,17 @@ function SortableTabCard({
   )
 }
 
-function TabGrid({
+/**
+ * Zone d'onglets d'un dossier (ou "sans dossier") : à la fois liste triable (réordonner) et cible
+ * de dépose (recevoir un onglet glissé depuis un autre conteneur) — cf. handleDragOver/handleDragEnd
+ * dans TabsManager, qui pilotent le déplacement inter-conteneurs pour TOUS les conteneurs à la fois
+ * (un seul DndContext partagé, pas un par conteneur).
+ */
+function TabContainer({
   containerKey,
   ids,
   tabsById,
   dndEnabled,
-  onReordered,
   canManage,
   onToggleActive,
   onEditTab,
@@ -428,46 +452,49 @@ function TabGrid({
   ids: string[]
   tabsById: Map<string, Tab>
   dndEnabled: boolean
-  onReordered: (containerKey: string, newIds: string[]) => void
   canManage: (tab: Tab) => boolean
   onToggleActive: (tab: Tab) => void
   onEditTab: (tab: Tab) => void
   onDeleteTab: (tab: Tab) => void
 }) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIndex = ids.indexOf(active.id as string)
-    const newIndex = ids.indexOf(over.id as string)
-    if (oldIndex === -1 || newIndex === -1) return
-    onReordered(containerKey, arrayMove(ids, oldIndex, newIndex))
-  }
+  const { setNodeRef, isOver } = useDroppable({
+    id: containerDndId(containerKey),
+    data: { type: 'container', container: containerKey } as ContainerDropData,
+    disabled: !dndEnabled,
+  })
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={ids} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {ids.map((id) => {
-            const tab = tabsById.get(id)
-            if (!tab) return null
-            const manageable = canManage(tab)
-            return (
-              <SortableTabCard
-                key={id}
-                tab={tab}
-                disabled={!dndEnabled || !manageable}
-                canManageThis={manageable}
-                onToggle={() => onToggleActive(tab)}
-                onEdit={() => onEditTab(tab)}
-                onDelete={() => onDeleteTab(tab)}
-              />
-            )
-          })}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <SortableContext items={ids} strategy={rectSortingStrategy}>
+      <div
+        ref={setNodeRef}
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 rounded-xl transition-colors ${
+          isOver ? 'ring-2 ring-[#F28C38]/40 bg-[#F28C38]/5' : ''
+        }`}
+      >
+        {ids.map((id) => {
+          const tab = tabsById.get(id)
+          if (!tab) return null
+          const manageable = canManage(tab)
+          return (
+            <SortableTabCard
+              key={id}
+              tab={tab}
+              containerKey={containerKey}
+              disabled={!dndEnabled || !manageable}
+              canManageThis={manageable}
+              onToggle={() => onToggleActive(tab)}
+              onEdit={() => onEditTab(tab)}
+              onDelete={() => onDeleteTab(tab)}
+            />
+          )
+        })}
+        {ids.length === 0 && dndEnabled && (
+          <div className="col-span-full flex items-center justify-center h-16 border-2 border-dashed border-gray-200 rounded-xl text-xs text-gray-300">
+            Glissez un onglet ici
+          </div>
+        )}
+      </div>
+    </SortableContext>
   )
 }
 
@@ -482,7 +509,6 @@ function FolderSection({
   onEditFolder,
   onDeleteFolder,
   onCreateTabHere,
-  onReorderTabs,
   canManage,
   onToggleActive,
   onEditTab,
@@ -498,7 +524,6 @@ function FolderSection({
   onEditFolder: () => void
   onDeleteFolder: () => void
   onCreateTabHere: () => void
-  onReorderTabs: (containerKey: string, newIds: string[]) => void
   canManage: (tab: Tab) => boolean
   onToggleActive: (tab: Tab) => void
   onEditTab: (tab: Tab) => void
@@ -507,6 +532,7 @@ function FolderSection({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: folder.id,
     disabled: !dndEnabled || !canManageThis,
+    data: { type: 'folder', folderId: folder.id } as FolderDragData,
   })
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -571,24 +597,18 @@ function FolderSection({
         )}
       </div>
 
-      {!collapsed &&
-        (ids.length === 0 ? (
-          <div className="text-center py-6 text-xs text-gray-400">
-            Dossier vide — modifiez un onglet pour le ranger ici.
-          </div>
-        ) : (
-          <TabGrid
-            containerKey={folder.id}
-            ids={ids}
-            tabsById={tabsById}
-            dndEnabled={dndEnabled}
-            onReordered={onReorderTabs}
-            canManage={canManage}
-            onToggleActive={onToggleActive}
-            onEditTab={onEditTab}
-            onDeleteTab={onDeleteTab}
-          />
-        ))}
+      {!collapsed && (
+        <TabContainer
+          containerKey={folder.id}
+          ids={ids}
+          tabsById={tabsById}
+          dndEnabled={dndEnabled}
+          canManage={canManage}
+          onToggleActive={onToggleActive}
+          onEditTab={onEditTab}
+          onDeleteTab={onDeleteTab}
+        />
+      )}
     </div>
   )
 }
@@ -612,6 +632,16 @@ export function TabsManager({
   const folderOrderRef = useRef(folderOrder)
   folderOrderRef.current = folderOrder
 
+  // Lu de façon synchrone par les handlers de drag (voir handleDragOver/handleDragEnd) : les
+  // événements de glisser-déposer se succèdent plus vite que les re-rendus React ne se
+  // garantissent, donc on tient cette ref à jour immédiatement à chaque écriture plutôt que de
+  // dépendre uniquement de l'effet ci-dessous (qui la garde en phase avec les autres sources de
+  // changement : création/édition/suppression d'un onglet ou d'un dossier).
+  const containerItemsRef = useRef(containerItems)
+  useEffect(() => {
+    containerItemsRef.current = containerItems
+  }, [containerItems])
+
   useEffect(() => {
     setContainerItems(buildContainers(tabs, folders))
   }, [tabs, folders])
@@ -621,6 +651,9 @@ export function TabsManager({
   }, [folders])
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [activeDrag, setActiveDrag] = useState<
+    { type: 'tab'; tab: Tab } | { type: 'folder'; folder: TabFolder } | null
+  >(null)
 
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; tab?: Tab } | null>(null)
   const [form, setForm] = useState<TabFormData>(EMPTY_TAB_FORM)
@@ -645,7 +678,7 @@ export function TabsManager({
   // à une seule BU), donc il reste compatible avec la réorganisation.
   const dndEnabled = search.trim() === ''
 
-  const folderSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const canManage = (tab: Tab) => {
     if (GLOBAL_TAB_MANAGERS.includes(userRole)) return true
@@ -890,24 +923,12 @@ export function TabsManager({
   }
 
   // ---- Réorganisation (glisser-déposer) ----
-
-  async function handleTabsReordered(containerKey: string, newIds: string[]) {
-    setContainerItems((prev) => ({ ...prev, [containerKey]: newIds }))
-    const folderId = containerKey === NONE ? null : containerKey
-    const items: ReorderItem[] = newIds.map((id, index) => ({ id, order: index, folderId }))
-    const orderByIdInContainer = new Map(items.map((i) => [i.id, i.order]))
-    setTabs((prev) =>
-      prev.map((t) => {
-        const order = orderByIdInContainer.get(t.id)
-        return order === undefined ? t : { ...t, order }
-      })
-    )
-    try {
-      await tabsApi.reorder(items)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la réorganisation des onglets.')
-    }
-  }
+  //
+  // Un seul DndContext couvre tout : la liste des dossiers (réordonnancement entre eux) et
+  // chaque conteneur d'onglets (dossier ou "sans dossier"). handleDragOver déplace visuellement
+  // un onglet d'un conteneur à l'autre pendant le survol (obligatoire pour prévisualiser un
+  // changement de dossier, cf. pattern "multi-conteneurs" de dnd-kit) ; handleDragEnd fixe la
+  // position finale au sein du conteneur d'arrivée et persiste en une fois vers l'API.
 
   async function persistFolderOrder(order: string[]) {
     const items: ReorderItem[] = order.map((id, index) => ({ id, order: index }))
@@ -924,16 +945,125 @@ export function TabsManager({
     }
   }
 
-  function handleFolderDragEnd(event: DragEndEvent) {
+  async function persistAllTabs(next: Record<string, string[]>) {
+    const items: ReorderItem[] = []
+    for (const [key, ids] of Object.entries(next)) {
+      const folderId = key === NONE ? null : key
+      ids.forEach((id, index) => items.push({ id, order: index, folderId }))
+    }
+    const byId = new Map(items.map((i) => [i.id, i]))
+    setTabs((prev) =>
+      prev.map((t) => {
+        const entry = byId.get(t.id)
+        if (!entry) return t
+        const folder = entry.folderId ? (foldersById.get(entry.folderId) ?? null) : null
+        return {
+          ...t,
+          order: entry.order,
+          folderId: entry.folderId ?? null,
+          folder: folder
+            ? { id: folder.id, name: folder.name, icon: folder.icon, color: folder.color }
+            : null,
+        }
+      })
+    )
+    if (items.length === 0) return
+    try {
+      await tabsApi.reorder(items)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la réorganisation des onglets.')
+    }
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    const data = event.active.data.current as DragData | undefined
+    if (data?.type === 'tab') {
+      const tab = tabsById.get(data.tabId)
+      if (tab) setActiveDrag({ type: 'tab', tab })
+    } else if (data?.type === 'folder') {
+      const folder = foldersById.get(data.folderId)
+      if (folder) setActiveDrag({ type: 'folder', folder })
+    }
+  }
+
+  function handleDragOver(event: DragOverEvent) {
     const { active, over } = event
-    if (!over || active.id === over.id) return
-    const order = folderOrderRef.current
-    const oldIndex = order.indexOf(active.id as string)
-    const newIndex = order.indexOf(over.id as string)
-    if (oldIndex === -1 || newIndex === -1) return
-    const next = arrayMove(order, oldIndex, newIndex)
-    setFolderOrder(next)
-    persistFolderOrder(next)
+    if (!over) return
+    const activeData = active.data.current as DragData | undefined
+    if (activeData?.type !== 'tab') return
+    const overData = over.data.current as DragData | undefined
+
+    const overContainerData =
+      overData?.type === 'tab' || overData?.type === 'container' ? overData : undefined
+    const toContainer = overContainerData?.container
+
+    const current = containerItemsRef.current
+    const fromContainer = findContainerOf(activeData.tabId, current)
+    if (!fromContainer || !toContainer || fromContainer === toContainer) return
+
+    const fromItems = current[fromContainer] ?? []
+    if (!fromItems.includes(activeData.tabId)) return
+    const toItems = current[toContainer] ?? []
+    const overIndex =
+      overContainerData?.type === 'tab' ? toItems.indexOf(overContainerData.tabId) : toItems.length
+    const insertAt = overIndex === -1 ? toItems.length : overIndex
+
+    const next = {
+      ...current,
+      [fromContainer]: fromItems.filter((id) => id !== activeData.tabId),
+      [toContainer]: [...toItems.slice(0, insertAt), activeData.tabId, ...toItems.slice(insertAt)],
+    }
+    containerItemsRef.current = next
+    setContainerItems(next)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveDrag(null)
+    const activeData = active.data.current as DragData | undefined
+    if (!activeData || activeData.type === 'container') return
+
+    if (activeData.type === 'folder') {
+      if (!over) return
+      const overData = over.data.current as DragData | undefined
+      if (overData?.type !== 'folder' || overData.folderId === activeData.folderId) return
+      const order = folderOrderRef.current
+      const oldIndex = order.indexOf(activeData.folderId)
+      const newIndex = order.indexOf(overData.folderId)
+      if (oldIndex === -1 || newIndex === -1) return
+      const next = arrayMove(order, oldIndex, newIndex)
+      folderOrderRef.current = next
+      setFolderOrder(next)
+      persistFolderOrder(next)
+      return
+    }
+
+    // activeData.type === 'tab'
+    if (!over) {
+      // Déposé hors de toute zone valide : annule le déplacement visuel fait pendant le survol
+      // (handleDragOver a pu changer le conteneur sans jamais avoir été confirmé).
+      const reverted = buildContainers(tabs, folders)
+      containerItemsRef.current = reverted
+      setContainerItems(reverted)
+      return
+    }
+
+    const current = containerItemsRef.current
+    const container = findContainerOf(activeData.tabId, current)
+    if (!container) return
+    let items = current[container] ?? []
+    const overData = over.data.current as DragData | undefined
+    if (overData?.type === 'tab' && overData.container === container) {
+      const oldIndex = items.indexOf(activeData.tabId)
+      const newIndex = items.indexOf(overData.tabId)
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        items = arrayMove(items, oldIndex, newIndex)
+      }
+    }
+    const next = { ...current, [container]: items }
+    containerItemsRef.current = next
+    setContainerItems(next)
+    persistAllTabs(next)
   }
 
   // ---- Filtrage ----
@@ -1026,13 +1156,15 @@ export function TabsManager({
       {nothingVisible ? (
         <div className="text-center py-16 text-gray-400 text-sm">Aucun onglet trouvé</div>
       ) : (
-        <div className="space-y-4">
-          {visibleFolderOrder.length > 0 && (
-            <DndContext
-              sensors={folderSensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleFolderDragEnd}
-            >
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="space-y-4">
+            {visibleFolderOrder.length > 0 && (
               <SortableContext items={visibleFolderOrder} strategy={verticalListSortingStrategy}>
                 <div className="space-y-3">
                   {visibleFolderOrder.map((fid) => {
@@ -1054,7 +1186,6 @@ export function TabsManager({
                         onEditFolder={() => openEditFolder(folder)}
                         onDeleteFolder={() => handleDeleteFolder(folder)}
                         onCreateTabHere={() => openCreate(folder)}
-                        onReorderTabs={handleTabsReordered}
                         canManage={canManage}
                         onToggleActive={toggleActive}
                         onEditTab={openEdit}
@@ -1064,35 +1195,64 @@ export function TabsManager({
                   })}
                 </div>
               </SortableContext>
-            </DndContext>
-          )}
+            )}
 
-          {visibleNoneIds.length > 0 && (
-            <div>
-              {folders.length > 0 && (
-                <div className="flex items-center gap-2 px-1 mb-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                    Sans dossier
-                  </span>
-                  <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
-                    {visibleNoneIds.length}
-                  </span>
-                </div>
-              )}
-              <TabGrid
-                containerKey={NONE}
-                ids={visibleNoneIds}
-                tabsById={tabsById}
-                dndEnabled={dndEnabled}
-                onReordered={handleTabsReordered}
-                canManage={canManage}
-                onToggleActive={toggleActive}
-                onEditTab={openEdit}
-                onDeleteTab={handleDelete}
-              />
-            </div>
-          )}
-        </div>
+            {(visibleNoneIds.length > 0 || folders.length > 0) && (
+              <div>
+                {folders.length > 0 && (
+                  <div className="flex items-center gap-2 px-1 mb-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                      Sans dossier
+                    </span>
+                    <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
+                      {visibleNoneIds.length}
+                    </span>
+                  </div>
+                )}
+                <TabContainer
+                  containerKey={NONE}
+                  ids={visibleNoneIds}
+                  tabsById={tabsById}
+                  dndEnabled={dndEnabled}
+                  canManage={canManage}
+                  onToggleActive={toggleActive}
+                  onEditTab={openEdit}
+                  onDeleteTab={handleDelete}
+                />
+              </div>
+            )}
+          </div>
+
+          <DragOverlay>
+            {activeDrag?.type === 'tab' ? (
+              <div className="w-72 shadow-2xl rounded-2xl rotate-1">
+                <TabCardContent
+                  tab={activeDrag.tab}
+                  canManageThis={false}
+                  onToggle={() => {}}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                />
+              </div>
+            ) : activeDrag?.type === 'folder' ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-gray-200 bg-white shadow-2xl w-72">
+                <span
+                  style={{ background: withAlpha(activeDrag.folder.color || DEFAULT_TAB_COLOR, '1A') }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                >
+                  <TabIcon
+                    value={activeDrag.folder.icon || DEFAULT_FOLDER_ICON}
+                    color={activeDrag.folder.color}
+                    className="w-4 h-4"
+                  />
+                </span>
+                <span className="font-semibold text-sm text-gray-800 truncate">
+                  {activeDrag.folder.name}
+                </span>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* Modale création / édition d'onglet */}

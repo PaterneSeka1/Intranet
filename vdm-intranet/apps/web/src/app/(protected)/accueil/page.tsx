@@ -1,61 +1,11 @@
 import { redirect } from 'next/navigation'
-import { ChevronRight, Clock, MapPin, Pin } from 'lucide-react'
+import { Clock, MapPin, Pin } from 'lucide-react'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import type { TodayPresenceResult } from '@/lib/presence'
 import type { Tab, TabFolder } from '@/lib/tabs'
 import { EndDayButton } from '@/components/presence/EndDayButton'
-import { TabIcon, DEFAULT_TAB_COLOR, withAlpha } from '@/components/tabs/tab-icons'
+import { HomeResources } from '@/components/tabs/HomeResources'
 import { ACCUEIL_ONLY_ROLES, ROLE_LABELS } from '@/types/user'
-
-function TabCard({ tab }: { tab: Tab }) {
-  return (
-    <a
-      href={tab.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="w-40 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center gap-3 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
-    >
-      <span
-        style={{ background: withAlpha(tab.color || DEFAULT_TAB_COLOR, '1A') }}
-        className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:brightness-95"
-      >
-        <TabIcon value={tab.icon} color={tab.color} className="w-8 h-8" />
-      </span>
-      <span className="text-sm font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
-        {tab.name}
-      </span>
-    </a>
-  )
-}
-
-/** Section repliable pour un dossier d'onglets — <details> natif : pas de JS côté client requis. */
-function TabFolderSection({ folder, tabs }: { folder: TabFolder; tabs: Tab[] }) {
-  return (
-    <details open className="group">
-      <summary className="flex items-center gap-2.5 mb-3 cursor-pointer select-none list-none">
-        <ChevronRight
-          className="w-3.5 h-3.5 text-gray-400 transition-transform group-open:rotate-90 shrink-0"
-          strokeWidth={2.5}
-        />
-        <span
-          style={{ background: withAlpha(folder.color || DEFAULT_TAB_COLOR, '1A') }}
-          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-        >
-          <TabIcon value={folder.icon || 'folder'} color={folder.color} className="w-4 h-4" />
-        </span>
-        <span className="text-sm font-bold text-gray-700">{folder.name}</span>
-        <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
-          {tabs.length}
-        </span>
-      </summary>
-      <div className="flex flex-wrap justify-center gap-3 pb-1">
-        {tabs.map((tab) => (
-          <TabCard key={tab.id} tab={tab} />
-        ))}
-      </div>
-    </details>
-  )
-}
 
 const STATUS_STYLE: Record<string, string> = {
   PRESENT: 'bg-green-100 text-green-700',
@@ -140,19 +90,20 @@ export default async function AccueilPage() {
   // retomber sur "ABSENT" par défaut ici, sous peine de re-marquer absent avant l'heure attendue.
   const status = presenceData?.status ?? 'ABSENT'
   const activeTabs = (allTabs ?? []).filter((t) => t.isActive)
-  const folders = [...(allFolders ?? [])].sort((a, b) => a.order - b.order)
-  const folderIds = new Set(folders.map((f) => f.id))
-  const tabsByFolder = new Map<string, Tab[]>()
+  const sortedFolders = [...(allFolders ?? [])].sort((a, b) => a.order - b.order)
+  const folderIds = new Set(sortedFolders.map((f) => f.id))
+  const tabsByFolder: Record<string, Tab[]> = {}
   const ungroupedTabs: Tab[] = []
   for (const tab of [...activeTabs].sort((a, b) => a.order - b.order)) {
     if (tab.folderId && folderIds.has(tab.folderId)) {
-      const list = tabsByFolder.get(tab.folderId)
-      if (list) list.push(tab)
-      else tabsByFolder.set(tab.folderId, [tab])
+      ;(tabsByFolder[tab.folderId] ??= []).push(tab)
     } else {
       ungroupedTabs.push(tab)
     }
   }
+  // Un dossier n'apparaît sur l'accueil que s'il contient au moins un onglet actif visible par
+  // cet utilisateur — éviter d'afficher une tuile qui s'ouvrirait sur un dossier vide.
+  const folders = sortedFolders.filter((f) => (tabsByFolder[f.id]?.length ?? 0) > 0)
   const displayName = user.firstName || user.fullName || user.username
 
   return (
@@ -319,20 +270,7 @@ export default async function AccueilPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-5">
-            {folders.map((folder) => {
-              const folderTabs = tabsByFolder.get(folder.id)
-              if (!folderTabs || folderTabs.length === 0) return null
-              return <TabFolderSection key={folder.id} folder={folder} tabs={folderTabs} />
-            })}
-            {ungroupedTabs.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-3">
-                {ungroupedTabs.map((tab) => (
-                  <TabCard key={tab.id} tab={tab} />
-                ))}
-              </div>
-            )}
-          </div>
+          <HomeResources folders={folders} tabsByFolder={tabsByFolder} ungroupedTabs={ungroupedTabs} />
         )}
       </section>
     </div>
