@@ -1,8 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { io, type Socket } from 'socket.io-client'
-import { MessageCircle, Plus, X } from 'lucide-react'
+import { MessageCircle, Pin, Plus, Trash2, X } from 'lucide-react'
 import { API_BASE } from '@/lib/api-base'
 import {
   chatApi,
@@ -12,6 +19,7 @@ import {
   type ConversationSummary,
 } from '@/lib/chat'
 import { toast } from '@/lib/toast'
+import { confirm } from '@/lib/confirm'
 import { Avatar } from '@/components/ui/Avatar'
 import { ConversationThread } from './ConversationThread'
 import { NewConversationModal } from './NewConversationModal'
@@ -19,8 +27,70 @@ import { GroupInfoModal } from './GroupInfoModal'
 
 const REFRESH_INTERVAL_MS = 60_000
 
+// Position mémorisée par appareil/navigateur (préférence purement locale, non partagée) — cf.
+// clampPosition/defaultPosition ci-dessous pour la logique de bornage à l'écran.
+const WIDGET_POSITION_STORAGE_KEY = 'vdm_chat_widget_position'
+const BUTTON_SIZE = 56
+const EDGE_MARGIN = 20
+const PANEL_GAP = 12
+/** Distance de pointeur (px) au-delà de laquelle un pointerdown/up est traité comme un glisser
+ * plutôt qu'un simple clic (sinon impossible d'ouvrir/fermer le widget par un clic normal). */
+const DRAG_THRESHOLD_PX = 4
+
+type Position = { x: number; y: number }
+
+function clampPosition(pos: Position): Position {
+  if (typeof window === 'undefined') return pos
+  const maxX = Math.max(EDGE_MARGIN, window.innerWidth - BUTTON_SIZE - EDGE_MARGIN)
+  const maxY = Math.max(EDGE_MARGIN, window.innerHeight - BUTTON_SIZE - EDGE_MARGIN)
+  return {
+    x: Math.min(Math.max(pos.x, EDGE_MARGIN), maxX),
+    y: Math.min(Math.max(pos.y, EDGE_MARGIN), maxY),
+  }
+}
+
+function defaultPosition(): Position {
+  if (typeof window === 'undefined') return { x: 0, y: 0 }
+  return clampPosition({
+    x: window.innerWidth - BUTTON_SIZE - EDGE_MARGIN,
+    y: window.innerHeight - BUTTON_SIZE - EDGE_MARGIN,
+  })
+}
+
+function loadStoredPosition(): Position | null {
+  try {
+    const raw = window.localStorage.getItem(WIDGET_POSITION_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<Position>
+    if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return null
+    return clampPosition({ x: parsed.x, y: parsed.y })
+  } catch {
+    return null
+  }
+}
+
+/** Panneau ancré près du bouton, en s'ouvrant à l'opposé du bord le plus proche pour ne jamais
+ * sortir de l'écran quel que soit l'endroit où le bouton a été déposé. */
+function computePanelStyle(position: Position | null): CSSProperties {
+  if (typeof window === 'undefined' || !position) {
+    return { bottom: BUTTON_SIZE + EDGE_MARGIN + PANEL_GAP, right: EDGE_MARGIN }
+  }
+  const style: CSSProperties = {}
+  if (position.y > window.innerHeight / 2) style.bottom = window.innerHeight - position.y + PANEL_GAP
+  else style.top = position.y + BUTTON_SIZE + PANEL_GAP
+  if (position.x > window.innerWidth / 2) style.right = window.innerWidth - position.x - BUTTON_SIZE
+  else style.left = position.x
+  return style
+}
+
 function socketUrl() {
   return `${API_BASE.replace(/\/$/, '')}/chat`
+}
+
+/** Épinglées en tête, sinon ordre déjà décroissant par activité — tri stable donc sans effet sur
+ * l'ordre relatif au sein d'un même groupe (épinglé/non-épinglé). */
+function sortConversations(list: ConversationSummary[]): ConversationSummary[] {
+  return [...list].sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
 }
 
 function fmtPreview(message: ChatMessage | null): string {
@@ -51,12 +121,94 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
   const [showNewConversation, setShowNewConversation] = useState(false)
   const [showGroupInfo, setShowGroupInfo] = useState(false)
+  const [position, setPosition] = useState<Position | null>(null)
 
   const socketRef = useRef<Socket | null>(null)
+  const positionRef = useRef<Position>({ x: 0, y: 0 })
+  // true juste après un glisser réel (pour ignorer le "click" natif que le navigateur émet quand
+  // même après un mouseup/touchend — sinon le widget s'ouvrirait/fermerait involontairement à
+  // chaque déplacement). Remis à false dès que ce click a été absorbé.
+  const justDraggedRef = useRef(false)
+  const dragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    originX: number
+    originY: number
+    moved: boolean
+  } | null>(null)
   const activeConversationIdRef = useRef<string | null>(null)
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId
   }, [activeConversationId])
+
+  // Position du bouton flottant : restaurée depuis localStorage (ou coin bas-droit par défaut),
+  // re-bornée à l'écran si la fenêtre est redimensionnée après un déplacement.
+  useEffect(() => {
+    const initial = loadStoredPosition() ?? defaultPosition()
+    positionRef.current = initial
+    setPosition(initial)
+
+    function handleResize() {
+      setPosition((prev) => {
+        const next = clampPosition(prev ?? defaultPosition())
+        positionRef.current = next
+        return next
+      })
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  function handlePointerDown(e: ReactPointerEvent<HTMLButtonElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: positionRef.current.x,
+      originY: positionRef.current.y,
+      moved: false,
+    }
+  }
+
+  function handlePointerMove(e: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== e.pointerId) return
+    const dx = e.clientX - drag.startX
+    const dy = e.clientY - drag.startY
+    if (!drag.moved && Math.abs(dx) < DRAG_THRESHOLD_PX && Math.abs(dy) < DRAG_THRESHOLD_PX) return
+    drag.moved = true
+    const next = clampPosition({ x: drag.originX + dx, y: drag.originY + dy })
+    positionRef.current = next
+    setPosition(next)
+  }
+
+  function handlePointerUp(e: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== e.pointerId) return
+    dragRef.current = null
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    if (drag.moved) {
+      justDraggedRef.current = true
+      try {
+        window.localStorage.setItem(WIDGET_POSITION_STORAGE_KEY, JSON.stringify(positionRef.current))
+      } catch {
+        /* stockage indisponible (navigation privée…) — position simplement non mémorisée */
+      }
+    }
+  }
+
+  // Le "click" (natif — couvre aussi l'activation clavier Entrée/Espace sur le bouton, à la
+  // différence des événements pointer) reste la seule source de vérité pour ouvrir/fermer le
+  // widget ; on l'ignore une fois s'il vient de conclure un glisser réel.
+  function handleButtonClick() {
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false
+      return
+    }
+    setOpen((v) => !v)
+  }
 
   const refreshConversations = useCallback(async () => {
     try {
@@ -92,10 +244,14 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     socket.on('message:new', ({ conversationId, message }: { conversationId: string; message: ChatMessage }) => {
       const isActive = activeConversationIdRef.current === conversationId
       const isMine = message.senderId === currentUserId
+      let found = true
       setConversations((prev) => {
         if (!prev) return prev
         const idx = prev.findIndex((c) => c.id === conversationId)
-        if (idx === -1) return prev
+        if (idx === -1) {
+          found = false
+          return prev
+        }
         const conv = prev[idx]
         const updated: ConversationSummary = {
           ...conv,
@@ -103,8 +259,11 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
           updatedAt: message.createdAt,
           unreadCount: isMine || isActive ? conv.unreadCount : conv.unreadCount + 1,
         }
-        return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)]
+        return sortConversations([updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)])
       })
+      // Conversation absente de la liste locale (p. ex. supprimée/masquée) : un nouveau message
+      // doit la faire réapparaître, cf. ChatService.listConversations.
+      if (!found) refreshConversations()
       if (isActive) {
         setActiveMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]))
         if (!isMine) chatApi.markRead(conversationId).catch(() => {})
@@ -154,6 +313,17 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
         )
       }
     )
+    // Épinglage/masquage synchronisés entre les onglets/appareils du même utilisateur (room privée
+    // `user:{id}` côté gateway, cf. ChatGateway.emitConversationPinChanged/emitConversationHidden).
+    socket.on('conversation:pin-changed', ({ conversationId, isPinned }: { conversationId: string; isPinned: boolean }) => {
+      setConversations((prev) =>
+        prev ? sortConversations(prev.map((c) => (c.id === conversationId ? { ...c, isPinned } : c))) : prev
+      )
+    })
+    socket.on('conversation:hidden', ({ conversationId }: { conversationId: string }) => {
+      setConversations((prev) => prev?.filter((c) => c.id !== conversationId) ?? prev)
+      if (activeConversationIdRef.current === conversationId) setActiveConversationId(null)
+    })
     socket.on(
       'typing:update',
       ({ conversationId, userId, isTyping }: { conversationId: string; userId: string; isTyping: boolean }) => {
@@ -257,14 +427,53 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     }
   }
 
+  async function handleTogglePin(conversation: ConversationSummary) {
+    const next = !conversation.isPinned
+    setConversations((prev) =>
+      prev
+        ? sortConversations(prev.map((c) => (c.id === conversation.id ? { ...c, isPinned: next } : c)))
+        : prev
+    )
+    try {
+      await chatApi.togglePin(conversation.id, next)
+    } catch {
+      toast.error(next ? "Impossible d'épingler cette conversation." : 'Impossible de désépingler cette conversation.')
+      refreshConversations()
+    }
+  }
+
+  async function handleDeleteConversation(conversation: ConversationSummary) {
+    const ok = await confirm({
+      message: `Supprimer la conversation avec ${conversationDisplayName(conversation, currentUserId)} ? Elle réapparaîtra si de nouveaux messages arrivent.`,
+      destructive: true,
+    })
+    if (!ok) return
+    setConversations((prev) => prev?.filter((c) => c.id !== conversation.id) ?? prev)
+    if (activeConversationId === conversation.id) setActiveConversationId(null)
+    try {
+      await chatApi.deleteConversation(conversation.id)
+    } catch {
+      toast.error('Impossible de supprimer cette conversation.')
+      refreshConversations()
+    }
+  }
+
   const totalUnread = conversations?.reduce((sum, c) => sum + c.unreadCount, 0) ?? 0
 
   return (
     <>
       <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Messagerie"
-        className="fixed bottom-5 right-5 z-[8500] w-14 h-14 rounded-full bg-[#F28C38] text-white shadow-xl flex items-center justify-center hover:brightness-105 transition-all active:scale-95"
+        onClick={handleButtonClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
+          ...(position ? { left: position.x, top: position.y } : { right: EDGE_MARGIN, bottom: EDGE_MARGIN }),
+          touchAction: 'none',
+        }}
+        aria-label="Messagerie (glisser pour déplacer)"
+        className="fixed z-[8500] w-14 h-14 rounded-full bg-[#F28C38] text-white shadow-xl flex items-center justify-center hover:brightness-105 transition-transform active:scale-95 cursor-grab active:cursor-grabbing select-none"
       >
         {open ? <X className="w-6 h-6" strokeWidth={2} /> : <MessageCircle className="w-6 h-6" strokeWidth={2} />}
         {!open && totalUnread > 0 && (
@@ -275,7 +484,10 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-5 z-[8500] w-[380px] max-w-[calc(100vw-2rem)] h-[70dvh] max-h-[600px] bg-white rounded-2xl border border-gray-100 shadow-2xl flex flex-col overflow-hidden">
+        <div
+          style={computePanelStyle(position)}
+          className="fixed z-[8500] w-[380px] max-w-[calc(100vw-2rem)] h-[70dvh] max-h-[600px] bg-white rounded-2xl border border-gray-100 shadow-2xl flex flex-col overflow-hidden"
+        >
           {activeConversationId && activeConversation ? (
             <ConversationThread
               conversation={activeConversation}
@@ -324,41 +536,74 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                       ? conversation.participants.find((p) => p.userId !== currentUserId)?.user
                       : null
                   return (
-                    <button
+                    <div
                       key={conversation.id}
-                      onClick={() => openConversation(conversation.id)}
-                      className={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                      className={`group flex items-center gap-1 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
                         conversation.unreadCount > 0 ? 'bg-[#F28C38]/5' : ''
                       }`}
                     >
-                      {conversation.type === 'GROUP' ? (
-                        <Avatar username={conversation.name ?? 'Groupe'} size="md" />
-                      ) : (
-                        <Avatar
-                          firstName={other?.firstName}
-                          lastName={other?.lastName}
-                          username={other?.username ?? '?'}
-                          size="md"
-                          online={other ? onlineUserIds.has(other.id) : undefined}
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-gray-900 truncate">
-                            {conversationDisplayName(conversation, currentUserId)}
-                          </span>
-                          <span className="text-[10px] text-gray-400 shrink-0">{fmtTime(conversation.updatedAt)}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-2 mt-0.5">
-                          <p className="text-xs text-gray-500 truncate">{fmtPreview(conversation.lastMessage)}</p>
-                          {conversation.unreadCount > 0 && (
-                            <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F28C38] text-white text-[10px] font-bold flex items-center justify-center">
-                              {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                      <button
+                        onClick={() => openConversation(conversation.id)}
+                        className="flex-1 min-w-0 text-left px-4 py-3 flex items-center gap-3"
+                      >
+                        {conversation.type === 'GROUP' ? (
+                          <Avatar username={conversation.name ?? 'Groupe'} size="md" />
+                        ) : (
+                          <Avatar
+                            firstName={other?.firstName}
+                            lastName={other?.lastName}
+                            username={other?.username ?? '?'}
+                            size="md"
+                            online={other ? onlineUserIds.has(other.id) : undefined}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-1 min-w-0">
+                              {conversation.isPinned && (
+                                <Pin
+                                  className="w-3 h-3 text-[#F28C38] shrink-0 fill-current"
+                                  strokeWidth={2}
+                                  aria-label="Épinglée"
+                                />
+                              )}
+                              <span className="text-sm font-semibold text-gray-900 truncate">
+                                {conversationDisplayName(conversation, currentUserId)}
+                              </span>
                             </span>
-                          )}
+                            <span className="text-[10px] text-gray-400 shrink-0">{fmtTime(conversation.updatedAt)}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 mt-0.5">
+                            <p className="text-xs text-gray-500 truncate">{fmtPreview(conversation.lastMessage)}</p>
+                            {conversation.unreadCount > 0 && (
+                              <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F28C38] text-white text-[10px] font-bold flex items-center justify-center">
+                                {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
+                      </button>
+                      <div className="hidden group-hover:flex items-center gap-0.5 pr-2 shrink-0">
+                        <button
+                          onClick={() => handleTogglePin(conversation)}
+                          aria-label={conversation.isPinned ? 'Désépingler' : 'Épingler'}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                            conversation.isPinned
+                              ? 'text-[#F28C38] hover:bg-[#F28C38]/10'
+                              : 'text-gray-400 hover:text-[#F28C38] hover:bg-[#F28C38]/10'
+                          }`}
+                        >
+                          <Pin className={`w-3.5 h-3.5 ${conversation.isPinned ? 'fill-current' : ''}`} strokeWidth={2} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteConversation(conversation)}
+                          aria-label="Supprimer la conversation"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   )
                 })}
               </div>

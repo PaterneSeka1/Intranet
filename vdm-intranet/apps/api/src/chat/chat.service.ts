@@ -90,7 +90,15 @@ export class ChatService {
       take: 200,
     })
 
-    return Promise.all(
+    // Épinglage/masquage sont des préférences propres à `userId`, jamais exposées aux autres
+    // participants (contrairement à `lastReadAt` dans CONVERSATION_SELECT) — récupérées à part.
+    const mine = await this.prisma.conversationParticipant.findMany({
+      where: { userId, conversationId: { in: conversations.map((c) => c.id) } },
+      select: { conversationId: true, isPinned: true, hiddenAt: true },
+    })
+    const mineByConversation = new Map(mine.map((p) => [p.conversationId, p]))
+
+    const summaries = await Promise.all(
       conversations.map(async ({ messages, ...conversation }) => {
         const me = conversation.participants.find((p) => p.userId === userId)
         const unreadCount = await this.prisma.message.count({
@@ -101,9 +109,26 @@ export class ChatService {
             ...(me?.lastReadAt ? { createdAt: { gt: me.lastReadAt } } : {}),
           },
         })
-        return { ...conversation, lastMessage: messages[0] ?? null, unreadCount }
+        return {
+          ...conversation,
+          lastMessage: messages[0] ?? null,
+          unreadCount,
+          mine: mineByConversation.get(conversation.id),
+        }
       })
     )
+
+    // Une conversation "supprimée" (masquée) par cet utilisateur reste absente de sa liste tant
+    // qu'aucun nouveau message n'est arrivé depuis — comportement calqué sur WhatsApp/Messenger
+    // plutôt qu'une vraie suppression de l'historique (cf. deleteConversation ci-dessous).
+    return summaries
+      .filter(({ mine, lastMessage }) => {
+        const hiddenAt = mine?.hiddenAt
+        if (!hiddenAt) return true
+        return !!lastMessage && new Date(lastMessage.createdAt) > hiddenAt
+      })
+      .map(({ mine, ...summary }) => ({ ...summary, isPinned: mine?.isPinned ?? false }))
+      .sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
   }
 
   async getConversation(id: string, userId: string) {
@@ -134,7 +159,15 @@ export class ChatService {
         },
         select: { id: true },
       })
-      if (existing) return this.getConversation(existing.id, requester.id)
+      if (existing) {
+        // Redémarrer une discussion que le demandeur avait supprimée (masquée) doit la refaire
+        // apparaître dans sa liste, sinon elle resterait invisible malgré l'ouverture immédiate.
+        await this.prisma.conversationParticipant.updateMany({
+          where: { conversationId: existing.id, userId: requester.id, hiddenAt: { not: null } },
+          data: { hiddenAt: null },
+        })
+        return this.getConversation(existing.id, requester.id)
+      }
     } else if (participantIds.length < 3) {
       throw new BadRequestException('Un groupe doit avoir au moins 2 autres participants.')
     }
@@ -328,6 +361,29 @@ export class ChatService {
     })
     this.gateway.emitConversationRead(conversationId, requester.id, now)
     return { lastReadAt: now }
+  }
+
+  async togglePin(id: string, pinned: boolean, requester: Requester) {
+    await this.assertParticipant(id, requester.id)
+    await this.prisma.conversationParticipant.update({
+      where: { conversationId_userId: { conversationId: id, userId: requester.id } },
+      data: { isPinned: pinned, pinnedAt: pinned ? new Date() : null },
+    })
+    this.gateway.emitConversationPinChanged(requester.id, id, pinned)
+    return { isPinned: pinned }
+  }
+
+  /** "Suppression" d'une conversation = masquage de sa liste pour ce seul utilisateur : l'historique
+   * et les autres participants ne sont pas affectés, et elle réapparaît si un nouveau message
+   * arrive (cf. listConversations). Distinct de removeParticipant, qui quitte réellement un groupe. */
+  async deleteConversation(id: string, requester: Requester) {
+    await this.assertParticipant(id, requester.id)
+    await this.prisma.conversationParticipant.update({
+      where: { conversationId_userId: { conversationId: id, userId: requester.id } },
+      data: { hiddenAt: new Date(), isPinned: false, pinnedAt: null },
+    })
+    this.gateway.emitConversationHidden(requester.id, id)
+    return { deleted: true }
   }
 
   async downloadAttachment(attachmentId: string, requester: Requester) {

@@ -8,7 +8,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets'
-import { Server, Socket } from 'socket.io'
+import { Namespace, Socket } from 'socket.io'
 import { PrismaService } from '../prisma/prisma.service'
 
 // Payloads déjà sérialisés par ChatService (formes `select` Prisma, pas les modèles bruts) —
@@ -52,8 +52,11 @@ const PRESENCE_ROOM = 'chat:presence'
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  // Gateway namespacé (`namespace: '/chat'`) : NestJS injecte ici directement l'instance
+  // `Namespace` (= server.of('/chat')) et non le `Server` racine — d'où le typage `Namespace`,
+  // nécessaire notamment pour `.sockets` (Map<socketId, Socket>) utilisé par joinConversation.
   @WebSocketServer()
-  private server?: Server
+  private server?: Namespace
 
   /** userId -> sockets connectés (plusieurs onglets/appareils possibles pour un même utilisateur). */
   private readonly onlineUsers = new Map<string, Set<string>>()
@@ -142,7 +145,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = `conversation:${conversationId}`
     for (const userId of userIds) {
       const sockets = this.onlineUsers.get(userId)
-      sockets?.forEach((socketId) => this.server?.sockets.sockets.get(socketId)?.join(room))
+      sockets?.forEach((socketId) => this.server?.sockets.get(socketId)?.join(room))
     }
   }
 
@@ -177,6 +180,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server
       ?.to(`conversation:${conversationId}`)
       .emit('conversation:read', { conversationId, userId, lastReadAt })
+  }
+
+  // Épinglage/masquage sont des préférences privées : émis uniquement vers les autres
+  // onglets/appareils du même utilisateur (room `user:{id}`), jamais vers toute la conversation.
+  emitConversationPinChanged(userId: string, conversationId: string, isPinned: boolean) {
+    this.server?.to(`user:${userId}`).emit('conversation:pin-changed', { conversationId, isPinned })
+  }
+
+  emitConversationHidden(userId: string, conversationId: string) {
+    this.server?.to(`user:${userId}`).emit('conversation:hidden', { conversationId })
   }
 
   isOnline(userId: string): boolean {

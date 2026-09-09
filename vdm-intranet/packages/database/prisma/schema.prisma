@@ -501,6 +501,13 @@ model ConversationParticipant {
   // Lu/non-lu dérivé de cette date plutôt qu'une table de statuts par message : un message est
   // non lu pour ce participant si createdAt > lastReadAt (ou lastReadAt null).
   lastReadAt     DateTime?
+  // Épinglage et masquage : préférences propres à ce participant, jamais visibles des autres.
+  isPinned       Boolean   @default(false)
+  pinnedAt       DateTime?
+  // "Suppression" d'une conversation = masquage de sa liste pour ce participant seulement (les
+  // autres et l'historique ne sont pas affectés) ; elle réapparaît si un nouveau message arrive
+  // après cette date, cf. ChatService.listConversations.
+  hiddenAt       DateTime?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)

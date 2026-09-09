@@ -230,111 +230,115 @@ export function ConversationThread({
 
           return (
             <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`group max-w-[80%] ${isMine ? 'items-end' : 'items-start'} flex flex-col`}>
-                {conversation.type === 'GROUP' && !isMine && (
-                  <span className="text-[10px] text-gray-400 mb-0.5 px-1">
-                    {chatUserDisplayName(message.sender)}
-                  </span>
-                )}
-                <div
-                  className={`relative rounded-2xl px-3 py-2 ${
-                    message.isDeleted
-                      ? 'bg-gray-50 text-gray-400 italic text-sm'
-                      : isMine
-                        ? 'bg-[#F28C38] text-white'
-                        : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  {message.isDeleted ? (
-                    <span className="text-sm">Message supprimé</span>
-                  ) : isEditing ? (
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        autoFocus
-                        value={editingBody}
-                        onChange={(e) => setEditingBody(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit()
-                          if (e.key === 'Escape') setEditingId(null)
-                        }}
-                        className="text-sm text-gray-900 bg-white rounded-lg px-2 py-1 outline-none min-w-[140px]"
-                      />
-                      <button onClick={saveEdit} className="text-white/90 hover:text-white shrink-0">
-                        <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-                      </button>
-                      <button onClick={() => setEditingId(null)} className="text-white/90 hover:text-white shrink-0">
-                        <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {message.body && <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>}
-                      {message.attachments.map((attachment) =>
-                        isImage(attachment.mimeType) ? (
-                          <a
-                            key={attachment.id}
-                            href={chatApi.attachmentUrl(attachment.id)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block mt-1.5"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={chatApi.attachmentUrl(attachment.id)}
-                              alt={attachment.fileName}
-                              className="max-w-full max-h-48 rounded-lg object-cover"
-                            />
-                          </a>
-                        ) : (
-                          <a
-                            key={attachment.id}
-                            href={chatApi.attachmentUrl(attachment.id)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={`mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ${
-                              isMine ? 'bg-white/15 hover:bg-white/25' : 'bg-white hover:bg-gray-50 border border-gray-200'
-                            }`}
-                          >
-                            <Paperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-                            <span className="truncate flex-1">{attachment.fileName}</span>
-                            <span className="opacity-70 shrink-0">{fmtSize(attachment.size)}</span>
-                          </a>
-                        )
-                      )}
-                    </>
-                  )}
-
-                  {!message.isDeleted && isMine && !isEditing && (
-                    <div className="absolute -left-14 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-1">
-                      {message.type === 'TEXT' && (
-                        <button
-                          onClick={() => startEdit(message)}
-                          aria-label="Modifier"
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" strokeWidth={2} />
-                        </button>
-                      )}
+              {/* Actions et bulle en frères dans un même flex row (plutôt qu'en position absolute
+                  hors-flux) : un vide entre les deux ferait perdre le survol du groupe avant même
+                  d'atteindre les boutons, les rendant quasi impossibles à cliquer. */}
+              <div className="group flex items-center gap-1 max-w-[80%]">
+                {!message.isDeleted && isMine && !isEditing && (
+                  <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                    {message.type === 'TEXT' && (
                       <button
-                        onClick={() => handleDelete(message.id)}
-                        aria-label="Supprimer"
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        onClick={() => startEdit(message)}
+                        aria-label="Modifier"
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                       >
-                        <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                        <Pencil className="w-3.5 h-3.5" strokeWidth={2} />
                       </button>
-                    </div>
+                    )}
+                    <button
+                      onClick={() => handleDelete(message.id)}
+                      aria-label="Supprimer"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                    </button>
+                  </div>
+                )}
+                <div className={`flex flex-col min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
+                  {conversation.type === 'GROUP' && !isMine && (
+                    <span className="text-[10px] text-gray-400 mb-0.5 px-1">
+                      {chatUserDisplayName(message.sender)}
+                    </span>
                   )}
-                </div>
-                <div className="flex items-center gap-1 mt-0.5 px-1">
-                  <span className="text-[10px] text-gray-400">
-                    {fmtTime(message.createdAt)}
-                    {message.isEdited && !message.isDeleted ? ' · modifié' : ''}
-                  </span>
-                  {isRead ? (
-                    <CheckCheck className="w-3 h-3 text-[#F28C38]" strokeWidth={2} />
-                  ) : isMine && !message.isDeleted ? (
-                    <Check className="w-3 h-3 text-gray-300" strokeWidth={2} />
-                  ) : null}
+                  <div
+                    className={`rounded-2xl px-3 py-2 ${
+                      message.isDeleted
+                        ? 'bg-gray-50 text-gray-400 italic text-sm'
+                        : isMine
+                          ? 'bg-[#F28C38] text-white'
+                          : 'bg-gray-100 text-gray-900'
+                    }`}
+                  >
+                    {message.isDeleted ? (
+                      <span className="text-sm">Message supprimé</span>
+                    ) : isEditing ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={editingBody}
+                          onChange={(e) => setEditingBody(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveEdit()
+                            if (e.key === 'Escape') setEditingId(null)
+                          }}
+                          className="text-sm text-gray-900 bg-white rounded-lg px-2 py-1 outline-none min-w-[140px]"
+                        />
+                        <button onClick={saveEdit} className="text-white/90 hover:text-white shrink-0">
+                          <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        </button>
+                        <button onClick={() => setEditingId(null)} className="text-white/90 hover:text-white shrink-0">
+                          <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {message.body && <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>}
+                        {message.attachments.map((attachment) =>
+                          isImage(attachment.mimeType) ? (
+                            <a
+                              key={attachment.id}
+                              href={chatApi.attachmentUrl(attachment.id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block mt-1.5"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={chatApi.attachmentUrl(attachment.id)}
+                                alt={attachment.fileName}
+                                className="max-w-full max-h-48 rounded-lg object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              key={attachment.id}
+                              href={chatApi.attachmentUrl(attachment.id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ${
+                                isMine ? 'bg-white/15 hover:bg-white/25' : 'bg-white hover:bg-gray-50 border border-gray-200'
+                              }`}
+                            >
+                              <Paperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                              <span className="truncate flex-1">{attachment.fileName}</span>
+                              <span className="opacity-70 shrink-0">{fmtSize(attachment.size)}</span>
+                            </a>
+                          )
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5 px-1">
+                    <span className="text-[10px] text-gray-400">
+                      {fmtTime(message.createdAt)}
+                      {message.isEdited && !message.isDeleted ? ' · modifié' : ''}
+                    </span>
+                    {isRead ? (
+                      <CheckCheck className="w-3 h-3 text-[#F28C38]" strokeWidth={2} />
+                    ) : isMine && !message.isDeleted ? (
+                      <Check className="w-3 h-3 text-gray-300" strokeWidth={2} />
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>

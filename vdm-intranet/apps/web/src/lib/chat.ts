@@ -61,6 +61,8 @@ export type Conversation = {
 export type ConversationSummary = Conversation & {
   lastMessage: ChatMessage | null
   unreadCount: number
+  // Épinglage propre à l'utilisateur courant (jamais dans `participants`, cf. ChatService.listConversations).
+  isPinned: boolean
 }
 
 export type MessagesPage = { messages: ChatMessage[]; hasMore: boolean }
@@ -116,6 +118,17 @@ export const chatApi = {
 
   markRead: (id: string) =>
     req<{ lastReadAt: string }>(`/chat/conversations/${id}/read`, { method: 'PATCH' }),
+
+  togglePin: (id: string, pinned: boolean) =>
+    req<{ isPinned: boolean }>(`/chat/conversations/${id}/pin`, {
+      method: 'PATCH',
+      body: JSON.stringify({ pinned }),
+    }),
+
+  // "Supprime" la conversation de la liste du seul utilisateur courant — cf. commentaire de
+  // ChatService.deleteConversation.
+  deleteConversation: (id: string) =>
+    req<{ deleted: boolean }>(`/chat/conversations/${id}`, { method: 'DELETE' }),
 
   attachmentUrl: (attachmentId: string) => `${API_BASE}/api/chat/attachments/${attachmentId}`,
 }

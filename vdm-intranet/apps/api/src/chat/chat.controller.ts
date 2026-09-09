@@ -23,6 +23,7 @@ import { CreateConversationDto } from './dto/create-conversation.dto'
 import { UpdateConversationDto } from './dto/update-conversation.dto'
 import { AddParticipantsDto } from './dto/add-participants.dto'
 import { UpdateMessageDto } from './dto/update-message.dto'
+import { TogglePinDto } from './dto/toggle-pin.dto'
 import {
   MAX_FILES_PER_MESSAGE,
   MAX_FILE_SIZE_BYTES,
@@ -70,6 +71,16 @@ export class ChatController {
   @Patch('conversations/:id/read')
   markRead(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.chatService.markRead(id, user)
+  }
+
+  @Patch('conversations/:id/pin')
+  togglePin(@Param('id') id: string, @Body() dto: TogglePinDto, @CurrentUser() user: AuthUser) {
+    return this.chatService.togglePin(id, dto.pinned, user)
+  }
+
+  @Delete('conversations/:id')
+  deleteConversation(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.chatService.deleteConversation(id, user)
   }
 
   @Post('conversations/:id/participants')
