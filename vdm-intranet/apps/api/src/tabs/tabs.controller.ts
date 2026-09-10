@@ -135,7 +135,8 @@ export class TabsController {
 
   @Delete('folders/:id')
   @ApiOperation({
-    summary: 'Supprimer un dossier — les onglets sont conservés, non regroupés (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)',
+    summary:
+      'Supprimer un dossier — les onglets sont conservés, non regroupés (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)',
   })
   removeFolder(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tabsService.removeFolder(user, id)
@@ -156,7 +157,9 @@ export class TabsController {
   }
 
   @Patch('reorder')
-  @ApiOperation({ summary: 'Réordonner les onglets et/ou les déplacer entre dossiers (drag & drop)' })
+  @ApiOperation({
+    summary: 'Réordonner les onglets et/ou les déplacer entre dossiers (drag & drop)',
+  })
   reorderTabs(@CurrentUser() user: AuthUser, @Body() dto: ReorderTabsDto) {
     return this.tabsService.reorderTabs(user, dto)
   }
@@ -177,7 +180,8 @@ export class TabsController {
 
   @Get(':id/credential')
   @ApiOperation({
-    summary: "Révéler l'identifiant partagé d'un onglet (visible par qui voit l'onglet, journalisé)",
+    summary:
+      "Révéler l'identifiant partagé d'un onglet (visible par qui voit l'onglet, journalisé)",
   })
   getCredential(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tabsService.getCredential(user, id)

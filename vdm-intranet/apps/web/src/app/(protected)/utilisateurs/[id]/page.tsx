@@ -35,7 +35,9 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
         {label}
       </div>
-      <div className="text-sm text-gray-700">{value || <span className="text-gray-300">—</span>}</div>
+      <div className="text-sm text-gray-700">
+        {value || <span className="text-gray-300">—</span>}
+      </div>
     </div>
   )
 }

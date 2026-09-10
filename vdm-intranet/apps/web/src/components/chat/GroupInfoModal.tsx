@@ -16,7 +16,13 @@ interface GroupInfoModalProps {
   onLeft: () => void
 }
 
-export function GroupInfoModal({ conversation, currentUserId, onClose, onChanged, onLeft }: GroupInfoModalProps) {
+export function GroupInfoModal({
+  conversation,
+  currentUserId,
+  onClose,
+  onChanged,
+  onLeft,
+}: GroupInfoModalProps) {
   const me = conversation.participants.find((p) => p.userId === currentUserId)
   const isAdmin = !!me?.isAdmin
 
@@ -91,7 +97,10 @@ export function GroupInfoModal({ conversation, currentUserId, onClose, onChanged
   }
 
   async function handleLeave() {
-    const ok = await confirm({ message: 'Quitter ce groupe ? Vous ne recevrez plus ses messages.', destructive: true })
+    const ok = await confirm({
+      message: 'Quitter ce groupe ? Vous ne recevrez plus ses messages.',
+      destructive: true,
+    })
     if (!ok) return
     try {
       await chatApi.removeParticipant(conversation.id, currentUserId)
@@ -123,7 +132,10 @@ export function GroupInfoModal({ conversation, currentUserId, onClose, onChanged
             <div className="flex items-center gap-1.5">
               <span className="font-semibold text-gray-900 truncate">{conversation.name}</span>
               {isAdmin && (
-                <button onClick={() => setEditingName(true)} className="text-gray-300 hover:text-gray-600 shrink-0">
+                <button
+                  onClick={() => setEditingName(true)}
+                  className="text-gray-300 hover:text-gray-600 shrink-0"
+                >
                   <Pencil className="w-3.5 h-3.5" strokeWidth={2} />
                 </button>
               )}
@@ -149,7 +161,10 @@ export function GroupInfoModal({ conversation, currentUserId, onClose, onChanged
       {showAddPicker && (
         <div className="mb-3 border border-gray-100 rounded-xl p-2">
           <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300" strokeWidth={2} />
+            <Search
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300"
+              strokeWidth={2}
+            />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -165,13 +180,22 @@ export function GroupInfoModal({ conversation, currentUserId, onClose, onChanged
                   key={user.id}
                   onClick={() =>
                     setSelectedIds((prev) =>
-                      prev.includes(user.id) ? prev.filter((x) => x !== user.id) : [...prev, user.id]
+                      prev.includes(user.id)
+                        ? prev.filter((x) => x !== user.id)
+                        : [...prev, user.id]
                     )
                   }
                   className="w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-gray-50 text-left"
                 >
-                  <Avatar firstName={user.firstName} lastName={user.lastName} username={user.username} size="sm" />
-                  <span className="flex-1 text-xs text-gray-800 truncate">{chatUserDisplayName(user)}</span>
+                  <Avatar
+                    firstName={user.firstName}
+                    lastName={user.lastName}
+                    username={user.username}
+                    size="sm"
+                  />
+                  <span className="flex-1 text-xs text-gray-800 truncate">
+                    {chatUserDisplayName(user)}
+                  </span>
                   <span
                     className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${
                       isSelected ? 'bg-[#F28C38] border-[#F28C38]' : 'border-gray-300'
@@ -195,7 +219,10 @@ export function GroupInfoModal({ conversation, currentUserId, onClose, onChanged
 
       <div className="max-h-56 overflow-y-auto space-y-0.5 mb-4">
         {conversation.participants.map((participant) => (
-          <div key={participant.userId} className="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg">
+          <div
+            key={participant.userId}
+            className="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg"
+          >
             <Avatar
               firstName={participant.user.firstName}
               lastName={participant.user.lastName}
@@ -203,7 +230,9 @@ export function GroupInfoModal({ conversation, currentUserId, onClose, onChanged
               size="sm"
             />
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-800 truncate">{chatUserDisplayName(participant.user)}</div>
+              <div className="text-sm text-gray-800 truncate">
+                {chatUserDisplayName(participant.user)}
+              </div>
             </div>
             {participant.isAdmin && (
               <span className="text-[10px] font-semibold text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full shrink-0">

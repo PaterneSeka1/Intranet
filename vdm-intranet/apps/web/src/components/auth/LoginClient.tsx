@@ -21,9 +21,7 @@ interface Props {
   initialLogo?: string
 }
 
-export function LoginClient({
-  initialLogo,
-}: Props) {
+export function LoginClient({ initialLogo }: Props) {
   const [step, setStep] = useState<Step>('form')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')

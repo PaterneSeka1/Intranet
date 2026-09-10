@@ -465,8 +465,8 @@ export class ReportsService {
     const periodToRaw = parsedTo ? dateOnly(parsedTo) : today
     const periodTo = periodToRaw > today ? today : periodToRaw
 
-    const [users, presences, connectionsCount, mandates, holiday, activeLeaves] =
-      await Promise.all([
+    const [users, presences, connectionsCount, mandates, holiday, activeLeaves] = await Promise.all(
+      [
         this.prisma.user.findMany({
           where: { ...userWhere, isActive: true },
           select: {
@@ -506,7 +506,8 @@ export class ReportsService {
         }),
         this.publicHolidays.isHoliday(today),
         this.leaveSync.getActiveLeaves(today),
-      ])
+      ]
+    )
 
     const presenceByUserId = new Map(presences.map((p) => [p.userId, p]))
     const mandateMap = new Map(mandates.map((m) => [m.userId, m]))

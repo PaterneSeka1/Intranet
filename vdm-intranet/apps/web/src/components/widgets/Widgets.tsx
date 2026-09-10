@@ -511,10 +511,7 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
               ) : (
                 <>
                   {WeatherIcon && (
-                    <WeatherIcon
-                      className="w-9 h-9 mt-1 text-[#F28C38]"
-                      strokeWidth={1.5}
-                    />
+                    <WeatherIcon className="w-9 h-9 mt-1 text-[#F28C38]" strokeWidth={1.5} />
                   )}
                   <div className="text-2xl font-bold text-gray-900 leading-tight">
                     {weather.temperature} °C

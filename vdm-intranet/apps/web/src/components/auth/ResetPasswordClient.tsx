@@ -39,7 +39,6 @@ function Shell({
             alt="Veilleur des Médias"
             className="h-12 w-auto mx-auto mb-4"
           />
-
         </div>
         {children}
       </div>

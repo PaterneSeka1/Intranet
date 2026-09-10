@@ -11,9 +11,7 @@ interface Props {
   initialLogo?: string
 }
 
-export function ForgotPasswordClient({
-  initialLogo,
-}: Props) {
+export function ForgotPasswordClient({ initialLogo }: Props) {
   const [identifier, setIdentifier] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
@@ -65,8 +63,8 @@ export function ForgotPasswordClient({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <p className="text-sm text-gray-500 mb-4">
-                Indiquez votre matricule ou votre email : si un compte correspond, vous recevrez
-                un lien pour choisir un nouveau mot de passe.
+                Indiquez votre matricule ou votre email : si un compte correspond, vous recevrez un
+                lien pour choisir un nouveau mot de passe.
               </p>
               <label
                 htmlFor="fp-identifier"

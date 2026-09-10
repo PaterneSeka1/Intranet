@@ -72,7 +72,7 @@ function macosScript(appUrl: string, appName: string): string {
     "# Script de lancement exécuté à chaque connexion : vérifie d'abord que",
     "# l'application est toujours installée avant de l'ouvrir. Si elle a été",
     '# désinstallée, il retire lui-même le démarrage automatique.',
-    "cat > \"$LAUNCHER\" <<'LAUNCHER_CONTENT'",
+    'cat > "$LAUNCHER" <<\'LAUNCHER_CONTENT\'',
     '#!/bin/bash',
     `APP_PATH="$HOME/Applications/Chrome Apps/${safeName}.app"`,
     'PLIST_PATH="$HOME/Library/LaunchAgents/com.vdm.intranet.plist"',

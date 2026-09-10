@@ -270,7 +270,11 @@ export default async function AccueilPage() {
             )}
           </div>
         ) : (
-          <HomeResources folders={folders} tabsByFolder={tabsByFolder} ungroupedTabs={ungroupedTabs} />
+          <HomeResources
+            folders={folders}
+            tabsByFolder={tabsByFolder}
+            ungroupedTabs={ungroupedTabs}
+          />
         )}
       </section>
     </div>

@@ -175,7 +175,7 @@ describe('PresenceService — mandats', () => {
       expect(prisma.dailyMandate.upsert).toHaveBeenCalledTimes(1)
     })
 
-    it("autorise deleteMandate à un CTO_ADMIN sur un mandat du PDG", async () => {
+    it('autorise deleteMandate à un CTO_ADMIN sur un mandat du PDG', async () => {
       prisma.dailyMandate.findUnique.mockResolvedValue({
         id: 'm1',
         userId: 'pdg1',
@@ -267,9 +267,7 @@ describe('PresenceService — mandats', () => {
         user: { role: Role.RESPONSABLE_BU, businessUnitId: 'buA', poleId: null },
       })
 
-      await expect(service.deleteMandate('m3', responsableBuA)).rejects.toThrow(
-        ForbiddenException
-      )
+      await expect(service.deleteMandate('m3', responsableBuA)).rejects.toThrow(ForbiddenException)
       expect(prisma.dailyMandate.delete).not.toHaveBeenCalled()
     })
 

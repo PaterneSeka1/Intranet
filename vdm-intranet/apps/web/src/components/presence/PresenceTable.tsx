@@ -179,8 +179,7 @@ export function PresenceTable({
       label: 'Présence',
       sortable: true,
       // À distance en premier au tri croissant (0), puis sur site (1), puis non vérifié (2).
-      sortValue: (r) =>
-        r.presence?.isOffSite == null ? 2 : r.presence.isOffSite ? 0 : 1,
+      sortValue: (r) => (r.presence?.isOffSite == null ? 2 : r.presence.isOffSite ? 0 : 1),
       render: (r) => {
         if (!r.presence || r.presence.isOffSite == null) {
           return <span className="text-gray-200 text-xs">—</span>

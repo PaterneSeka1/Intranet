@@ -1,4 +1,12 @@
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator'
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator'
 import { ConversationType } from '@prisma/client'
 
 export class CreateConversationDto {

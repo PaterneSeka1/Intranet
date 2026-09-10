@@ -261,26 +261,28 @@ export class PresenceService {
 
     // Calculer le groupe horaire hors transaction (lecture seule, non critique). Les 3 lectures
     // sont indépendantes — parallélisées plutôt qu'enchaînées en série.
-    const [
-      { time: expectedTime, isNightShift },
-      { time: expectedDepartureTime },
-      workplace,
-    ] = await Promise.all([
-      this.schedule.getScheduleSource(userId, today),
-      this.schedule.getDepartureScheduleSource(userId, today),
-      // Écart au lieu de travail de référence — comparé uniquement à la première connexion du jour
-      // (seul moment où la géolocalisation est obligatoire). null tant qu'aucun WorkplaceLocation
-      // n'est configuré : ne veut jamais dire "sur site", cf. redactPresenceForRole/type GeolocatedPresence.
-      this.prisma.workplaceLocation.findFirst({
-        orderBy: { createdAt: 'asc' },
-      }),
-    ])
+    const [{ time: expectedTime, isNightShift }, { time: expectedDepartureTime }, workplace] =
+      await Promise.all([
+        this.schedule.getScheduleSource(userId, today),
+        this.schedule.getDepartureScheduleSource(userId, today),
+        // Écart au lieu de travail de référence — comparé uniquement à la première connexion du jour
+        // (seul moment où la géolocalisation est obligatoire). null tant qu'aucun WorkplaceLocation
+        // n'est configuré : ne veut jamais dire "sur site", cf. redactPresenceForRole/type GeolocatedPresence.
+        this.prisma.workplaceLocation.findFirst({
+          orderBy: { createdAt: 'asc' },
+        }),
+      ])
 
     // mapsUrl toujours construit côté serveur — jamais depuis le client
     const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
     const distanceFromWorkplaceMeters = workplace
       ? Math.round(
-          haversineDistanceMeters(dto.latitude, dto.longitude, workplace.latitude, workplace.longitude)
+          haversineDistanceMeters(
+            dto.latitude,
+            dto.longitude,
+            workplace.latitude,
+            workplace.longitude
+          )
         )
       : null
     const isOffSite = workplace ? distanceFromWorkplaceMeters! > workplace.radiusMeters : null

@@ -44,6 +44,9 @@ export function isDangerousFilename(originalName: string): boolean {
 
 /** Nom de fichier aléatoire (jamais le nom d'origine) pour éviter collisions et traversée de chemin. */
 export function randomStorageFilename(originalName: string): string {
-  const ext = path.extname(originalName).toLowerCase().replace(/[^a-z0-9.]/g, '')
+  const ext = path
+    .extname(originalName)
+    .toLowerCase()
+    .replace(/[^a-z0-9.]/g, '')
   return `${crypto.randomUUID()}${ext}`
 }

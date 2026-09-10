@@ -2323,7 +2323,8 @@ function GroupsSection({
                   )}
                   {g.expectedDepartureTime && (
                     <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                      <DoorOpen className="w-3.5 h-3.5" strokeWidth={1.75} /> {g.expectedDepartureTime}
+                      <DoorOpen className="w-3.5 h-3.5" strokeWidth={1.75} />{' '}
+                      {g.expectedDepartureTime}
                     </span>
                   )}
                   <span className="text-[10px] text-gray-400">
@@ -2512,7 +2513,7 @@ function PolesSection({
 // ---------------------------------------------------------------------------
 
 const GEO_ERRORS: Record<number, string> = {
-  1: "Accès à la localisation refusé — autorisez-la dans les paramètres de votre navigateur.",
+  1: 'Accès à la localisation refusé — autorisez-la dans les paramètres de votre navigateur.',
   2: 'Position introuvable — vérifiez que le GPS est activé.',
   3: 'La demande de localisation a expiré, réessayez.',
 }
@@ -2574,7 +2575,12 @@ function WorkplaceLocationPanel({ initial }: { initial: WorkplaceLocation | null
 
     setSaving(true)
     try {
-      const payload: WorkplaceLocationPayload = { label: label.trim(), latitude: lat, longitude: lng, radiusMeters: radius }
+      const payload: WorkplaceLocationPayload = {
+        label: label.trim(),
+        latitude: lat,
+        longitude: lng,
+        radiusMeters: radius,
+      }
       const updated = await presenceApi.saveWorkplaceLocation(payload)
       setSaved(updated)
       toast.success('Lieu de travail enregistré.')

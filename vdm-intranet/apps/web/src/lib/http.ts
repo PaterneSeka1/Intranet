@@ -40,7 +40,10 @@ async function rawFetch(path: string, opts: RequestOptions = {}): Promise<Respon
     return await fetch(`${API_BASE}/api${path}`, {
       credentials: 'include',
       ...requestInit,
-      headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...requestInit.headers },
+      headers: {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...requestInit.headers,
+      },
       signal: signal ?? controller?.signal,
     })
   } finally {

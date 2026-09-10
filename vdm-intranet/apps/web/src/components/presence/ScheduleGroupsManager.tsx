@@ -210,7 +210,8 @@ export function ScheduleGroupsManager({
                     )}
                     {g.expectedDepartureTime && (
                       <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                        <DoorOpen className="w-3.5 h-3.5" strokeWidth={1.75} /> {g.expectedDepartureTime}
+                        <DoorOpen className="w-3.5 h-3.5" strokeWidth={1.75} />{' '}
+                        {g.expectedDepartureTime}
                       </span>
                     )}
                   </div>

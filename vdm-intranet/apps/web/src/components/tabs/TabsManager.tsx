@@ -26,12 +26,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  rectSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable'
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
   type Tab,
@@ -232,13 +227,21 @@ function IconPickerField({
               : undefined
           }
           className={`w-8 h-8 rounded-lg flex items-center justify-center border text-xs font-semibold cursor-pointer transition-colors ${
-            isImageIcon(value) ? 'border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-100'
+            isImageIcon(value)
+              ? 'border-transparent'
+              : 'border-gray-200 text-gray-500 hover:bg-gray-100'
           }`}
           title="Choisir une image"
         >
           {processing ? '…' : 'IMG'}
         </label>
-        <input id={inputId} type="file" accept="image/*" onChange={onImageChange} className="sr-only" />
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          onChange={onImageChange}
+          className="sr-only"
+        />
       </div>
       <div className="mb-2 flex items-center gap-2">
         <div
@@ -248,7 +251,9 @@ function IconPickerField({
           <TabIcon value={value} color={color} className="w-6 h-6" />
         </div>
         <div className="text-[11px] text-gray-400 leading-snug">
-          {isImageIcon(value) ? 'Image redimensionnée automatiquement.' : 'Icône de la palette ou image.'}
+          {isImageIcon(value)
+            ? 'Image redimensionnée automatiquement.'
+            : 'Icône de la palette ou image.'}
         </div>
       </div>
       <input
@@ -449,7 +454,9 @@ function SortableTabCard({
         onEdit={onEdit}
         onDelete={onDelete}
         onManageCredential={onManageCredential}
-        dragHandle={!disabled ? <DragHandle attributes={attributes} listeners={listeners} /> : undefined}
+        dragHandle={
+          !disabled ? <DragHandle attributes={attributes} listeners={listeners} /> : undefined
+        }
       />
     </div>
   )
@@ -572,10 +579,20 @@ function FolderSection({
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="min-w-0 bg-gray-50/60 border border-gray-100 rounded-2xl p-3 sm:p-4">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="min-w-0 bg-gray-50/60 border border-gray-100 rounded-2xl p-3 sm:p-4"
+    >
       <div className="flex items-center justify-between gap-2 mb-3">
-        <button type="button" onClick={onToggleCollapsed} className="flex items-center gap-2 min-w-0 text-left flex-1">
-          {dndEnabled && canManageThis && <DragHandle attributes={attributes} listeners={listeners} className="p-1 -ml-1" />}
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          className="flex items-center gap-2 min-w-0 text-left flex-1"
+        >
+          {dndEnabled && canManageThis && (
+            <DragHandle attributes={attributes} listeners={listeners} className="p-1 -ml-1" />
+          )}
           {collapsed ? (
             <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" strokeWidth={1.75} />
           ) : (
@@ -585,7 +602,11 @@ function FolderSection({
             style={{ background: withAlpha(folder.color || DEFAULT_TAB_COLOR, '1A') }}
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
           >
-            <TabIcon value={folder.icon || DEFAULT_FOLDER_ICON} color={folder.color} className="w-4 h-4" />
+            <TabIcon
+              value={folder.icon || DEFAULT_FOLDER_ICON}
+              color={folder.color}
+              className="w-4 h-4"
+            />
           </span>
           <span className="font-semibold text-gray-800 text-sm truncate">{folder.name}</span>
           <span className="text-[10px] text-gray-400 bg-white px-1.5 py-0.5 rounded-full shrink-0">
@@ -694,9 +715,10 @@ export function TabsManager({
   const [error, setError] = useState('')
   const [iconProcessing, setIconProcessing] = useState(false)
 
-  const [folderModal, setFolderModal] = useState<{ mode: 'create' | 'edit'; folder?: TabFolder } | null>(
-    null
-  )
+  const [folderModal, setFolderModal] = useState<{
+    mode: 'create' | 'edit'
+    folder?: TabFolder
+  } | null>(null)
   const [folderForm, setFolderForm] = useState<FolderFormData>(EMPTY_FOLDER_FORM)
   const [folderSubmitting, setFolderSubmitting] = useState(false)
   const [folderError, setFolderError] = useState('')
@@ -743,11 +765,7 @@ export function TabsManager({
   function openCreate(folder?: TabFolder) {
     setForm({
       ...EMPTY_TAB_FORM,
-      businessUnitId: folder
-        ? (folder.businessUnitId ?? '')
-        : canManageAll
-          ? ''
-          : (userBuId ?? ''),
+      businessUnitId: folder ? (folder.businessUnitId ?? '') : canManageAll ? '' : (userBuId ?? ''),
       folderId: folder ? folder.id : '',
     })
     setError('')
@@ -912,7 +930,15 @@ export function TabsManager({
         setTabs((prev) =>
           prev.map((t) =>
             t.folderId === updated.id
-              ? { ...t, folder: { id: updated.id, name: updated.name, icon: updated.icon, color: updated.color } }
+              ? {
+                  ...t,
+                  folder: {
+                    id: updated.id,
+                    name: updated.name,
+                    icon: updated.icon,
+                    color: updated.color,
+                  },
+                }
               : t
           )
         )
@@ -972,7 +998,11 @@ export function TabsManager({
     setCredentialLoading(true)
     try {
       const cred = await tabsApi.getCredential(tab.id)
-      setCredentialForm({ username: cred.username, password: cred.password, notes: cred.notes ?? '' })
+      setCredentialForm({
+        username: cred.username,
+        password: cred.password,
+        notes: cred.notes ?? '',
+      })
     } catch (err) {
       setCredentialError(
         err instanceof Error ? err.message : "Erreur lors du chargement de l'identifiant."
@@ -1043,7 +1073,9 @@ export function TabsManager({
     try {
       await tabFoldersApi.reorder(items)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la réorganisation des dossiers.')
+      toast.error(
+        err instanceof Error ? err.message : 'Erreur lors de la réorganisation des dossiers.'
+      )
     }
   }
 
@@ -1073,7 +1105,9 @@ export function TabsManager({
     try {
       await tabsApi.reorder(items)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la réorganisation des onglets.')
+      toast.error(
+        err instanceof Error ? err.message : 'Erreur lors de la réorganisation des onglets.'
+      )
     }
   }
 
@@ -1341,7 +1375,9 @@ export function TabsManager({
             ) : activeDrag?.type === 'folder' ? (
               <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-gray-200 bg-white shadow-2xl w-72">
                 <span
-                  style={{ background: withAlpha(activeDrag.folder.color || DEFAULT_TAB_COLOR, '1A') }}
+                  style={{
+                    background: withAlpha(activeDrag.folder.color || DEFAULT_TAB_COLOR, '1A'),
+                  }}
                   className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                 >
                   <TabIcon
@@ -1383,7 +1419,9 @@ export function TabsManager({
               <select
                 id="tab-bu"
                 value={form.businessUnitId}
-                onChange={(e) => setForm((f) => ({ ...f, businessUnitId: e.target.value, folderId: '' }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, businessUnitId: e.target.value, folderId: '' }))
+                }
                 className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
               >
                 <option value="">Tous les utilisateurs (Global)</option>
@@ -1535,7 +1573,11 @@ export function TabsManager({
       <Modal
         open={!!folderModal}
         onClose={() => setFolderModal(null)}
-        title={folderModal?.mode === 'create' ? 'Nouveau dossier' : `Modifier — ${folderModal?.folder?.name ?? ''}`}
+        title={
+          folderModal?.mode === 'create'
+            ? 'Nouveau dossier'
+            : `Modifier — ${folderModal?.folder?.name ?? ''}`
+        }
         subtitle={
           folderModal?.mode === 'create'
             ? 'Regrouper des onglets sous un même dossier'

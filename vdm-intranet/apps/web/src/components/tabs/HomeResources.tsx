@@ -77,7 +77,13 @@ function CredentialModal({ tab, onClose }: { tab: Tab | null; onClose: () => voi
   }, [tab])
 
   return (
-    <Modal open={!!tab} onClose={onClose} title="Identifiants partagés" subtitle={tab?.name} size="sm">
+    <Modal
+      open={!!tab}
+      onClose={onClose}
+      title="Identifiants partagés"
+      subtitle={tab?.name}
+      size="sm"
+    >
       {loading && <p className="text-sm text-gray-400 text-center py-6">Chargement…</p>}
       {!loading && error && (
         <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
@@ -153,7 +159,15 @@ function CredentialModal({ tab, onClose }: { tab: Tab | null; onClose: () => voi
  * pas une simple icône dans un carré — cliquer dessus l'ouvre (Modal) pour révéler les onglets à
  * l'intérieur, comme un vrai dossier qu'on ouvrirait.
  */
-function FolderTile({ folder, count, onOpen }: { folder: TabFolder; count: number; onOpen: () => void }) {
+function FolderTile({
+  folder,
+  count,
+  onOpen,
+}: {
+  folder: TabFolder
+  count: number
+  onOpen: () => void
+}) {
   const color = folder.color || DEFAULT_TAB_COLOR
   return (
     <button

@@ -127,7 +127,8 @@ export function ConversationThread({
   useEffect(() => {
     if (!openActionsId) return
     function handleClick(e: MouseEvent) {
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) setOpenActionsId(null)
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node))
+        setOpenActionsId(null)
     }
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpenActionsId(null)
@@ -140,7 +141,10 @@ export function ConversationThread({
     }
   }, [openActionsId])
 
-  const other = conversation.type === 'DIRECT' ? conversation.participants.find((p) => p.userId !== currentUserId) : null
+  const other =
+    conversation.type === 'DIRECT'
+      ? conversation.participants.find((p) => p.userId !== currentUserId)
+      : null
   const isOnline = other ? onlineUserIds.has(other.userId) : false
 
   const typingNames = Array.from(typingUserIds)
@@ -261,7 +265,10 @@ export function ConversationThread({
       <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
         {hasMore && (
           <div className="text-center">
-            <button onClick={onLoadMore} className="text-xs text-[#F28C38] font-medium hover:underline">
+            <button
+              onClick={onLoadMore}
+              className="text-xs text-[#F28C38] font-medium hover:underline"
+            >
               Charger les messages précédents
             </button>
           </div>
@@ -291,7 +298,9 @@ export function ConversationThread({
                     ref={openActionsId === message.id ? actionsMenuRef : undefined}
                   >
                     <button
-                      onClick={() => setOpenActionsId((prev) => (prev === message.id ? null : message.id))}
+                      onClick={() =>
+                        setOpenActionsId((prev) => (prev === message.id ? null : message.id))
+                      }
                       aria-label="Actions du message"
                       aria-haspopup="menu"
                       aria-expanded={openActionsId === message.id}
@@ -366,10 +375,16 @@ export function ConversationThread({
                           }}
                           className="text-sm text-gray-900 bg-white rounded-lg px-2 py-1 outline-none min-w-[140px]"
                         />
-                        <button onClick={saveEdit} className="text-white/90 hover:text-white shrink-0">
+                        <button
+                          onClick={saveEdit}
+                          className="text-white/90 hover:text-white shrink-0"
+                        >
                           <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
                         </button>
-                        <button onClick={() => setEditingId(null)} className="text-white/90 hover:text-white shrink-0">
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="text-white/90 hover:text-white shrink-0"
+                        >
                           <X className="w-3.5 h-3.5" strokeWidth={2.5} />
                         </button>
                       </div>
@@ -403,12 +418,16 @@ export function ConversationThread({
                               target="_blank"
                               rel="noreferrer"
                               className={`mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ${
-                                isMine ? 'bg-white/15 hover:bg-white/25' : 'bg-white hover:bg-gray-50 border border-gray-200'
+                                isMine
+                                  ? 'bg-white/15 hover:bg-white/25'
+                                  : 'bg-white hover:bg-gray-50 border border-gray-200'
                               }`}
                             >
                               <Paperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
                               <span className="truncate flex-1">{attachment.fileName}</span>
-                              <span className="opacity-70 shrink-0">{fmtSize(attachment.size)}</span>
+                              <span className="opacity-70 shrink-0">
+                                {fmtSize(attachment.size)}
+                              </span>
                             </a>
                           )
                         )}

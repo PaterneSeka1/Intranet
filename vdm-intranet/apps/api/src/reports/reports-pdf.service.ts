@@ -213,9 +213,7 @@ export class ReportsPdfService {
         .map(
           (r) =>
             `<tr>${r
-              .map(
-                (c, i) => `<td${numeric.has(i) ? ' class="num"' : ''}>${escapeHtml(c)}</td>`
-              )
+              .map((c, i) => `<td${numeric.has(i) ? ' class="num"' : ''}>${escapeHtml(c)}</td>`)
               .join('')}</tr>`
         )
         .join('')}</tbody>
@@ -233,7 +231,10 @@ export class ReportsPdfService {
       { label: 'Personnes suivies', value: summaryRows.length },
       { label: 'Absences cumulées', value: sum(summaryRows.map((r) => r.absences)) },
       { label: 'Jours de retard', value: sum(summaryRows.map((r) => r.lateDays)) },
-      { label: 'Minutes de retard cumulées', value: sum(summaryRows.map((r) => r.lateMinutesTotal)) },
+      {
+        label: 'Minutes de retard cumulées',
+        value: sum(summaryRows.map((r) => r.lateMinutesTotal)),
+      },
     ])
 
     const summaryTable = this.table(
@@ -306,7 +307,10 @@ export class ReportsPdfService {
   private connectionsHtml(rows: ConnectionRows, periodLabel: string): string {
     const stats = this.statCards([
       { label: 'Connexions', value: rows.length },
-      { label: 'Premières connexions du jour', value: rows.filter((r) => r.isFirstConnectionOfDay).length },
+      {
+        label: 'Premières connexions du jour',
+        value: rows.filter((r) => r.isFirstConnectionOfDay).length,
+      },
     ])
     const body =
       stats +
@@ -423,7 +427,11 @@ export class ReportsPdfService {
 
     const leavesTable = this.table(
       ['Type', 'Du', 'Au'],
-      leaves.map((l) => [l.typeLabel, this.reports.fmtDate(l.startDate), this.reports.fmtDate(l.endDate)])
+      leaves.map((l) => [
+        l.typeLabel,
+        this.reports.fmtDate(l.startDate),
+        this.reports.fmtDate(l.endDate),
+      ])
     )
 
     const body =

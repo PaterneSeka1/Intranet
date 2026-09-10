@@ -76,7 +76,8 @@ function computePanelStyle(position: Position | null): CSSProperties {
     return { bottom: BUTTON_SIZE + EDGE_MARGIN + PANEL_GAP, right: EDGE_MARGIN }
   }
   const style: CSSProperties = {}
-  if (position.y > window.innerHeight / 2) style.bottom = window.innerHeight - position.y + PANEL_GAP
+  if (position.y > window.innerHeight / 2)
+    style.bottom = window.innerHeight - position.y + PANEL_GAP
   else style.top = position.y + BUTTON_SIZE + PANEL_GAP
   if (position.x > window.innerWidth / 2) style.right = window.innerWidth - position.x - BUTTON_SIZE
   else style.left = position.x
@@ -102,7 +103,12 @@ function fmtPreview(message: ChatMessage | null): string {
 }
 
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 interface ChatWidgetProps {
@@ -192,7 +198,10 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     if (drag.moved) {
       justDraggedRef.current = true
       try {
-        window.localStorage.setItem(WIDGET_POSITION_STORAGE_KEY, JSON.stringify(positionRef.current))
+        window.localStorage.setItem(
+          WIDGET_POSITION_STORAGE_KEY,
+          JSON.stringify(positionRef.current)
+        )
       } catch {
         /* stockage indisponible (navigation privée…) — position simplement non mémorisée */
       }
@@ -241,73 +250,103 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
       })
     })
 
-    socket.on('message:new', ({ conversationId, message }: { conversationId: string; message: ChatMessage }) => {
-      const isActive = activeConversationIdRef.current === conversationId
-      const isMine = message.senderId === currentUserId
-      let found = true
-      setConversations((prev) => {
-        if (!prev) return prev
-        const idx = prev.findIndex((c) => c.id === conversationId)
-        if (idx === -1) {
-          found = false
-          return prev
+    socket.on(
+      'message:new',
+      ({ conversationId, message }: { conversationId: string; message: ChatMessage }) => {
+        const isActive = activeConversationIdRef.current === conversationId
+        const isMine = message.senderId === currentUserId
+        let found = true
+        setConversations((prev) => {
+          if (!prev) return prev
+          const idx = prev.findIndex((c) => c.id === conversationId)
+          if (idx === -1) {
+            found = false
+            return prev
+          }
+          const conv = prev[idx]
+          const updated: ConversationSummary = {
+            ...conv,
+            lastMessage: message,
+            updatedAt: message.createdAt,
+            unreadCount: isMine || isActive ? conv.unreadCount : conv.unreadCount + 1,
+          }
+          return sortConversations([updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)])
+        })
+        // Conversation absente de la liste locale (p. ex. supprimée/masquée) : un nouveau message
+        // doit la faire réapparaître, cf. ChatService.listConversations.
+        if (!found) refreshConversations()
+        if (isActive) {
+          setActiveMessages((prev) =>
+            prev.some((m) => m.id === message.id) ? prev : [...prev, message]
+          )
+          if (!isMine) chatApi.markRead(conversationId).catch(() => {})
         }
-        const conv = prev[idx]
-        const updated: ConversationSummary = {
-          ...conv,
-          lastMessage: message,
-          updatedAt: message.createdAt,
-          unreadCount: isMine || isActive ? conv.unreadCount : conv.unreadCount + 1,
+      }
+    )
+
+    socket.on(
+      'message:updated',
+      ({ conversationId, message }: { conversationId: string; message: ChatMessage }) => {
+        if (activeConversationIdRef.current === conversationId) {
+          setActiveMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)))
         }
-        return sortConversations([updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)])
-      })
-      // Conversation absente de la liste locale (p. ex. supprimée/masquée) : un nouveau message
-      // doit la faire réapparaître, cf. ChatService.listConversations.
-      if (!found) refreshConversations()
-      if (isActive) {
-        setActiveMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]))
-        if (!isMine) chatApi.markRead(conversationId).catch(() => {})
-      }
-    })
-
-    socket.on('message:updated', ({ conversationId, message }: { conversationId: string; message: ChatMessage }) => {
-      if (activeConversationIdRef.current === conversationId) {
-        setActiveMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)))
-      }
-      setConversations((prev) =>
-        prev?.map((c) => (c.lastMessage?.id === message.id ? { ...c, lastMessage: message } : c)) ?? prev
-      )
-    })
-
-    socket.on('message:deleted', ({ conversationId, messageId }: { conversationId: string; messageId: string }) => {
-      if (activeConversationIdRef.current === conversationId) {
-        setActiveMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true, body: null } : m))
+        setConversations(
+          (prev) =>
+            prev?.map((c) =>
+              c.lastMessage?.id === message.id ? { ...c, lastMessage: message } : c
+            ) ?? prev
         )
       }
-      setConversations((prev) =>
-        prev?.map((c) =>
-          c.lastMessage?.id === messageId ? { ...c, lastMessage: { ...c.lastMessage, isDeleted: true, body: null } } : c
-        ) ?? prev
-      )
-    })
+    )
+
+    socket.on(
+      'message:deleted',
+      ({ conversationId, messageId }: { conversationId: string; messageId: string }) => {
+        if (activeConversationIdRef.current === conversationId) {
+          setActiveMessages((prev) =>
+            prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true, body: null } : m))
+          )
+        }
+        setConversations(
+          (prev) =>
+            prev?.map((c) =>
+              c.lastMessage?.id === messageId
+                ? { ...c, lastMessage: { ...c.lastMessage, isDeleted: true, body: null } }
+                : c
+            ) ?? prev
+        )
+      }
+    )
 
     socket.on('conversation:new', () => refreshConversations())
     socket.on('conversation:updated', ({ conversationId }: { conversationId: string }) => {
       refreshConversations()
       if (activeConversationIdRef.current === conversationId) {
-        chatApi.getConversation(conversationId).then(setActiveConversation).catch(() => {})
+        chatApi
+          .getConversation(conversationId)
+          .then(setActiveConversation)
+          .catch(() => {})
       }
     })
     socket.on(
       'conversation:read',
-      ({ conversationId, userId, lastReadAt }: { conversationId: string; userId: string; lastReadAt: string }) => {
+      ({
+        conversationId,
+        userId,
+        lastReadAt,
+      }: {
+        conversationId: string
+        userId: string
+        lastReadAt: string
+      }) => {
         if (activeConversationIdRef.current !== conversationId) return
         setActiveConversation((prev) =>
           prev
             ? {
                 ...prev,
-                participants: prev.participants.map((p) => (p.userId === userId ? { ...p, lastReadAt } : p)),
+                participants: prev.participants.map((p) =>
+                  p.userId === userId ? { ...p, lastReadAt } : p
+                ),
               }
             : prev
         )
@@ -315,18 +354,31 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     )
     // Épinglage/masquage synchronisés entre les onglets/appareils du même utilisateur (room privée
     // `user:{id}` côté gateway, cf. ChatGateway.emitConversationPinChanged/emitConversationHidden).
-    socket.on('conversation:pin-changed', ({ conversationId, isPinned }: { conversationId: string; isPinned: boolean }) => {
-      setConversations((prev) =>
-        prev ? sortConversations(prev.map((c) => (c.id === conversationId ? { ...c, isPinned } : c))) : prev
-      )
-    })
+    socket.on(
+      'conversation:pin-changed',
+      ({ conversationId, isPinned }: { conversationId: string; isPinned: boolean }) => {
+        setConversations((prev) =>
+          prev
+            ? sortConversations(prev.map((c) => (c.id === conversationId ? { ...c, isPinned } : c)))
+            : prev
+        )
+      }
+    )
     socket.on('conversation:hidden', ({ conversationId }: { conversationId: string }) => {
       setConversations((prev) => prev?.filter((c) => c.id !== conversationId) ?? prev)
       if (activeConversationIdRef.current === conversationId) setActiveConversationId(null)
     })
     socket.on(
       'typing:update',
-      ({ conversationId, userId, isTyping }: { conversationId: string; userId: string; isTyping: boolean }) => {
+      ({
+        conversationId,
+        userId,
+        isTyping,
+      }: {
+        conversationId: string
+        userId: string
+        isTyping: boolean
+      }) => {
         if (activeConversationIdRef.current !== conversationId || userId === currentUserId) return
         setTypingUsers((prev) => {
           const next = new Set(prev)
@@ -353,11 +405,16 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     setTypingUsers(new Set())
     setActiveLoading(true)
     try {
-      const [conversation, page] = await Promise.all([chatApi.getConversation(id), chatApi.listMessages(id)])
+      const [conversation, page] = await Promise.all([
+        chatApi.getConversation(id),
+        chatApi.listMessages(id),
+      ])
       setActiveConversation(conversation)
       setActiveMessages(page.messages)
       setActiveHasMore(page.hasMore)
-      setConversations((prev) => prev?.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)) ?? prev)
+      setConversations(
+        (prev) => prev?.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)) ?? prev
+      )
       await chatApi.markRead(id)
     } catch {
       toast.error('Impossible de charger cette conversation.')
@@ -382,11 +439,16 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     if (!activeConversationId) return
     try {
       const message = await chatApi.sendMessage(activeConversationId, body, files)
-      setActiveMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]))
-      setConversations((prev) =>
-        prev?.map((c) =>
-          c.id === activeConversationId ? { ...c, lastMessage: message, updatedAt: message.createdAt } : c
-        ) ?? prev
+      setActiveMessages((prev) =>
+        prev.some((m) => m.id === message.id) ? prev : [...prev, message]
+      )
+      setConversations(
+        (prev) =>
+          prev?.map((c) =>
+            c.id === activeConversationId
+              ? { ...c, lastMessage: message, updatedAt: message.createdAt }
+              : c
+          ) ?? prev
       )
     } catch {
       toast.error("Échec de l'envoi du message.")
@@ -405,7 +467,9 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
   async function handleDeleteMessage(messageId: string) {
     try {
       await chatApi.deleteMessage(messageId)
-      setActiveMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true, body: null } : m)))
+      setActiveMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true, body: null } : m))
+      )
     } catch {
       toast.error('Échec de la suppression du message.')
     }
@@ -413,10 +477,16 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
 
   function handleTyping(isTyping: boolean) {
     if (!activeConversationId) return
-    socketRef.current?.emit(isTyping ? 'typing:start' : 'typing:stop', { conversationId: activeConversationId })
+    socketRef.current?.emit(isTyping ? 'typing:start' : 'typing:stop', {
+      conversationId: activeConversationId,
+    })
   }
 
-  async function handleCreateConversation(payload: { type: 'DIRECT' | 'GROUP'; participantIds: string[]; name?: string }) {
+  async function handleCreateConversation(payload: {
+    type: 'DIRECT' | 'GROUP'
+    participantIds: string[]
+    name?: string
+  }) {
     try {
       const conversation = await chatApi.createConversation(payload)
       setShowNewConversation(false)
@@ -431,13 +501,19 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     const next = !conversation.isPinned
     setConversations((prev) =>
       prev
-        ? sortConversations(prev.map((c) => (c.id === conversation.id ? { ...c, isPinned: next } : c)))
+        ? sortConversations(
+            prev.map((c) => (c.id === conversation.id ? { ...c, isPinned: next } : c))
+          )
         : prev
     )
     try {
       await chatApi.togglePin(conversation.id, next)
     } catch {
-      toast.error(next ? "Impossible d'épingler cette conversation." : 'Impossible de désépingler cette conversation.')
+      toast.error(
+        next
+          ? "Impossible d'épingler cette conversation."
+          : 'Impossible de désépingler cette conversation.'
+      )
       refreshConversations()
     }
   }
@@ -469,13 +545,19 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         style={{
-          ...(position ? { left: position.x, top: position.y } : { right: EDGE_MARGIN, bottom: EDGE_MARGIN }),
+          ...(position
+            ? { left: position.x, top: position.y }
+            : { right: EDGE_MARGIN, bottom: EDGE_MARGIN }),
           touchAction: 'none',
         }}
         aria-label="Messagerie (glisser pour déplacer)"
         className="fixed z-[8500] w-14 h-14 rounded-full bg-[#F28C38] text-white shadow-xl flex items-center justify-center hover:brightness-105 transition-transform active:scale-95 cursor-grab active:cursor-grabbing select-none"
       >
-        {open ? <X className="w-6 h-6" strokeWidth={2} /> : <MessageCircle className="w-6 h-6" strokeWidth={2} />}
+        {open ? (
+          <X className="w-6 h-6" strokeWidth={2} />
+        ) : (
+          <MessageCircle className="w-6 h-6" strokeWidth={2} />
+        )}
         {!open && totalUnread > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white">
             {totalUnread > 9 ? '9+' : totalUnread}
@@ -518,10 +600,14 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                {conversations === null && <p className="text-sm text-gray-400 text-center py-8">Chargement…</p>}
+                {conversations === null && (
+                  <p className="text-sm text-gray-400 text-center py-8">Chargement…</p>
+                )}
                 {conversations?.length === 0 && (
                   <div className="text-center py-10 px-6">
-                    <p className="text-sm text-gray-400 mb-3">Aucune conversation pour le moment.</p>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Aucune conversation pour le moment.
+                    </p>
                     <button
                       onClick={() => setShowNewConversation(true)}
                       className="text-sm text-[#F28C38] font-medium hover:underline"
@@ -571,10 +657,14 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                                 {conversationDisplayName(conversation, currentUserId)}
                               </span>
                             </span>
-                            <span className="text-[10px] text-gray-400 shrink-0">{fmtTime(conversation.updatedAt)}</span>
+                            <span className="text-[10px] text-gray-400 shrink-0">
+                              {fmtTime(conversation.updatedAt)}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between gap-2 mt-0.5">
-                            <p className="text-xs text-gray-500 truncate">{fmtPreview(conversation.lastMessage)}</p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {fmtPreview(conversation.lastMessage)}
+                            </p>
                             {conversation.unreadCount > 0 && (
                               <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F28C38] text-white text-[10px] font-bold flex items-center justify-center">
                                 {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
@@ -593,7 +683,10 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                               : 'text-gray-400 hover:text-[#F28C38] hover:bg-[#F28C38]/10'
                           }`}
                         >
-                          <Pin className={`w-3.5 h-3.5 ${conversation.isPinned ? 'fill-current' : ''}`} strokeWidth={2} />
+                          <Pin
+                            className={`w-3.5 h-3.5 ${conversation.isPinned ? 'fill-current' : ''}`}
+                            strokeWidth={2}
+                          />
                         </button>
                         <button
                           onClick={() => handleDeleteConversation(conversation)}

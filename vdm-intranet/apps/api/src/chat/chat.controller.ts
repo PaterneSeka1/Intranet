@@ -108,7 +108,12 @@ export class ChatController {
     @Query('before') before?: string,
     @Query('limit') limit?: string
   ) {
-    return this.chatService.listMessages(id, user.id, before, limit ? parseInt(limit, 10) : undefined)
+    return this.chatService.listMessages(
+      id,
+      user.id,
+      before,
+      limit ? parseInt(limit, 10) : undefined
+    )
   }
 
   @Post('conversations/:id/messages')
@@ -138,7 +143,11 @@ export class ChatController {
   }
 
   @Patch('messages/:id')
-  editMessage(@Param('id') id: string, @Body() dto: UpdateMessageDto, @CurrentUser() user: AuthUser) {
+  editMessage(
+    @Param('id') id: string,
+    @Body() dto: UpdateMessageDto,
+    @CurrentUser() user: AuthUser
+  ) {
     return this.chatService.editMessage(id, dto.body, user)
   }
 

@@ -394,7 +394,7 @@ export class TabsService {
         updatedBy: { select: { id: true, username: true, fullName: true } },
       },
     })
-    if (!credential) throw new NotFoundException("Aucun identifiant enregistré pour cet onglet.")
+    if (!credential) throw new NotFoundException('Aucun identifiant enregistré pour cet onglet.')
 
     await this.log(requester.id, LogAction.TAB_CREDENTIAL_VIEWED, tabId, { tabName: tab.name })
 
@@ -448,7 +448,7 @@ export class TabsService {
       await this.prisma.portalTabCredential.delete({ where: { tabId } })
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'P2025')
-        throw new NotFoundException("Aucun identifiant enregistré pour cet onglet.")
+        throw new NotFoundException('Aucun identifiant enregistré pour cet onglet.')
       throw err
     }
     await this.log(requester.id, LogAction.TAB_CREDENTIAL_DELETED, tabId, { tabName: tab.name })
@@ -538,7 +538,13 @@ export class TabsService {
         data: dto,
         select: FOLDER_SELECT,
       })
-      await this.log(requester.id, LogAction.TAB_FOLDER_UPDATED, id, dto as object, 'PortalTabFolder')
+      await this.log(
+        requester.id,
+        LogAction.TAB_FOLDER_UPDATED,
+        id,
+        dto as object,
+        'PortalTabFolder'
+      )
       return updated
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'P2025')
@@ -630,7 +636,7 @@ export class TabsService {
         if (!folder) throw new NotFoundException('Dossier introuvable.')
         if (folder.businessUnitId !== tab.businessUnitId) {
           throw new BadRequestException(
-            "Un onglet ne peut être déplacé que dans un dossier de la même portée (global ou même BU)."
+            'Un onglet ne peut être déplacé que dans un dossier de la même portée (global ou même BU).'
           )
         }
       }
@@ -665,7 +671,10 @@ export class TabsService {
     if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) return
     if (folderBuId === null)
       throw new ForbiddenException('Seuls les administrateurs peuvent gérer les dossiers globaux.')
-    if (CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) && requester.businessUnitId === folderBuId)
+    if (
+      CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) &&
+      requester.businessUnitId === folderBuId
+    )
       return
     throw new ForbiddenException('Accès refusé à ce dossier.')
   }

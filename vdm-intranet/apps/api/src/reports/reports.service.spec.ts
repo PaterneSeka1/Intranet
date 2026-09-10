@@ -258,9 +258,7 @@ describe('ReportsService — getEmployeeReportData', () => {
     prisma.user.findFirst.mockResolvedValue(null) // hors BU du RESPONSABLE_BU demandeur
     const requester = { id: 'r1', role: Role.RESPONSABLE_BU, businessUnitId: 'bu-1', poleId: null }
 
-    await expect(service.getEmployeeReportData(requester, 'u1')).rejects.toThrow(
-      NotFoundException
-    )
+    await expect(service.getEmployeeReportData(requester, 'u1')).rejects.toThrow(NotFoundException)
   })
 
   it('rejette une plage invalide sans interroger l’employé', async () => {

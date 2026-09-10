@@ -153,7 +153,9 @@ export class ChatService {
 
     if (dto.type === ConversationType.DIRECT) {
       if (participantIds.length !== 2) {
-        throw new BadRequestException('Une conversation directe doit avoir exactement 2 participants.')
+        throw new BadRequestException(
+          'Une conversation directe doit avoir exactement 2 participants.'
+        )
       }
       const [a, b] = participantIds
       // Réutiliser la conversation DIRECT existante entre ces 2 utilisateurs plutôt que d'en
@@ -161,7 +163,10 @@ export class ChatService {
       const existing = await this.prisma.conversation.findFirst({
         where: {
           type: ConversationType.DIRECT,
-          AND: [{ participants: { some: { userId: a } } }, { participants: { some: { userId: b } } }],
+          AND: [
+            { participants: { some: { userId: a } } },
+            { participants: { some: { userId: b } } },
+          ],
         },
         select: { id: true },
       })
@@ -210,7 +215,7 @@ export class ChatService {
       throw new BadRequestException('Seuls les groupes peuvent être renommés.')
     }
     if (!participant.isAdmin) {
-      throw new ForbiddenException("Seul un administrateur du groupe peut le renommer.")
+      throw new ForbiddenException('Seul un administrateur du groupe peut le renommer.')
     }
 
     const updated = await this.prisma.conversation.update({
@@ -227,10 +232,14 @@ export class ChatService {
     const conversation = await this.prisma.conversation.findUnique({ where: { id } })
     if (!conversation) throw new NotFoundException('Conversation introuvable.')
     if (conversation.type !== ConversationType.GROUP) {
-      throw new BadRequestException("On ne peut pas ajouter de participant à une conversation directe.")
+      throw new BadRequestException(
+        'On ne peut pas ajouter de participant à une conversation directe.'
+      )
     }
     if (!participant.isAdmin) {
-      throw new ForbiddenException('Seul un administrateur du groupe peut ajouter des participants.')
+      throw new ForbiddenException(
+        'Seul un administrateur du groupe peut ajouter des participants.'
+      )
     }
 
     const existing = await this.prisma.conversationParticipant.findMany({
@@ -258,7 +267,9 @@ export class ChatService {
     const conversation = await this.prisma.conversation.findUnique({ where: { id } })
     if (!conversation) throw new NotFoundException('Conversation introuvable.')
     if (conversation.type !== ConversationType.GROUP) {
-      throw new BadRequestException("On ne peut pas retirer de participant d'une conversation directe.")
+      throw new BadRequestException(
+        "On ne peut pas retirer de participant d'une conversation directe."
+      )
     }
     const isSelf = targetUserId === requester.id
     if (!isSelf && !participant.isAdmin) {
@@ -297,7 +308,9 @@ export class ChatService {
 
     const cleanBody = body?.trim() || null
     if (!cleanBody && !files.length) {
-      throw new BadRequestException('Un message doit contenir du texte ou au moins une pièce jointe.')
+      throw new BadRequestException(
+        'Un message doit contenir du texte ou au moins une pièce jointe.'
+      )
     }
 
     // Regroupées dans une transaction : un seul aller-retour réseau plutôt que deux appels

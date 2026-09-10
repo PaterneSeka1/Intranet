@@ -295,7 +295,11 @@ export class ReportsExcelService {
         { label: 'Du', width: 14 },
         { label: 'Au', width: 14 },
       ],
-      rows: leaves.map((l) => [l.typeLabel, this.reports.fmtDate(l.startDate), this.reports.fmtDate(l.endDate)]),
+      rows: leaves.map((l) => [
+        l.typeLabel,
+        this.reports.fmtDate(l.startDate),
+        this.reports.fmtDate(l.endDate),
+      ]),
     })
 
     await this.reports.logExport(requester.id, LogAction.EMPLOYEE_REPORT_EXPORTED, 'excel')

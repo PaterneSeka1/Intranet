@@ -392,10 +392,8 @@ export function DataTable<T>({
 // ---------------------------------------------------------------------------
 
 function SortIndicator({ dir }: { dir: 'asc' | 'desc' | null }) {
-  if (dir === 'asc')
-    return <ChevronUp className="w-3.5 h-3.5 text-[#F28C38]" strokeWidth={2} />
-  if (dir === 'desc')
-    return <ChevronDown className="w-3.5 h-3.5 text-[#F28C38]" strokeWidth={2} />
+  if (dir === 'asc') return <ChevronUp className="w-3.5 h-3.5 text-[#F28C38]" strokeWidth={2} />
+  if (dir === 'desc') return <ChevronDown className="w-3.5 h-3.5 text-[#F28C38]" strokeWidth={2} />
   return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
 }
 

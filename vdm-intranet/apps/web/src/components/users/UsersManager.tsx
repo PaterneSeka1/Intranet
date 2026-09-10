@@ -2,7 +2,14 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { User as UserIcon, KeyRound, Building2, Clock, CalendarDays, type LucideIcon } from 'lucide-react'
+import {
+  User as UserIcon,
+  KeyRound,
+  Building2,
+  Clock,
+  CalendarDays,
+  type LucideIcon,
+} from 'lucide-react'
 import { ROLE_LABELS, type Role, type User } from '@/types/user'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { toast } from '@/lib/toast'

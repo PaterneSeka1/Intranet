@@ -76,8 +76,11 @@ export const chatApi = {
 
   listConversations: () => req<ConversationSummary[]>('/chat/conversations'),
 
-  createConversation: (payload: { type: ConversationType; participantIds: string[]; name?: string }) =>
-    req<Conversation>('/chat/conversations', { method: 'POST', body: JSON.stringify(payload) }),
+  createConversation: (payload: {
+    type: ConversationType
+    participantIds: string[]
+    name?: string
+  }) => req<Conversation>('/chat/conversations', { method: 'POST', body: JSON.stringify(payload) }),
 
   getConversation: (id: string) => req<Conversation>(`/chat/conversations/${id}`),
 
@@ -114,7 +117,8 @@ export const chatApi = {
   editMessage: (id: string, body: string) =>
     req<ChatMessage>(`/chat/messages/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }),
 
-  deleteMessage: (id: string) => req<{ deleted: boolean }>(`/chat/messages/${id}`, { method: 'DELETE' }),
+  deleteMessage: (id: string) =>
+    req<{ deleted: boolean }>(`/chat/messages/${id}`, { method: 'DELETE' }),
 
   markRead: (id: string) =>
     req<{ lastReadAt: string }>(`/chat/conversations/${id}/read`, { method: 'PATCH' }),

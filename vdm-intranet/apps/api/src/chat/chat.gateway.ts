@@ -92,9 +92,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         where: { userId: user.id },
         select: { conversationId: true },
       })
-      await Promise.all(
-        conversationIds.map((c) => client.join(`conversation:${c.conversationId}`))
-      )
+      await Promise.all(conversationIds.map((c) => client.join(`conversation:${c.conversationId}`)))
 
       const wasOffline = !this.onlineUsers.has(user.id)
       const sockets = this.onlineUsers.get(user.id) ?? new Set<string>()
@@ -150,7 +148,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   emitNewMessage(conversationId: string, message: MessagePayload) {
-    this.server?.to(`conversation:${conversationId}`).emit('message:new', { conversationId, message })
+    this.server
+      ?.to(`conversation:${conversationId}`)
+      .emit('message:new', { conversationId, message })
   }
 
   emitMessageUpdated(conversationId: string, message: MessagePayload) {
@@ -173,7 +173,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   emitConversationUpdated(conversationId: string) {
-    this.server?.to(`conversation:${conversationId}`).emit('conversation:updated', { conversationId })
+    this.server
+      ?.to(`conversation:${conversationId}`)
+      .emit('conversation:updated', { conversationId })
   }
 
   emitConversationRead(conversationId: string, userId: string, lastReadAt: Date) {

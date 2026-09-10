@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Search } from 'lucide-react'
-import { chatApi, chatUserDisplayName, type ChatDirectoryUser, type ConversationType } from '@/lib/chat'
+import {
+  chatApi,
+  chatUserDisplayName,
+  type ChatDirectoryUser,
+  type ConversationType,
+} from '@/lib/chat'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { toast } from '@/lib/toast'
@@ -13,7 +18,11 @@ interface NewConversationModalProps {
   onCreate: (payload: { type: ConversationType; participantIds: string[]; name?: string }) => void
 }
 
-export function NewConversationModal({ currentUserId, onClose, onCreate }: NewConversationModalProps) {
+export function NewConversationModal({
+  currentUserId,
+  onClose,
+  onCreate,
+}: NewConversationModalProps) {
   const [users, setUsers] = useState<ChatDirectoryUser[] | null>(null)
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -55,13 +64,26 @@ export function NewConversationModal({ currentUserId, onClose, onCreate }: NewCo
       return
     }
     setSubmitting(true)
-    onCreate({ type, participantIds: selectedIds, name: type === 'GROUP' ? groupName.trim() : undefined })
+    onCreate({
+      type,
+      participantIds: selectedIds,
+      name: type === 'GROUP' ? groupName.trim() : undefined,
+    })
   }
 
   return (
-    <Modal open onClose={onClose} title="Nouvelle conversation" subtitle="1 personne pour discuter en direct, plusieurs pour créer un groupe" size="md">
+    <Modal
+      open
+      onClose={onClose}
+      title="Nouvelle conversation"
+      subtitle="1 personne pour discuter en direct, plusieurs pour créer un groupe"
+      size="md"
+    >
       <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" strokeWidth={2} />
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300"
+          strokeWidth={2}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -92,10 +114,19 @@ export function NewConversationModal({ currentUserId, onClose, onCreate }: NewCo
               onClick={() => toggle(user.id)}
               className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors text-left"
             >
-              <Avatar firstName={user.firstName} lastName={user.lastName} username={user.username} size="sm" />
+              <Avatar
+                firstName={user.firstName}
+                lastName={user.lastName}
+                username={user.username}
+                size="sm"
+              />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">{chatUserDisplayName(user)}</div>
-                <div className="text-xs text-gray-400 truncate">{user.businessUnit?.name ?? user.matricule ?? user.username}</div>
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {chatUserDisplayName(user)}
+                </div>
+                <div className="text-xs text-gray-400 truncate">
+                  {user.businessUnit?.name ?? user.matricule ?? user.username}
+                </div>
               </div>
               <span
                 className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border ${

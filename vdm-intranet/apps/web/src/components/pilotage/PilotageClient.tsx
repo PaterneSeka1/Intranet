@@ -34,7 +34,14 @@ import {
   type DateRange,
 } from '@/lib/excel-export'
 import { downloadPdfBlob } from '@/lib/pdf-export'
-import { CalendarDays, ClipboardList, Plug, BarChart3, Download, type LucideIcon } from 'lucide-react'
+import {
+  CalendarDays,
+  ClipboardList,
+  Plug,
+  BarChart3,
+  Download,
+  type LucideIcon,
+} from 'lucide-react'
 
 type ReportKey = 'presence' | 'activity' | 'connections' | 'general'
 
@@ -480,7 +487,8 @@ export function PilotageClient({ role }: Props) {
                       </>
                     ) : (
                       <>
-                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />Excel
+                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                        Excel
                       </>
                     )}
                   </button>
@@ -496,7 +504,8 @@ export function PilotageClient({ role }: Props) {
                       </>
                     ) : (
                       <>
-                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />PDF
+                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                        PDF
                       </>
                     )}
                   </button>

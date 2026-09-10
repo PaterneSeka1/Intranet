@@ -65,7 +65,9 @@ export default async function ParametresPage() {
     serverFetch<Holiday[]>('/public-holidays') ?? [],
     // Réservé au CTO_ADMIN côté API (CAN_MANAGE_SETTINGS) — jamais chargé pour le PDG en lecture
     // seule ci-dessous, qui n'a pas accès à ce réglage.
-    user.role === 'CTO_ADMIN' ? serverFetch<WorkplaceLocation>('/presence/workplace-location') : null,
+    user.role === 'CTO_ADMIN'
+      ? serverFetch<WorkplaceLocation>('/presence/workplace-location')
+      : null,
   ])
 
   if (user.role === 'PDG') {

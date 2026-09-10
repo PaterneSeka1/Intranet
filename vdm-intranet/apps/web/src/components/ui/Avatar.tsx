@@ -14,7 +14,11 @@ interface AvatarProps {
   className?: string
 }
 
-function getInitials(firstName: string | null | undefined, lastName: string | null | undefined, username: string) {
+function getInitials(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  username: string
+) {
   const f = firstName?.trim()
   const l = lastName?.trim()
   if (f && l) return (f[0] + l[0]).toUpperCase()
@@ -24,14 +28,19 @@ function getInitials(firstName: string | null | undefined, lastName: string | nu
 
 /** Avatar à initiales partagé (le repo n'a pas de photo de profil) — cf. logique dupliquée dans
  * UsersManager.tsx et Sidebar.tsx, factorisée ici pour la messagerie. */
-export function Avatar({ firstName, lastName, username, size = 'md', online, className = '' }: AvatarProps) {
+export function Avatar({
+  firstName,
+  lastName,
+  username,
+  size = 'md',
+  online,
+  className = '',
+}: AvatarProps) {
   const s = SIZES[size]
   const initials = getInitials(firstName, lastName, username)
   return (
     <div className={`relative shrink-0 ${className}`}>
-      <div
-        className={`${s.box} rounded-full bg-[#F28C38]/10 flex items-center justify-center`}
-      >
+      <div className={`${s.box} rounded-full bg-[#F28C38]/10 flex items-center justify-center`}>
         <span className={`${s.text} font-bold text-[#F28C38]`}>{initials}</span>
       </div>
       {online !== undefined && (

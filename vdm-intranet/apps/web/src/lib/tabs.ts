@@ -103,7 +103,8 @@ export const tabsApi = {
   remove: (id: string): Promise<void> => req<void>(`/tabs/${id}`, { method: 'DELETE' }),
   reorder: (items: ReorderItem[]): Promise<{ updated: number }> =>
     req<{ updated: number }>('/tabs/reorder', { method: 'PATCH', body: JSON.stringify({ items }) }),
-  getCredential: (id: string): Promise<TabCredential> => req<TabCredential>(`/tabs/${id}/credential`),
+  getCredential: (id: string): Promise<TabCredential> =>
+    req<TabCredential>(`/tabs/${id}/credential`),
   setCredential: (
     id: string,
     payload: SetTabCredentialPayload

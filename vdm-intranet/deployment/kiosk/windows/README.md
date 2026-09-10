@@ -96,7 +96,7 @@ de recommencer :
 > Ce fichier a été bloqué, car les fichiers de ce type provenant d'Internet
 > peuvent être dangereux.
 
-**Cause** : le *Contrôle intelligent des applications* (Smart App Control,
+**Cause** : le _Contrôle intelligent des applications_ (Smart App Control,
 Windows 11) bloque par défaut les fichiers `.ps1`, `.bat` et `.reg` non
 signés dès qu'ils portent la marque « provient d'Internet » (flux
 `Zone.Identifier`, ajoutée automatiquement par le navigateur ou par
@@ -132,6 +132,6 @@ méthode.
 
 **Dernier recours**, réservé à des postes kiosques dédiés (décision DSI —
 irréversible sans réinstallation complète de Windows) : désactiver le
-Contrôle intelligent des applications via *Sécurité Windows → Contrôle des
+Contrôle intelligent des applications via _Sécurité Windows → Contrôle des
 applications et du navigateur → Contrôle intelligent des applications →
-Désactivé*.
+Désactivé_.

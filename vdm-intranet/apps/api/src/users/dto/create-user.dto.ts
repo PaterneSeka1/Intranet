@@ -58,7 +58,8 @@ export class CreateUserDto {
 
   @ApiProperty({
     example: 'jean@vdm.ci',
-    description: 'Obligatoire pour tout le monde sans exception (identifiant de connexion des stagiaires).',
+    description:
+      'Obligatoire pour tout le monde sans exception (identifiant de connexion des stagiaires).',
   })
   @IsEmail()
   @IsNotEmpty()
