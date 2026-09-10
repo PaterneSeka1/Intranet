@@ -106,8 +106,8 @@ Firefox), sans dépendre d'aucune PWA ni politique préalable.
 ## ⚠️ Point d'attention : la politique Chromium (« Managed Preferences »)
 
 Les restrictions (`chromium-policy.plist` : devtools, incognito,
-téléchargements, historique...) passent par le mécanisme macOS *Managed
-Preferences*, qui attend le fichier dans un **sous-dossier nommé par
+téléchargements, historique...) passent par le mécanisme macOS _Managed
+Preferences_, qui attend le fichier dans un **sous-dossier nommé par
 l'utilisateur** :
 
 ```
