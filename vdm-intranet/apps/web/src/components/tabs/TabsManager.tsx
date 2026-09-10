@@ -12,6 +12,7 @@ import {
   FolderPlus,
   Plus,
   Folder as FolderGlyph,
+  KeyRound,
 } from 'lucide-react'
 import {
   DndContext,
@@ -46,6 +47,7 @@ import {
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { Modal } from '@/components/ui/Modal'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import {
   TAB_ICON_REGISTRY,
   TAB_ICON_PRESETS,
@@ -299,6 +301,7 @@ function TabCardContent({
   onToggle,
   onEdit,
   onDelete,
+  onManageCredential,
   showFolderBadge,
   dragHandle,
 }: {
@@ -307,6 +310,7 @@ function TabCardContent({
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
+  onManageCredential?: () => void
   showFolderBadge?: boolean
   dragHandle?: React.ReactNode
 }) {
@@ -342,6 +346,14 @@ function TabCardContent({
                   <span className="truncate">{tab.folder.name}</span>
                 </span>
               )}
+              {tab.credential && (
+                <span
+                  className="text-gray-400 inline-flex items-center"
+                  title="Identifiant partagé disponible"
+                >
+                  <KeyRound className="w-3 h-3" strokeWidth={2} />
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -358,6 +370,15 @@ function TabCardContent({
                 <ToggleLeft className="w-4 h-4" strokeWidth={1.75} />
               )}
             </button>
+            {onManageCredential && (
+              <button
+                onClick={onManageCredential}
+                className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-[#F28C38] transition-colors"
+                title="Identifiants partagés"
+              >
+                <KeyRound className="w-4 h-4" strokeWidth={1.75} />
+              </button>
+            )}
             <button
               onClick={onEdit}
               className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-[#F28C38] transition-colors"
@@ -398,6 +419,7 @@ function SortableTabCard({
   onToggle,
   onEdit,
   onDelete,
+  onManageCredential,
 }: {
   tab: Tab
   containerKey: string
@@ -406,6 +428,7 @@ function SortableTabCard({
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
+  onManageCredential: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
@@ -425,6 +448,7 @@ function SortableTabCard({
         onToggle={onToggle}
         onEdit={onEdit}
         onDelete={onDelete}
+        onManageCredential={onManageCredential}
         dragHandle={!disabled ? <DragHandle attributes={attributes} listeners={listeners} /> : undefined}
       />
     </div>
@@ -446,6 +470,7 @@ function TabContainer({
   onToggleActive,
   onEditTab,
   onDeleteTab,
+  onManageCredential,
   gridClassName = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 }: {
   containerKey: string
@@ -456,6 +481,7 @@ function TabContainer({
   onToggleActive: (tab: Tab) => void
   onEditTab: (tab: Tab) => void
   onDeleteTab: (tab: Tab) => void
+  onManageCredential: (tab: Tab) => void
   /** Colonnes de la grille — plus étroites quand le conteneur est une tuile-dossier compacte. */
   gridClassName?: string
 }) {
@@ -487,6 +513,7 @@ function TabContainer({
               onToggle={() => onToggleActive(tab)}
               onEdit={() => onEditTab(tab)}
               onDelete={() => onDeleteTab(tab)}
+              onManageCredential={() => onManageCredential(tab)}
             />
           )
         })}
@@ -515,6 +542,7 @@ function FolderSection({
   onToggleActive,
   onEditTab,
   onDeleteTab,
+  onManageCredential,
 }: {
   folder: TabFolder
   ids: string[]
@@ -530,6 +558,7 @@ function FolderSection({
   onToggleActive: (tab: Tab) => void
   onEditTab: (tab: Tab) => void
   onDeleteTab: (tab: Tab) => void
+  onManageCredential: (tab: Tab) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: folder.id,
@@ -609,6 +638,7 @@ function FolderSection({
           onToggleActive={onToggleActive}
           onEditTab={onEditTab}
           onDeleteTab={onDeleteTab}
+          onManageCredential={onManageCredential}
           gridClassName="grid-cols-1"
         />
       )}
@@ -671,6 +701,13 @@ export function TabsManager({
   const [folderSubmitting, setFolderSubmitting] = useState(false)
   const [folderError, setFolderError] = useState('')
   const [folderIconProcessing, setFolderIconProcessing] = useState(false)
+
+  // ---- Identifiants partagés ----
+  const [credentialModal, setCredentialModal] = useState<Tab | null>(null)
+  const [credentialForm, setCredentialForm] = useState({ username: '', password: '', notes: '' })
+  const [credentialLoading, setCredentialLoading] = useState(false)
+  const [credentialSubmitting, setCredentialSubmitting] = useState(false)
+  const [credentialError, setCredentialError] = useState('')
 
   const [filterBu, setFilterBu] = useState<string>('')
   const [search, setSearch] = useState('')
@@ -920,6 +957,68 @@ export function TabsManager({
         prev.map((t) => (t.folderId === folder.id ? { ...t, folderId: null, folder: null } : t))
       )
       toast.success(`Dossier « ${folder.name} » supprimé.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression.')
+    }
+  }
+
+  // ---- Identifiants partagés ----
+
+  async function openCredential(tab: Tab) {
+    setCredentialModal(tab)
+    setCredentialError('')
+    setCredentialForm({ username: '', password: '', notes: '' })
+    if (!tab.credential) return
+    setCredentialLoading(true)
+    try {
+      const cred = await tabsApi.getCredential(tab.id)
+      setCredentialForm({ username: cred.username, password: cred.password, notes: cred.notes ?? '' })
+    } catch (err) {
+      setCredentialError(
+        err instanceof Error ? err.message : "Erreur lors du chargement de l'identifiant."
+      )
+    } finally {
+      setCredentialLoading(false)
+    }
+  }
+
+  async function handleCredentialSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!credentialModal) return
+    setCredentialSubmitting(true)
+    setCredentialError('')
+    try {
+      await tabsApi.setCredential(credentialModal.id, {
+        username: credentialForm.username,
+        password: credentialForm.password,
+        notes: credentialForm.notes || undefined,
+      })
+      const tabId = credentialModal.id
+      setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, credential: { id: tabId } } : t)))
+      setCredentialModal(null)
+      toast.success('Identifiants enregistrés.')
+    } catch (err) {
+      setCredentialError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setCredentialSubmitting(false)
+    }
+  }
+
+  async function handleCredentialDelete() {
+    if (!credentialModal) return
+    const ok = await confirm({
+      title: 'Supprimer les identifiants',
+      message: `Supprimer l'identifiant partagé de « ${credentialModal.name} » ? Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    })
+    if (!ok) return
+    const tabId = credentialModal.id
+    try {
+      await tabsApi.removeCredential(tabId)
+      setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, credential: null } : t)))
+      setCredentialModal(null)
+      toast.success('Identifiants supprimés.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la suppression.')
     }
@@ -1193,6 +1292,7 @@ export function TabsManager({
                         onToggleActive={toggleActive}
                         onEditTab={openEdit}
                         onDeleteTab={handleDelete}
+                        onManageCredential={openCredential}
                       />
                     )
                   })}
@@ -1221,6 +1321,7 @@ export function TabsManager({
                   onToggleActive={toggleActive}
                   onEditTab={openEdit}
                   onDeleteTab={handleDelete}
+                  onManageCredential={openCredential}
                 />
               </div>
             )}
@@ -1540,6 +1641,114 @@ export function TabsManager({
                 ? 'Enregistrement…'
                 : folderModal?.mode === 'create'
                   ? 'Créer'
+                  : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modale identifiants partagés */}
+      <Modal
+        open={!!credentialModal}
+        onClose={() => setCredentialModal(null)}
+        title="Identifiants partagés"
+        subtitle={credentialModal?.name}
+        size="sm"
+      >
+        <form onSubmit={handleCredentialSubmit} className="space-y-4">
+          <p className="text-xs text-gray-500 -mt-1">
+            Identifiant commun utilisé par tous les utilisateurs qui voient cet onglet. Chaque
+            consultation est journalisée.
+          </p>
+
+          <div>
+            <label
+              htmlFor="cred-username"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Identifiant
+            </label>
+            <input
+              id="cred-username"
+              type="text"
+              value={credentialForm.username}
+              onChange={(e) => setCredentialForm((f) => ({ ...f, username: e.target.value }))}
+              disabled={credentialLoading}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300 disabled:opacity-50"
+              placeholder="Ex : contact@veilleurdesmedias.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="cred-password"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Mot de passe
+            </label>
+            <PasswordInput
+              id="cred-password"
+              value={credentialForm.password}
+              onChange={(e) => setCredentialForm((f) => ({ ...f, password: e.target.value }))}
+              disabled={credentialLoading}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300 disabled:opacity-50"
+              placeholder="Mot de passe du compte partagé"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="cred-notes"
+              className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+            >
+              Notes <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+            </label>
+            <textarea
+              id="cred-notes"
+              value={credentialForm.notes}
+              onChange={(e) => setCredentialForm((f) => ({ ...f, notes: e.target.value }))}
+              disabled={credentialLoading}
+              rows={2}
+              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300 disabled:opacity-50 resize-none"
+              placeholder="Ex : code 2FA envoyé sur la boîte mail partagée"
+            />
+          </div>
+
+          {credentialError && (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
+              {credentialError}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            {credentialModal?.credential && (
+              <button
+                type="button"
+                onClick={handleCredentialDelete}
+                className="py-2.5 px-3 border border-gray-200 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-colors"
+                title="Supprimer les identifiants"
+              >
+                <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setCredentialModal(null)}
+              className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={credentialSubmitting || credentialLoading}
+              className="flex-1 bg-[#F28C38] hover:bg-[#e07d29] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+            >
+              {credentialLoading
+                ? 'Chargement…'
+                : credentialSubmitting
+                  ? 'Enregistrement…'
                   : 'Enregistrer'}
             </button>
           </div>

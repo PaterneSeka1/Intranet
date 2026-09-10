@@ -12,12 +12,17 @@ import { CreateTabFolderDto } from './dto/create-tab-folder.dto'
 import { UpdateTabFolderDto } from './dto/update-tab-folder.dto'
 import { ReorderTabsDto } from './dto/reorder-tabs.dto'
 import { ReorderTabFoldersDto } from './dto/reorder-tab-folders.dto'
+import { SetTabCredentialDto } from './dto/set-tab-credential.dto'
 import {
   CAN_MANAGE_TABS,
   CAN_MANAGE_TABS_GLOBAL,
   CAN_MANAGE_TABS_BU_SCOPE,
   CAN_VIEW_TABS_OWN_BU,
 } from '../common/permissions'
+import {
+  encryptCredentialSecret,
+  decryptCredentialSecret,
+} from '../common/crypto/tab-credential-crypto.util'
 
 type Requester = {
   id: string
@@ -42,6 +47,10 @@ const TAB_SELECT = {
   businessUnit: { select: { id: true, name: true, code: true } },
   folder: { select: { id: true, name: true, icon: true, color: true } },
   createdBy: { select: { id: true, username: true, fullName: true } },
+  // N'expose jamais le secret dans la liste : seulement de quoi savoir qu'un identifiant partagé
+  // existe (tab.credential !== null). Le déchiffrement/la consultation passent uniquement par
+  // getCredential(), journalisés.
+  credential: { select: { id: true } },
 } as const
 
 const FOLDER_SELECT = {
@@ -369,6 +378,84 @@ export class TabsService {
     return { deleted: true }
   }
 
+  // ---- Identifiant partagé d'un onglet ----
+
+  async getCredential(requester: Requester, tabId: string) {
+    const tab = await this.findTabOrFail(tabId)
+    this.assertCanViewTab(requester, tab.businessUnitId, tab.isActive)
+
+    const credential = await this.prisma.portalTabCredential.findUnique({
+      where: { tabId },
+      select: {
+        username: true,
+        passwordEnc: true,
+        notes: true,
+        updatedAt: true,
+        updatedBy: { select: { id: true, username: true, fullName: true } },
+      },
+    })
+    if (!credential) throw new NotFoundException("Aucun identifiant enregistré pour cet onglet.")
+
+    await this.log(requester.id, LogAction.TAB_CREDENTIAL_VIEWED, tabId, { tabName: tab.name })
+
+    return {
+      username: credential.username,
+      password: decryptCredentialSecret(credential.passwordEnc),
+      notes: credential.notes,
+      updatedAt: credential.updatedAt,
+      updatedBy: credential.updatedBy,
+    }
+  }
+
+  async setCredential(requester: Requester, tabId: string, dto: SetTabCredentialDto) {
+    const tab = await this.findTabOrFail(tabId)
+    this.assertCanManage(requester, tab.businessUnitId)
+
+    const passwordEnc = encryptCredentialSecret(dto.password)
+    const credential = await this.prisma.portalTabCredential.upsert({
+      where: { tabId },
+      create: {
+        tabId,
+        username: dto.username,
+        passwordEnc,
+        notes: dto.notes,
+        updatedById: requester.id,
+      },
+      update: {
+        username: dto.username,
+        passwordEnc,
+        notes: dto.notes ?? null,
+        updatedById: requester.id,
+      },
+      select: {
+        username: true,
+        notes: true,
+        updatedAt: true,
+        updatedBy: { select: { id: true, username: true, fullName: true } },
+      },
+    })
+
+    await this.log(requester.id, LogAction.TAB_CREDENTIAL_SET, tabId, { tabName: tab.name })
+
+    return credential
+  }
+
+  async deleteCredential(requester: Requester, tabId: string) {
+    const tab = await this.findTabOrFail(tabId)
+    this.assertCanManage(requester, tab.businessUnitId)
+
+    try {
+      await this.prisma.portalTabCredential.delete({ where: { tabId } })
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'P2025')
+        throw new NotFoundException("Aucun identifiant enregistré pour cet onglet.")
+      throw err
+    }
+    await this.log(requester.id, LogAction.TAB_CREDENTIAL_DELETED, tabId, { tabName: tab.name })
+
+    return { deleted: true }
+  }
+
   // ---- Dossiers d'onglets ----
 
   async findAllFolders(requester: Requester, buId?: string) {
@@ -617,7 +704,7 @@ export class TabsService {
   private async findTabOrFail(id: string) {
     const tab = await this.prisma.portalTab.findUnique({
       where: { id },
-      select: { id: true, name: true, url: true, businessUnitId: true },
+      select: { id: true, name: true, url: true, businessUnitId: true, isActive: true },
     })
     if (!tab) throw new NotFoundException('Onglet introuvable.')
     return tab
@@ -629,6 +716,24 @@ export class TabsService {
       throw new ForbiddenException('Seuls les administrateurs peuvent gérer les onglets globaux.')
     if (CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) && requester.businessUnitId === tabBuId)
       return
+    throw new ForbiddenException('Accès refusé à cet onglet.')
+  }
+
+  /**
+   * Vérifie qu'un onglet est *visible* pour le requester — même règle de portée que findAll()
+   * (global toujours visible, sinon même BU), avec la même exigence isActive pour les rôles en
+   * lecture seule (CAN_VIEW_TABS_OWN_BU). Contrairement à assertCanManage, un manager BU/global
+   * n'a pas besoin d'être le gestionnaire de CET onglet précis : voir son identifiant partagé est
+   * ouvert à tout utilisateur qui verrait l'onglet dans la liste.
+   */
+  private assertCanViewTab(requester: Requester, tabBuId: string | null, tabIsActive: boolean) {
+    const isViewerOnlyRole = CAN_VIEW_TABS_OWN_BU.includes(requester.role)
+    if (isViewerOnlyRole && !tabIsActive) {
+      throw new ForbiddenException('Onglet désactivé.')
+    }
+    if (tabBuId === null) return // Onglet global : visible par tous.
+    if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) return
+    if (requester.businessUnitId === tabBuId) return
     throw new ForbiddenException('Accès refusé à cet onglet.')
   }
 

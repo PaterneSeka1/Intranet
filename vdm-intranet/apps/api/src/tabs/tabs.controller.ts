@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common'
@@ -20,6 +21,7 @@ import { CreateTabFolderDto } from './dto/create-tab-folder.dto'
 import { UpdateTabFolderDto } from './dto/update-tab-folder.dto'
 import { ReorderTabsDto } from './dto/reorder-tabs.dto'
 import { ReorderTabFoldersDto } from './dto/reorder-tab-folders.dto'
+import { SetTabCredentialDto } from './dto/set-tab-credential.dto'
 import { CreateBusinessUnitDto } from './dto/create-business-unit.dto'
 import { UpdateBusinessUnitDto } from './dto/update-business-unit.dto'
 import { CreatePoleDto } from './dto/create-pole.dto'
@@ -169,5 +171,36 @@ export class TabsController {
   @ApiOperation({ summary: 'Supprimer un onglet (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)' })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.tabsService.remove(user, id)
+  }
+
+  // ---- Identifiant partagé d'un onglet ----
+
+  @Get(':id/credential')
+  @ApiOperation({
+    summary: "Révéler l'identifiant partagé d'un onglet (visible par qui voit l'onglet, journalisé)",
+  })
+  getCredential(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.tabsService.getCredential(user, id)
+  }
+
+  @Put(':id/credential')
+  @ApiOperation({
+    summary:
+      "Définir ou mettre à jour l'identifiant partagé d'un onglet (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)",
+  })
+  setCredential(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: SetTabCredentialDto
+  ) {
+    return this.tabsService.setCredential(user, id, dto)
+  }
+
+  @Delete(':id/credential')
+  @ApiOperation({
+    summary: "Supprimer l'identifiant partagé d'un onglet (CTO_ADMIN, PDG, DAF, RESPONSABLE_BU)",
+  })
+  removeCredential(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.tabsService.deleteCredential(user, id)
   }
 }

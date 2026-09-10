@@ -53,6 +53,9 @@ enum LogAction {
   TAB_FOLDER_UPDATED
   TAB_FOLDER_DELETED
   TAB_FOLDER_REORDERED
+  TAB_CREDENTIAL_SET
+  TAB_CREDENTIAL_DELETED
+  TAB_CREDENTIAL_VIEWED
   REPORT_EXPORTED
   PRESENCE_REPORT_EXPORTED
   ACTIVITY_REPORT_EXPORTED
@@ -163,22 +166,23 @@ model User {
   createdAt                       DateTime  @default(now())
   updatedAt                       DateTime  @updatedAt
 
-  businessUnit         BusinessUnit?        @relation(fields: [businessUnitId], references: [id])
-  pole                 Pole?                @relation(fields: [poleId], references: [id])
-  manager              User?                @relation("Hierarchy", fields: [managerId], references: [id])
-  subordinates         User[]               @relation("Hierarchy")
-  scheduleGroup        ScheduleGroup?       @relation(fields: [scheduleGroupId], references: [id])
-  presences            Presence[]
-  connectionLogs       ConnectionLog[]
-  mandates             DailyMandate[]       @relation("MandateSubject")
-  createdMandates      DailyMandate[]       @relation("MandateCreator")
-  createdTabs          PortalTab[]          @relation("TabCreator")
-  createdTabFolders    PortalTabFolder[]    @relation("TabFolderCreator")
-  createdAnnouncements Announcement[]       @relation("AnnouncementCreator")
-  activityLogs         ActivityLog[]
-  passwordResetTokens  PasswordResetToken[]
-  notifications        Notification[]
-  workplaceLocationUpdates WorkplaceLocation[]
+  businessUnit               BusinessUnit?             @relation(fields: [businessUnitId], references: [id])
+  pole                       Pole?                     @relation(fields: [poleId], references: [id])
+  manager                    User?                     @relation("Hierarchy", fields: [managerId], references: [id])
+  subordinates               User[]                    @relation("Hierarchy")
+  scheduleGroup              ScheduleGroup?            @relation(fields: [scheduleGroupId], references: [id])
+  presences                  Presence[]
+  connectionLogs             ConnectionLog[]
+  mandates                   DailyMandate[]            @relation("MandateSubject")
+  createdMandates            DailyMandate[]            @relation("MandateCreator")
+  createdTabs                PortalTab[]               @relation("TabCreator")
+  createdTabFolders          PortalTabFolder[]         @relation("TabFolderCreator")
+  updatedTabCredentials      PortalTabCredential[]     @relation("TabCredentialUpdater")
+  createdAnnouncements       Announcement[]            @relation("AnnouncementCreator")
+  activityLogs               ActivityLog[]
+  passwordResetTokens        PasswordResetToken[]
+  notifications              Notification[]
+  workplaceLocationUpdates   WorkplaceLocation[]
   createdConversations       Conversation[]            @relation("ConversationCreator")
   conversationParticipations ConversationParticipant[]
   messages                   Message[]
@@ -204,35 +208,35 @@ model PasswordResetToken {
 // ============================================================
 
 model Presence {
-  id                    String         @id @default(cuid())
-  userId                String
-  date                  DateTime       @db.Date
-  status                PresenceStatus
-  expectedArrivalTime   String
-  officialArrivalTime   DateTime?
-  delayMinutes          Int?
-  expectedDepartureTime String?
-  officialDepartureTime DateTime?
-  departureDelayMinutes Int?
-  latitude              Float?
-  longitude             Float?
-  accuracy              Float?
-  address               String?
-  mapsUrl               String?
-  departureLatitude     Float?
-  departureLongitude    Float?
-  departureAccuracy     Float?
-  departureAddress      String?
-  departureMapsUrl      String?
+  id                          String         @id @default(cuid())
+  userId                      String
+  date                        DateTime       @db.Date
+  status                      PresenceStatus
+  expectedArrivalTime         String
+  officialArrivalTime         DateTime?
+  delayMinutes                Int?
+  expectedDepartureTime       String?
+  officialDepartureTime       DateTime?
+  departureDelayMinutes       Int?
+  latitude                    Float?
+  longitude                   Float?
+  accuracy                    Float?
+  address                     String?
+  mapsUrl                     String?
+  departureLatitude           Float?
+  departureLongitude          Float?
+  departureAccuracy           Float?
+  departureAddress            String?
+  departureMapsUrl            String?
   // Écart par rapport au lieu de travail de référence (WorkplaceLocation), calculé une seule fois
   // à la première connexion du jour (seul moment où la géolocalisation est obligatoire — voir
   // PresenceService.processFirstLogin). null tant qu'aucun lieu de travail n'est configuré :
   // ne signifie jamais "sur site", à distinguer de isOffSite=false.
   isOffSite                   Boolean?
   distanceFromWorkplaceMeters Float?
-  sourceConnectionLogId String?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  sourceConnectionLogId       String?
+  createdAt                   DateTime       @default(now())
+  updatedAt                   DateTime       @updatedAt
 
   user                User           @relation(fields: [userId], references: [id])
   sourceConnectionLog ConnectionLog? @relation("PresenceSourceConnectionLog", fields: [sourceConnectionLogId], references: [id], onDelete: SetNull)
@@ -339,13 +343,38 @@ model PortalTab {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  businessUnit BusinessUnit?    @relation(fields: [businessUnitId], references: [id])
+  businessUnit BusinessUnit?        @relation(fields: [businessUnitId], references: [id])
   // Suppression d'un dossier = les onglets redeviennent "sans dossier" (jamais supprimés).
-  folder       PortalTabFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  createdBy    User             @relation("TabCreator", fields: [createdById], references: [id])
+  folder       PortalTabFolder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  createdBy    User                 @relation("TabCreator", fields: [createdById], references: [id])
+  // Identifiant partagé optionnel (un seul par onglet) — voir PortalTabCredential.
+  credential   PortalTabCredential?
 
   @@unique([businessUnitId, url])
   @@map("portal_tabs")
+}
+
+// Identifiant partagé (compte commun à tous les utilisateurs voyant l'onglet) rattaché à un
+// PortalTab, ex. abonnement/outil externe où toute l'agence ou toute une BU se connecte avec le
+// même identifiant. Optionnel : la plupart des onglets n'en ont pas. Visibilité = même portée que
+// l'onglet lui-même (BU/global) ; gestion (créer/modifier/supprimer) réservée aux mêmes rôles que
+// la gestion de l'onglet (cf. TabsService.assertCanManage / assertCanViewTab).
+model PortalTabCredential {
+  id          String   @id @default(cuid())
+  tabId       String   @unique
+  username    String
+  // Chiffré AES-256-GCM (format "iv:authTag:ciphertext", chaque partie en base64) — jamais le mot
+  // de passe en clair en base. Voir apps/api/src/common/crypto/tab-credential-crypto.util.ts.
+  passwordEnc String   @db.Text
+  notes       String?
+  updatedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tab       PortalTab @relation(fields: [tabId], references: [id], onDelete: Cascade)
+  updatedBy User      @relation("TabCredentialUpdater", fields: [updatedById], references: [id])
+
+  @@map("portal_tab_credentials")
 }
 
 model PortalTabFolder {
