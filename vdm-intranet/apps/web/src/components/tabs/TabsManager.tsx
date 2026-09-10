@@ -29,7 +29,6 @@ import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
-  verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -447,6 +446,7 @@ function TabContainer({
   onToggleActive,
   onEditTab,
   onDeleteTab,
+  gridClassName = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 }: {
   containerKey: string
   ids: string[]
@@ -456,6 +456,8 @@ function TabContainer({
   onToggleActive: (tab: Tab) => void
   onEditTab: (tab: Tab) => void
   onDeleteTab: (tab: Tab) => void
+  /** Colonnes de la grille — plus étroites quand le conteneur est une tuile-dossier compacte. */
+  gridClassName?: string
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: containerDndId(containerKey),
@@ -467,7 +469,7 @@ function TabContainer({
     <SortableContext items={ids} strategy={rectSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 rounded-xl transition-colors ${
+        className={`grid ${gridClassName} gap-4 rounded-xl transition-colors ${
           isOver ? 'ring-2 ring-[#F28C38]/40 bg-[#F28C38]/5' : ''
         }`}
       >
@@ -541,7 +543,7 @@ function FolderSection({
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-gray-50/60 border border-gray-100 rounded-2xl p-3 sm:p-4">
+    <div ref={setNodeRef} style={style} className="min-w-0 bg-gray-50/60 border border-gray-100 rounded-2xl p-3 sm:p-4">
       <div className="flex items-center justify-between gap-2 mb-3">
         <button type="button" onClick={onToggleCollapsed} className="flex items-center gap-2 min-w-0 text-left flex-1">
           {dndEnabled && canManageThis && <DragHandle attributes={attributes} listeners={listeners} className="p-1 -ml-1" />}
@@ -607,6 +609,7 @@ function FolderSection({
           onToggleActive={onToggleActive}
           onEditTab={onEditTab}
           onDeleteTab={onDeleteTab}
+          gridClassName="grid-cols-1"
         />
       )}
     </div>
@@ -1165,8 +1168,8 @@ export function TabsManager({
         >
           <div className="space-y-4">
             {visibleFolderOrder.length > 0 && (
-              <SortableContext items={visibleFolderOrder} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3">
+              <SortableContext items={visibleFolderOrder} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
                   {visibleFolderOrder.map((fid) => {
                     const folder = foldersById.get(fid)
                     if (!folder) return null

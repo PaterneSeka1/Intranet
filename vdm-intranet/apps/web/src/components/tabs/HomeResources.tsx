@@ -14,15 +14,15 @@ function TabCard({ tab }: { tab: Tab }) {
       href={tab.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="w-40 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center gap-3 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
+      className="w-32 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col items-center gap-2 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
     >
       <span
         style={{ background: withAlpha(tab.color || DEFAULT_TAB_COLOR, '1A') }}
-        className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:brightness-95"
+        className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors group-hover:brightness-95"
       >
-        <TabIcon value={tab.icon} color={tab.color} className="w-8 h-8" />
+        <TabIcon value={tab.icon} color={tab.color} className="w-6 h-6" />
       </span>
-      <span className="text-sm font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
+      <span className="text-xs font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
         {tab.name}
       </span>
     </a>
@@ -40,19 +40,19 @@ function FolderTile({ folder, count, onOpen }: { folder: TabFolder; count: numbe
     <button
       type="button"
       onClick={onOpen}
-      className="w-40 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col items-center gap-3 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
+      className="w-32 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col items-center gap-2 hover:border-[#F28C38]/30 hover:shadow-md hover:-translate-y-0.5 transition-all group"
     >
-      <span className="relative w-16 h-14 shrink-0">
+      <span className="relative w-12 h-11 shrink-0">
         {/* Languette du dossier */}
         <span
           aria-hidden
           style={{ background: color }}
-          className="absolute left-0 top-0 h-3.5 w-9 rounded-t-md"
+          className="absolute left-0 top-0 h-3 w-7 rounded-t-md"
         />
         {/* Corps du dossier — coin haut-gauche non arrondi pour se fondre avec la languette */}
         <span
           style={{ background: color }}
-          className="absolute inset-x-0 bottom-0 top-2.5 rounded-b-xl rounded-tr-xl overflow-hidden flex items-center justify-center transition-transform group-hover:-translate-y-0.5"
+          className="absolute inset-x-0 bottom-0 top-2 rounded-b-xl rounded-tr-xl overflow-hidden flex items-center justify-center transition-transform group-hover:-translate-y-0.5"
         >
           <span
             aria-hidden
@@ -61,16 +61,16 @@ function FolderTile({ folder, count, onOpen }: { folder: TabFolder; count: numbe
           <TabIcon
             value={folder.icon || DEFAULT_FOLDER_ICON}
             color="#ffffff"
-            className="relative w-6 h-6 drop-shadow-sm"
+            className="relative w-4 h-4 drop-shadow-sm"
           />
         </span>
         {count > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gray-700 text-white text-[10px] font-bold flex items-center justify-center shadow-sm z-10">
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-gray-700 text-white text-[9px] font-bold flex items-center justify-center shadow-sm z-10">
             {count}
           </span>
         )}
       </span>
-      <span className="text-sm font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
+      <span className="text-xs font-semibold text-gray-700 text-center group-hover:text-[#F28C38] transition-colors line-clamp-2 leading-tight">
         {folder.name}
       </span>
     </button>

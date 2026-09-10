@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Check,
@@ -84,8 +84,10 @@ export function ConversationThread({
   // plutôt que par survol — évite qu'il se referme tout seul avant même d'avoir pu cliquer dessus.
   const [openActionsId, setOpenActionsId] = useState<string | null>(null)
   const actionsMenuRef = useRef<HTMLDivElement>(null)
+  const actionsDropdownRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<number | null>(null)
   const wasTypingRef = useRef(false)
 
@@ -93,6 +95,34 @@ export function ConversationThread({
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length, conversation.id])
+
+  // Fait grandir/rétrécir le champ de saisie avec le contenu tapé, dans la limite de max-h-24
+  // (au-delà, le débordement défile normalement grâce au scroll interne du textarea).
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [body])
+
+  // Le menu Modifier/Supprimer s'ouvre par défaut vers la gauche (right-0), aligné sur le bouton ⋮.
+  // Pour un message très long, ce bouton se retrouve tout près du bord gauche du cadre : le menu
+  // déborderait alors hors du cadre. On mesure après affichage et on bascule l'ouverture vers la
+  // droite si besoin, pour qu'il reste toujours entièrement visible.
+  useLayoutEffect(() => {
+    if (!openActionsId) return
+    const menuEl = actionsDropdownRef.current
+    const container = listRef.current
+    if (!menuEl || !container) return
+    menuEl.style.left = ''
+    menuEl.style.right = '0'
+    const containerRect = container.getBoundingClientRect()
+    const menuRect = menuEl.getBoundingClientRect()
+    if (menuRect.left < containerRect.left) {
+      menuEl.style.right = 'auto'
+      menuEl.style.left = '0'
+    }
+  }, [openActionsId])
 
   useEffect(() => {
     if (!openActionsId) return
@@ -254,7 +284,7 @@ export function ConversationThread({
               {/* Actions et bulle en frères dans un même flex row (plutôt qu'en position absolute
                   hors-flux) : un vide entre les deux ferait perdre le survol du groupe avant même
                   d'atteindre les boutons, les rendant quasi impossibles à cliquer. */}
-              <div className="group flex items-center gap-1 max-w-[80%]">
+              <div className="group flex items-center gap-1 max-w-[80%] min-w-0">
                 {!message.isDeleted && isMine && !isEditing && (
                   <div
                     className="relative shrink-0"
@@ -275,6 +305,7 @@ export function ConversationThread({
                     </button>
                     {openActionsId === message.id && (
                       <div
+                        ref={actionsDropdownRef}
                         role="menu"
                         className="absolute right-0 top-full mt-1 w-36 py-1 bg-white rounded-xl border border-gray-100 shadow-xl z-10 overflow-hidden"
                       >
@@ -313,7 +344,7 @@ export function ConversationThread({
                     </span>
                   )}
                   <div
-                    className={`rounded-2xl px-3 py-2 ${
+                    className={`rounded-2xl px-3 py-2 max-w-full min-w-0 ${
                       message.isDeleted
                         ? 'bg-gray-50 text-gray-400 italic text-sm'
                         : isMine
@@ -344,7 +375,11 @@ export function ConversationThread({
                       </div>
                     ) : (
                       <>
-                        {message.body && <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>}
+                        {message.body && (
+                          <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                            {message.body}
+                          </p>
+                        )}
                         {message.attachments.map((attachment) =>
                           isImage(attachment.mimeType) ? (
                             <a
@@ -440,6 +475,7 @@ export function ConversationThread({
             <Paperclip className="w-[18px] h-[18px]" strokeWidth={1.75} />
           </button>
           <textarea
+            ref={textareaRef}
             value={body}
             onChange={(e) => handleBodyChange(e.target.value)}
             onKeyDown={(e) => {
