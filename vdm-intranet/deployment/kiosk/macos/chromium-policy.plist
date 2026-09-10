@@ -5,10 +5,13 @@
 <dict>
 
   <!-- ── RESTRICTIONS ──────────────────────────────────────────────────
-       Le lancement se fait directement en Chrome, mode kiosque (voir
-       kiosk-vdm.sh) : pas besoin d'installer de PWA au préalable, d'où
-       l'absence de WebAppInstallForceList/WebAppSettings ici (mêmes clés
-       que chrome-policy.reg côté Windows). -->
+       Modèle PARTAGÉ par tous les navigateurs de la famille Chromium
+       (Chrome, Edge, Brave, Chromium — même schéma de politique, seul le
+       fichier de destination change selon l'éditeur, voir
+       installer-demarrage.sh). Le lancement se fait directement en mode
+       kiosque (voir kiosk-vdm.sh) : pas besoin d'installer de PWA au
+       préalable, d'où l'absence de WebAppInstallForceList/WebAppSettings
+       ici (mêmes clés que chromium-policy.reg côté Windows). -->
   <key>NewTabPageLocation</key>
   <string>http://localhost:3000</string>
 

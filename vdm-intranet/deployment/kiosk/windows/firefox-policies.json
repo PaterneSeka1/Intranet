@@ -1,0 +1,28 @@
+{
+  "policies": {
+    "Homepage": {
+      "URL": "http://localhost:3000",
+      "Locked": true,
+      "StartPage": "homepage"
+    },
+    "DisableDeveloperTools": true,
+    "DisablePrivateBrowsing": true,
+    "DisableFirefoxAccounts": true,
+    "DisablePocket": true,
+    "DisableTelemetry": true,
+    "DisableAppUpdate": true,
+    "DisableSetDesktopBackground": true,
+    "DontCheckDefaultBrowser": true,
+    "NoDefaultBookmarks": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "DisplayBookmarksToolbar": "never",
+    "PasswordManagerEnabled": false,
+    "PrintingEnabled": false,
+    "PopupBlocking": {
+      "Default": true,
+      "Locked": true
+    },
+    "SanitizeOnShutdown": true
+  }
+}

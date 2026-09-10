@@ -1,12 +1,17 @@
 Windows Registry Editor Version 5.00
 
-; VDM Intranet — Politique Chrome (Windows)
-; Double-cliquez pour appliquer en tant qu'Administrateur
+; VDM Intranet — Politique de verrouillage (Windows)
+; Modèle PARTAGÉ par tous les navigateurs de la famille Chromium (Chrome,
+; Edge, Brave — même schéma de politique, seule la clé de registre
+; [HKEY_LOCAL_MACHINE\...] change selon l'éditeur, substituée par
+; installer-demarrage.ps1). Ce fichier cible Chrome par défaut ; double-cliquer
+; dessus (Administrateur) applique la politique à Chrome uniquement — utiliser
+; installer-demarrage.ps1 pour une détection automatique du navigateur.
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
 
 ; ── RESTRICTIONS ─────────────────────────────────────────────────────────────
-; Le lancement se fait directement en Chrome --kiosk sur l'URL (voir
+; Le lancement se fait directement en mode kiosque sur l'URL (voir
 ; installer-demarrage.ps1) : pas besoin d'installer de PWA au préalable,
 ; d'où l'absence de WebAppInstallForceList/WebAppSettings ici.
 "NewTabPageLocation"="http://localhost:3000"
