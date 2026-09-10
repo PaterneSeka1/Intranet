@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { ConversationType } from '@prisma/client'
+import { ConversationType, Prisma } from '@prisma/client'
 import * as fs from 'fs'
 import * as path from 'path'
 import { PrismaService } from '../prisma/prisma.service'
@@ -98,25 +98,31 @@ export class ChatService {
     })
     const mineByConversation = new Map(mine.map((p) => [p.conversationId, p]))
 
-    const summaries = await Promise.all(
-      conversations.map(async ({ messages, ...conversation }) => {
-        const me = conversation.participants.find((p) => p.userId === userId)
-        const unreadCount = await this.prisma.message.count({
-          where: {
-            conversationId: conversation.id,
-            isDeleted: false,
-            senderId: { not: userId },
-            ...(me?.lastReadAt ? { createdAt: { gt: me.lastReadAt } } : {}),
-          },
-        })
-        return {
-          ...conversation,
-          lastMessage: messages[0] ?? null,
-          unreadCount,
-          mine: mineByConversation.get(conversation.id),
-        }
-      })
-    )
+    // Un seul aller-retour pour tous les compteurs non-lus (au lieu d'un COUNT par conversation) :
+    // jointure sur conversation_participants pour appliquer le seuil lastReadAt propre à `userId`,
+    // qui diffère d'une conversation à l'autre. Conversations absentes du résultat → 0 non-lu.
+    const conversationIds = conversations.map((c) => c.id)
+    const unreadRows = conversationIds.length
+      ? await this.prisma.$queryRaw<{ conversationId: string; count: number }[]>`
+          SELECT m."conversationId" AS "conversationId", COUNT(*)::int AS "count"
+          FROM "messages" m
+          JOIN "conversation_participants" cp
+            ON cp."conversationId" = m."conversationId" AND cp."userId" = ${userId}
+          WHERE m."conversationId" IN (${Prisma.join(conversationIds)})
+            AND m."isDeleted" = false
+            AND m."senderId" != ${userId}
+            AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")
+          GROUP BY m."conversationId"
+        `
+      : []
+    const unreadByConversation = new Map(unreadRows.map((r) => [r.conversationId, r.count]))
+
+    const summaries = conversations.map(({ messages, ...conversation }) => ({
+      ...conversation,
+      lastMessage: messages[0] ?? null,
+      unreadCount: unreadByConversation.get(conversation.id) ?? 0,
+      mine: mineByConversation.get(conversation.id),
+    }))
 
     // Une conversation "supprimée" (masquée) par cet utilisateur reste absente de sa liste tant
     // qu'aucun nouveau message n'est arrivé depuis — comportement calqué sur WhatsApp/Messenger
@@ -294,28 +300,31 @@ export class ChatService {
       throw new BadRequestException('Un message doit contenir du texte ou au moins une pièce jointe.')
     }
 
-    const message = await this.prisma.message.create({
-      data: {
-        conversationId,
-        senderId: requester.id,
-        body: cleanBody,
-        type: files.length ? 'FILE' : 'TEXT',
-        attachments: {
-          create: files.map((file) => ({
-            fileName: file.originalname,
-            mimeType: file.mimetype,
-            size: file.size,
-            storageKey: file.filename,
-          })),
+    // Regroupées dans une transaction : un seul aller-retour réseau plutôt que deux appels
+    // séquentiels, et garantit que la conversation "remonte" toujours en cohérence avec le message.
+    const [message] = await this.prisma.$transaction([
+      this.prisma.message.create({
+        data: {
+          conversationId,
+          senderId: requester.id,
+          body: cleanBody,
+          type: files.length ? 'FILE' : 'TEXT',
+          attachments: {
+            create: files.map((file) => ({
+              fileName: file.originalname,
+              mimeType: file.mimetype,
+              size: file.size,
+              storageKey: file.filename,
+            })),
+          },
         },
-      },
-      select: MESSAGE_SELECT,
-    })
-
-    await this.prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    })
+        select: MESSAGE_SELECT,
+      }),
+      this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      }),
+    ])
 
     this.gateway.emitNewMessage(conversationId, message)
     return message
@@ -389,7 +398,12 @@ export class ChatService {
   async downloadAttachment(attachmentId: string, requester: Requester) {
     const attachment = await this.prisma.messageAttachment.findUnique({
       where: { id: attachmentId },
-      include: { message: true },
+      select: {
+        fileName: true,
+        mimeType: true,
+        storageKey: true,
+        message: { select: { conversationId: true, isDeleted: true } },
+      },
     })
     if (!attachment || attachment.message.isDeleted) {
       throw new NotFoundException('Pièce jointe introuvable.')

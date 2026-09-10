@@ -112,10 +112,13 @@ export class PresenceService {
   async getTodayPresence(userId: string, role?: Role) {
     const today = getToday()
     const now = new Date()
-    const presence = await this.prisma.presence.findUnique({
-      where: { userId_date: { userId, date: today } },
-    })
-    const scheduleSource = await this.schedule.getScheduleSource(userId, today)
+    // Indépendantes l'une de l'autre — parallélisées plutôt qu'enchaînées en série.
+    const [presence, scheduleSource] = await Promise.all([
+      this.prisma.presence.findUnique({
+        where: { userId_date: { userId, date: today } },
+      }),
+      this.schedule.getScheduleSource(userId, today),
+    ])
 
     if (presence && !presence.expectedDepartureTime) {
       const departureSource = await this.schedule.getDepartureScheduleSource(userId, today)
@@ -127,12 +130,16 @@ export class PresenceService {
     let onLeave: LeaveInfo = null
     let computedStatus: SyntheticStatus | null = null
     if (!presence) {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { username: true, email: true, workingDays: true },
-      })
+      // user et activeLeaves sont indépendants (activeLeaves ne dépend que de `today`) —
+      // parallélisés ; seul le rapprochement ci-dessous a besoin des deux résultats.
+      const [user, activeLeaves] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { username: true, email: true, workingDays: true },
+        }),
+        this.leaveSync.getActiveLeaves(today),
+      ])
       if (user) {
-        const activeLeaves = await this.leaveSync.getActiveLeaves(today)
         const leave = activeLeaves.find((l) => matchLeaveToUser(l, user))
         onLeave = this.toLeaveInfo(leave)
       }
@@ -252,25 +259,25 @@ export class PresenceService {
     const today = getToday()
     const now = new Date()
 
-    // Calculer le groupe horaire hors transaction (lecture seule, non critique)
-    const { time: expectedTime, isNightShift } = await this.schedule.getScheduleSource(
-      userId,
-      today
-    )
-    const { time: expectedDepartureTime } = await this.schedule.getDepartureScheduleSource(
-      userId,
-      today
-    )
+    // Calculer le groupe horaire hors transaction (lecture seule, non critique). Les 3 lectures
+    // sont indépendantes — parallélisées plutôt qu'enchaînées en série.
+    const [
+      { time: expectedTime, isNightShift },
+      { time: expectedDepartureTime },
+      workplace,
+    ] = await Promise.all([
+      this.schedule.getScheduleSource(userId, today),
+      this.schedule.getDepartureScheduleSource(userId, today),
+      // Écart au lieu de travail de référence — comparé uniquement à la première connexion du jour
+      // (seul moment où la géolocalisation est obligatoire). null tant qu'aucun WorkplaceLocation
+      // n'est configuré : ne veut jamais dire "sur site", cf. redactPresenceForRole/type GeolocatedPresence.
+      this.prisma.workplaceLocation.findFirst({
+        orderBy: { createdAt: 'asc' },
+      }),
+    ])
 
     // mapsUrl toujours construit côté serveur — jamais depuis le client
     const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
-
-    // Écart au lieu de travail de référence — comparé uniquement à la première connexion du jour
-    // (seul moment où la géolocalisation est obligatoire). null tant qu'aucun WorkplaceLocation
-    // n'est configuré : ne veut jamais dire "sur site", cf. redactPresenceForRole/type GeolocatedPresence.
-    const workplace = await this.prisma.workplaceLocation.findFirst({
-      orderBy: { createdAt: 'asc' },
-    })
     const distanceFromWorkplaceMeters = workplace
       ? Math.round(
           haversineDistanceMeters(dto.latitude, dto.longitude, workplace.latitude, workplace.longitude)
@@ -572,6 +579,8 @@ export class PresenceService {
         _count: { select: { users: true } },
       },
       orderBy: { name: 'asc' },
+      // Table encore petite en pratique — plafond défensif plutôt qu'une vraie limite métier.
+      take: 500,
     })
   }
 
@@ -745,6 +754,7 @@ export class PresenceService {
         where: { user: userWhere, date: exactDate },
         include,
         orderBy: [{ createdAt: 'desc' }],
+        take: 500,
       })
     }
 
@@ -761,6 +771,7 @@ export class PresenceService {
         },
         include,
         orderBy: [{ date: 'asc' }],
+        take: 1000,
       })
     }
 

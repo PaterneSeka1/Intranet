@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import cookieParser = require('cookie-parser')
+import compression from 'compression'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
@@ -22,6 +23,9 @@ async function bootstrap() {
 
   app.set('trust proxy', true)
   app.use(helmet())
+  // Compresse toutes les réponses JSON (chat compris) — réduit la taille sur le réseau sans rien
+  // changer côté clients (REST classique, indépendant des websockets Socket.IO).
+  app.use(compression())
   app.use(cookieParser())
   app.setGlobalPrefix('api')
   app.useGlobalPipes(

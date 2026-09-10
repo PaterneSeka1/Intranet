@@ -133,6 +133,8 @@ export class AnnouncementsService {
       const targets = await this.prisma.user.findMany({
         where: { isActive: true, ...(businessUnitId ? { businessUnitId } : {}) },
         select: { id: true },
+        // Plafond défensif largement au-dessus de l'effectif réel (pas une limite métier).
+        take: 5000,
       })
       await this.notifications.notifyUsers(
         targets.map((u) => u.id),

@@ -263,6 +263,9 @@ model ConnectionLog {
   sourcedPresences Presence[] @relation("PresenceSourceConnectionLog")
 
   @@index([userId, date, type])
+  // Recherches globales (rôles CTO_ADMIN/DAF) filtrant par date/type sans userId — même raison
+  // que ActivityLog.occurredAt ci-dessus (reports.getConnectionRows, pilotage.getConnectionsChart).
+  @@index([date, type])
   @@map("connection_logs")
 }
 
@@ -309,6 +312,9 @@ model DailyMandate {
   createdBy User @relation("MandateCreator", fields: [createdById], references: [id])
 
   @@unique([userId, date])
+  // Requêtes par date (ou plage de dates) sans userId — presence.getMandates, pilotage.getSummary/
+  // getPresenceByBu, reports.computeAttendanceSummaries.
+  @@index([date])
   @@map("daily_mandates")
 }
 
@@ -432,6 +438,10 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, occurredAt])
+  // Recherches globales (rôles CTO_ADMIN/DAF) filtrant par date sans userId — l'index composite
+  // ci-dessus, préfixé par userId, ne les sert pas efficacement (reports.getActivityRows,
+  // pilotage.getActivityChart/getActivityLog).
+  @@index([occurredAt])
   @@map("activity_logs")
 }
 

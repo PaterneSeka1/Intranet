@@ -47,6 +47,8 @@ export class LeavesService {
         businessUnit: { select: { id: true, name: true } },
       },
       orderBy: [{ lastName: 'asc' }],
+      // Plafond défensif largement au-dessus de l'effectif réel (pas une limite métier).
+      take: 5000,
     })
 
     const employees: EmployeeOnLeave[] = []
@@ -82,6 +84,8 @@ export class LeavesService {
 
     const users = await this.prisma.user.findMany({
       select: { username: true, email: true },
+      // Plafond défensif largement au-dessus de l'effectif réel (pas une limite métier).
+      take: 5000,
     })
 
     const candidates = employees.filter(
