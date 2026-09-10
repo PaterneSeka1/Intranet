@@ -4,35 +4,11 @@
 <plist version="1.0">
 <dict>
 
-  <!-- ── INSTALLATION SILENCIEUSE DE LA PWA ─────────────────────────────
-       Chrome installe automatiquement l'app au premier lancement,
-       sans aucune interaction utilisateur.                               -->
-  <key>WebAppInstallForceList</key>
-  <array>
-    <dict>
-      <key>url</key>
-      <string>http://localhost:3000</string>
-      <key>default_launch_container</key>
-      <string>window</string>
-      <key>create_desktop_shortcut</key>
-      <true/>
-      <key>fallback_app_name</key>
-      <string>VDM Intranet</string>
-    </dict>
-  </array>
-
-  <!-- Ouvre toujours la PWA dans sa propre fenêtre (sans barre navigateur) -->
-  <key>WebAppSettings</key>
-  <array>
-    <dict>
-      <key>manifest_id</key>
-      <string>http://localhost:3000/</string>
-      <key>display_mode</key>
-      <string>standalone</string>
-    </dict>
-  </array>
-
-  <!-- ── RESTRICTIONS ──────────────────────────────────────────────── -->
+  <!-- ── RESTRICTIONS ──────────────────────────────────────────────────
+       Le lancement se fait directement en Chrome, mode kiosque (voir
+       kiosk-vdm.sh) : pas besoin d'installer de PWA au préalable, d'où
+       l'absence de WebAppInstallForceList/WebAppSettings ici (mêmes clés
+       que chrome-policy.reg côté Windows). -->
   <key>NewTabPageLocation</key>
   <string>http://localhost:3000</string>
 
