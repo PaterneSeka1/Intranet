@@ -161,7 +161,7 @@ export function MonProfilClient({ user }: Props) {
       )}
 
       {/* Onglets */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit max-w-full overflow-x-auto">
         {(user.mustChangePassword
           ? (['password'] as const)
           : (['info', 'password', 'security'] as const)
@@ -169,7 +169,7 @@ export function MonProfilClient({ user }: Props) {
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === t
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'

@@ -10,6 +10,7 @@ import { MobileSidebarToggle } from '@/components/sidebar/MobileSidebarToggle'
 import type { Announcement } from '@/lib/announcements'
 import { API_BASE } from '@/lib/api-base'
 import Link from 'next/link'
+import { User, History } from 'lucide-react'
 import { BgRestorer } from '@/components/ui/BgRestorer'
 import { BgImageLayer } from '@/components/ui/BgImageLayer'
 import { ServiceUnavailablePage } from '@/components/ui/ServiceUnavailablePage'
@@ -60,8 +61,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         <MustChangePasswordGuard mustChangePassword={!!user.mustChangePassword} />
         <BgRestorer />
         <BgImageLayer />
-        <header className="bg-white border-b border-gray-100 px-6 h-14 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-2">
+        <header className="bg-white border-b border-gray-100 px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sticky top-0 z-10">
+          <div className="flex items-center gap-2 min-w-0">
             {logo ? (
               <img
                 src={logo}
@@ -75,27 +76,33 @@ export default async function ProtectedLayout({ children }: { children: React.Re
                 className="w-7 h-7 rounded-lg object-cover shrink-0"
               />
             )}
-            <span className="font-bold text-gray-800 text-sm">{appName}</span>
+            <span className="font-bold text-gray-800 text-sm hidden sm:inline truncate">
+              {appName}
+            </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3 shrink-0">
             <Link
               href="/mon-profil"
-              className="text-xs text-gray-500 hover:text-gray-800 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
             >
-              Mon profil
+              <User className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+              <span className="hidden sm:inline">Mon profil</span>
             </Link>
             <Link
               href="/mon-historique"
-              className="text-xs text-gray-500 hover:text-gray-800 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
             >
-              Mon historique
+              <History className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+              <span className="hidden sm:inline">Mon historique</span>
             </Link>
             <NotificationsBell />
             <LogoutButton />
           </div>
         </header>
-        <LiveAnnouncements initialAnnouncements={announcements} showWidgets />
-        <main className="flex-1 p-6">{children}</main>
+        <div className="relative z-[2] flex-1 flex flex-col">
+          <LiveAnnouncements initialAnnouncements={announcements} showWidgets />
+          <main className="flex-1 p-4 sm:p-6">{children}</main>
+        </div>
         <ChatWidget currentUserId={user.id} />
       </div>
     )
