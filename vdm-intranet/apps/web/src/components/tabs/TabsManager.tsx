@@ -1597,11 +1597,7 @@ export function TabsManager({
                   Identifiant partagé{' '}
                   <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
                 </p>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  Compte commun pour ce site (abonnement, outil de monitoring…), visible par tous
-                  les utilisateurs qui voient cet onglet. Chaque consultation est journalisée.
-                  Modifiable ensuite via « Identifiants partagés ».
-                </p>
+
               </div>
 
               <div>
