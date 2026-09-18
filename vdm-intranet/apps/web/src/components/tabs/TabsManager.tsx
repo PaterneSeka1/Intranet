@@ -1597,7 +1597,6 @@ export function TabsManager({
                   Identifiant partagé{' '}
                   <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
                 </p>
-
               </div>
 
               <div>
