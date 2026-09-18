@@ -192,6 +192,11 @@ function IconPickerField({
   onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }) {
   const iconIsDataImage = value.startsWith('data:image/')
+  const isCustomUrlIcon = /^https?:\/\//.test(value)
+  // Champ texte brut replié par défaut : tous les noms d'icône du registre sont déjà
+  // sélectionnables via les boutons ci-dessus, ce champ ne sert plus qu'à coller une URL d'image
+  // externe (cas rare) — il ne doit pas s'imposer visuellement à chaque ouverture du formulaire.
+  const [showRawInput, setShowRawInput] = useState(false)
   const inputId = useMemo(() => `icon-image-${Math.random().toString(36).slice(2)}`, [])
   return (
     <div>
@@ -264,15 +269,25 @@ function IconPickerField({
             : 'Icône de la palette ou image.'}
         </div>
       </div>
-      <input
-        type="text"
-        value={iconIsDataImage ? 'Image sélectionnée' : value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={iconIsDataImage}
-        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-        maxLength={100000}
-        placeholder="Nom d'icône ou URL image"
-      />
+      {!iconIsDataImage &&
+        (isCustomUrlIcon || showRawInput ? (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
+            maxLength={100000}
+            placeholder="URL d'image externe (https://…)"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowRawInput(true)}
+            className="text-[11px] font-semibold text-gray-400 hover:text-[#F28C38]"
+          >
+            Utiliser une URL d&apos;image externe
+          </button>
+        ))}
       {iconIsDataImage && (
         <button
           type="button"
