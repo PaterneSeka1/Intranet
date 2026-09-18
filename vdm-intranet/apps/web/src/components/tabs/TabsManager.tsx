@@ -81,6 +81,11 @@ type TabFormData = {
   color: string
   businessUnitId: string // '' = onglet global
   folderId: string // '' = aucun dossier
+  // Identifiant partagé optionnel, saisi uniquement à la création (cf. tabsApi.setCredential) —
+  // en édition la gestion passe par le bouton dédié "Identifiants partagés".
+  credentialUsername: string
+  credentialPassword: string
+  credentialNotes: string
 }
 
 const EMPTY_TAB_FORM: TabFormData = {
@@ -91,6 +96,9 @@ const EMPTY_TAB_FORM: TabFormData = {
   color: '#F28C38',
   businessUnitId: '',
   folderId: '',
+  credentialUsername: '',
+  credentialPassword: '',
+  credentialNotes: '',
 }
 
 type FolderFormData = {
@@ -781,6 +789,9 @@ export function TabsManager({
       color: tab.color ?? '#F28C38',
       businessUnitId: tab.businessUnitId ?? '',
       folderId: tab.folderId ?? '',
+      credentialUsername: '',
+      credentialPassword: '',
+      credentialNotes: '',
     })
     setError('')
     setModal({ mode: 'edit', tab })
@@ -797,6 +808,12 @@ export function TabsManager({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const credUsername = form.credentialUsername.trim()
+    const credPassword = form.credentialPassword
+    if (modal?.mode === 'create' && (credUsername ? !credPassword : credPassword)) {
+      setError("Identifiant partagé : renseignez à la fois l'identifiant et le mot de passe.")
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
@@ -812,7 +829,24 @@ export function TabsManager({
           folderId: form.folderId || undefined,
         }
         const created = await tabsApi.create(payload)
-        setTabs((prev) => [...prev, created])
+        let finalTab = created
+        if (credUsername && credPassword) {
+          try {
+            await tabsApi.setCredential(created.id, {
+              username: credUsername,
+              password: credPassword,
+              notes: form.credentialNotes.trim() || undefined,
+            })
+            finalTab = { ...created, credential: { id: created.id } }
+          } catch (credErr) {
+            toast.error(
+              credErr instanceof Error
+                ? `Onglet créé, mais l'identifiant n'a pas pu être enregistré : ${credErr.message}`
+                : "Onglet créé, mais l'identifiant n'a pas pu être enregistré."
+            )
+          }
+        }
+        setTabs((prev) => [...prev, finalTab])
         setModal(null)
         toast.success('Onglet créé avec succès.')
       } else if (modal?.mode === 'edit' && modal.tab) {
@@ -1539,6 +1573,77 @@ export function TabsManager({
               <div className="text-xs text-gray-400 mt-1 text-center">{form.color}</div>
             </div>
           </div>
+
+          {modal?.mode === 'create' && (
+            <div className="border-t border-gray-100 pt-4 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  Identifiant partagé{' '}
+                  <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+                </p>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Compte commun pour ce site (abonnement, outil de monitoring…), visible par tous
+                  les utilisateurs qui voient cet onglet. Chaque consultation est journalisée.
+                  Modifiable ensuite via « Identifiants partagés ».
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="tab-cred-username"
+                  className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+                >
+                  Identifiant
+                </label>
+                <input
+                  id="tab-cred-username"
+                  type="text"
+                  value={form.credentialUsername}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, credentialUsername: e.target.value }))
+                  }
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
+                  placeholder="Ex : contact@veilleurdesmedias.com"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="tab-cred-password"
+                  className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+                >
+                  Mot de passe
+                </label>
+                <PasswordInput
+                  id="tab-cred-password"
+                  value={form.credentialPassword}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, credentialPassword: e.target.value }))
+                  }
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
+                  placeholder="Mot de passe du compte partagé"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="tab-cred-notes"
+                  className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
+                >
+                  Notes <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+                </label>
+                <textarea
+                  id="tab-cred-notes"
+                  value={form.credentialNotes}
+                  onChange={(e) => setForm((f) => ({ ...f, credentialNotes: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300 resize-none"
+                  placeholder="Ex : code 2FA envoyé sur la boîte mail partagée"
+                />
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5 text-xs text-red-600">
