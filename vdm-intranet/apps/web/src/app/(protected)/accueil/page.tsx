@@ -61,10 +61,10 @@ function StatBlock({
 }) {
   return (
     <div>
-      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">
         {label}
       </div>
-      <div className={`text-sm font-semibold ${accent ? 'text-[#F28C38]' : 'text-gray-800'}`}>
+      <div className={`text-xs font-semibold ${accent ? 'text-[#F28C38]' : 'text-gray-800'}`}>
         {value}
       </div>
     </div>
@@ -109,40 +109,40 @@ export default async function AccueilPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Hero de bienvenue */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#1B293C] px-6 py-7 sm:px-8 sm:py-9">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#F28C38]/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-10 h-48 w-48 rounded-full bg-[#F28C38]/10 blur-3xl" />
-        <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <div className="relative overflow-hidden rounded-2xl bg-[#1B293C] px-5 py-4 sm:px-6 sm:py-5">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#F28C38]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-14 left-10 h-32 w-32 rounded-full bg-[#F28C38]/10 blur-3xl" />
+        <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#F28C38] mb-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#F28C38] mb-1">
               {ROLE_LABELS[user.role]}
               {user.businessUnit ? ` · ${user.businessUnit.name}` : ''}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight">
               {greeting()}, {displayName}
             </h1>
-            <p className="text-sm text-white/60 mt-1.5 capitalize">{formatDate()}</p>
+            <p className="text-xs text-white/60 mt-1 capitalize">{formatDate()}</p>
           </div>
         </div>
       </div>
 
       {/* Carte présence — uniquement les données du jour */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-[#F28C38]/10 flex items-center justify-center text-[#F28C38]">
-              <Clock className="w-4 h-4" strokeWidth={1.75} />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+            <span className="w-6 h-6 rounded-lg bg-[#F28C38]/10 flex items-center justify-center text-[#F28C38]">
+              <Clock className="w-3.5 h-3.5" strokeWidth={1.75} />
             </span>
             Ma journée
           </h2>
           <span
-            className={`text-xs font-bold px-3 py-1 rounded-full ${STATUS_STYLE[status] ?? DEFAULT_STATUS_STYLE}`}
+            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${STATUS_STYLE[status] ?? DEFAULT_STATUS_STYLE}`}
           >
             {STATUS_LABEL[status] ?? status}
           </span>
         </div>
         <div
-          className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-5`}
+          className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3`}
         >
           <StatBlock
             label="Heure attendue"
@@ -180,7 +180,7 @@ export default async function AccueilPage() {
         </div>
 
         {showGeolocation && presence?.address && (
-          <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 flex items-center gap-1.5">
+          <div className="mt-2.5 text-xs text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5 border border-gray-100 flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
             {presence.address}
           </div>
@@ -188,9 +188,9 @@ export default async function AccueilPage() {
 
         {/* Départ */}
         {presence && (
-          <div className="mt-5 pt-5 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-gray-100">
             <div
-              className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-5`}
+              className={`grid grid-cols-2 ${showGeolocation ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3`}
             >
               <StatBlock label="Départ attendu" value={presence.expectedDepartureTime ?? '—'} />
               <StatBlock
@@ -228,14 +228,14 @@ export default async function AccueilPage() {
             </div>
 
             {showGeolocation && presence.departureAddress && (
-              <div className="mt-4 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 flex items-center gap-1.5">
+              <div className="mt-2.5 text-xs text-gray-500 bg-gray-50 rounded-lg px-2.5 py-1.5 border border-gray-100 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
                 {presence.departureAddress}
               </div>
             )}
 
             {!presence.officialDepartureTime && (
-              <div className="mt-5">
+              <div className="mt-3">
                 <EndDayButton />
               </div>
             )}
