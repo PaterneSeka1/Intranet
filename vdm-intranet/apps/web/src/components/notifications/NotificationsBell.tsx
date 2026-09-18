@@ -134,59 +134,66 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
       </button>
 
       {open && (
-        <div
-          className={`absolute ${dark ? 'left-0' : 'right-0'} mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-gray-100 shadow-2xl z-[9500] overflow-hidden`}
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <span className="font-bold text-sm text-gray-900">Notifications</span>
-            {items && items.some((i) => !i.isRead) && (
-              <button
-                onClick={handleMarkAllRead}
-                className="text-xs text-[#F28C38] hover:underline font-medium"
-              >
-                Tout marquer comme lu
-              </button>
-            )}
-          </div>
+        <>
+          <div
+            className="sm:hidden fixed inset-0 bg-black/20 z-[9400]"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            className={`fixed left-3 right-3 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:mt-2 sm:w-96 ${dark ? 'sm:left-0' : 'sm:right-0'} bg-white rounded-2xl border border-gray-100 shadow-2xl z-[9500] overflow-hidden`}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <span className="font-bold text-sm text-gray-900">Notifications</span>
+              {items && items.some((i) => !i.isRead) && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="text-xs text-[#F28C38] hover:underline font-medium"
+                >
+                  Tout marquer comme lu
+                </button>
+              )}
+            </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {items === null && (
-              <p className="text-sm text-gray-400 text-center py-6">Chargement…</p>
-            )}
-            {items?.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">Aucune notification.</p>
-            )}
-            {items?.map((item) => (
-              <div
-                key={item.id}
-                className={`group relative border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                  item.isRead ? '' : 'bg-[#F28C38]/5'
-                }`}
-              >
-                <button
-                  onClick={() => handleItemClick(item)}
-                  className="w-full text-left px-4 py-3 pr-9"
+            <div className="max-h-[calc(100vh-9rem)] sm:max-h-96 overflow-y-auto">
+              {items === null && (
+                <p className="text-sm text-gray-400 text-center py-6">Chargement…</p>
+              )}
+              {items?.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-6">Aucune notification.</p>
+              )}
+              {items?.map((item) => (
+                <div
+                  key={item.id}
+                  className={`group relative border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                    item.isRead ? '' : 'bg-[#F28C38]/5'
+                  }`}
                 >
-                  <div className="flex items-center gap-2">
-                    {!item.isRead && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#F28C38] shrink-0" />
-                    )}
-                    <span className="text-sm font-semibold text-gray-900">{item.title}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.body}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">{fmtDate(item.createdAt)}</p>
-                </button>
-                <button
-                  onClick={(e) => handleDelete(e, item)}
-                  aria-label="Supprimer la notification"
-                  className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                >
-                  <X className="w-3.5 h-3.5" strokeWidth={2} />
-                </button>
-              </div>
-            ))}
+                  <button
+                    onClick={() => handleItemClick(item)}
+                    className="w-full text-left px-4 py-3 pr-9"
+                  >
+                    <div className="flex items-center gap-2">
+                      {!item.isRead && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#F28C38] shrink-0" />
+                      )}
+                      <span className="text-sm font-semibold text-gray-900">{item.title}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.body}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{fmtDate(item.createdAt)}</p>
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(e, item)}
+                    aria-label="Supprimer la notification"
+                    className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={2} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
