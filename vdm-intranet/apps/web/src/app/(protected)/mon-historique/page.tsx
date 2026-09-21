@@ -44,7 +44,7 @@ export default async function MonHistoriquePage() {
           href="/accueil"
           className="text-sm text-gray-500 hover:text-gray-800 border border-gray-200 px-4 py-2 rounded-xl transition-colors"
         >
-          ← Accueil
+          Accueil
         </Link>
       </div>
 
