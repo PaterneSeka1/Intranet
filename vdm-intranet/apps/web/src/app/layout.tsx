@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+// @ts-ignore Next.js loads global CSS at runtime; its declarations are provided by the build pipeline.
 import './globals.css'
 import { Toaster } from '@/components/ui/Toaster'
 import { ConfirmPortal } from '@/components/ui/ConfirmModal'
