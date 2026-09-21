@@ -222,7 +222,9 @@ function AnnouncementWidget({ announcements }: { announcements: Announcement[] }
   const items = [...pinned, ...regular]
 
   return (
-    <div className={`${CARD} w-80 p-4 pointer-events-auto flex flex-col max-h-[min(60vh,26rem)]`}>
+    <div
+      className={`${CARD} w-[min(20rem,calc(100vw-2rem))] p-4 pointer-events-auto flex flex-col max-h-[min(60vh,26rem)]`}
+    >
       <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
         <div>
           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -257,7 +259,9 @@ function fmtLeaveDate(iso: string): string {
 
 function LeaveWidget({ employees }: { employees: EmployeeOnLeave[] }) {
   return (
-    <div className={`${CARD} w-80 p-4 pointer-events-auto flex flex-col max-h-[min(60vh,26rem)]`}>
+    <div
+      className={`${CARD} w-[min(20rem,calc(100vw-2rem))] p-4 pointer-events-auto flex flex-col max-h-[min(60vh,26rem)]`}
+    >
       <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
         <div>
           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -428,9 +432,9 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
   const timeWidgetsVisible = visible.clock || visible.calendar || visible.weather
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 hidden lg:flex flex-col items-end gap-2 pointer-events-none">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2 pointer-events-none max-w-[calc(100vw-2rem)]">
       {/* ── Bascules ── */}
-      <div className="flex gap-1.5 pointer-events-auto">
+      <div className="flex flex-wrap justify-end gap-1.5 pointer-events-auto">
         {WIDGET_KEYS.map((key) => (
           <button
             key={key}
@@ -452,7 +456,7 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
 
       {/* ── Cartes widgets ── */}
       {timeWidgetsVisible && (
-        <div className="flex gap-3 items-end pointer-events-auto">
+        <div className="flex flex-wrap justify-end gap-3 items-end pointer-events-auto">
           {/* Horloge — composant isolé pour limiter les re-renders */}
           {visible.clock && <ClockWidget />}
 
