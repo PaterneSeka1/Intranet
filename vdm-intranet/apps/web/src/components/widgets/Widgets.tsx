@@ -75,6 +75,9 @@ const WIDGET_LABELS: Record<WidgetKey, string> = {
   weather: 'Météo',
 }
 
+// Horloge/calendrier/météo : superflus sur mobile, réservés au desktop
+const DESKTOP_ONLY_WIDGETS = new Set<WidgetKey>(['clock', 'calendar', 'weather'])
+
 const DEFAULT_WIDGET_VISIBILITY: Record<WidgetKey, boolean> = {
   announcements: true,
   leave: true,
@@ -440,6 +443,8 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
             key={key}
             onClick={() => toggleWidget(key)}
             className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all backdrop-blur-sm shadow-md border ${
+              DESKTOP_ONLY_WIDGETS.has(key) ? 'hidden lg:inline-block' : ''
+            } ${
               visible[key]
                 ? 'bg-[#F28C38] border-[#F28C38]/30 text-white'
                 : 'bg-white/70 border-gray-200/50 text-gray-500 hover:bg-white/90'
@@ -454,9 +459,9 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
 
       {visible.leave && <LeaveWidget employees={onLeave} />}
 
-      {/* ── Cartes widgets ── */}
+      {/* ── Cartes widgets (horloge/calendrier/météo) — desktop uniquement ── */}
       {timeWidgetsVisible && (
-        <div className="flex flex-wrap justify-end gap-3 items-end pointer-events-auto">
+        <div className="hidden lg:flex flex-wrap justify-end gap-3 items-end pointer-events-auto">
           {/* Horloge — composant isolé pour limiter les re-renders */}
           {visible.clock && <ClockWidget />}
 
