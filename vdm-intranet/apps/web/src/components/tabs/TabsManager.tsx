@@ -1610,9 +1610,7 @@ export function TabsManager({
                   id="tab-cred-username"
                   type="text"
                   value={form.credentialUsername}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, credentialUsername: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, credentialUsername: e.target.value }))}
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
                   placeholder="Ex : contact@veilleurdesmedias.com"
                 />
@@ -1628,9 +1626,7 @@ export function TabsManager({
                 <PasswordInput
                   id="tab-cred-password"
                   value={form.credentialPassword}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, credentialPassword: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, credentialPassword: e.target.value }))}
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] placeholder-gray-300"
                   placeholder="Mot de passe du compte partagé"
                 />
