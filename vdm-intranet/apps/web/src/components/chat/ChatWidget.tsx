@@ -13,6 +13,7 @@ import { MessageCircle, Pin, Plus, Trash2, X } from 'lucide-react'
 import { API_BASE } from '@/lib/api-base'
 import {
   chatApi,
+  chatUserDisplayName,
   conversationDisplayName,
   type ChatMessage,
   type Conversation,
@@ -147,6 +148,12 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId
   }, [activeConversationId])
+  // Miroir de `open`, lu depuis le handler socket (fermé sur sa valeur initiale sinon) pour ne
+  // notifier que si la conversation concernée n'est pas déjà affichée à l'écran.
+  const openRef = useRef(false)
+  useEffect(() => {
+    openRef.current = open
+  }, [open])
 
   // Position du bouton flottant : restaurée depuis localStorage (ou coin bas-droit par défaut),
   // re-bornée à l'écran si la fenêtre est redimensionnée après un déplacement.
@@ -256,6 +263,7 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
         const isActive = activeConversationIdRef.current === conversationId
         const isMine = message.senderId === currentUserId
         let found = true
+        let matchedConversation: ConversationSummary | undefined
         setConversations((prev) => {
           if (!prev) return prev
           const idx = prev.findIndex((c) => c.id === conversationId)
@@ -264,6 +272,7 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
             return prev
           }
           const conv = prev[idx]
+          matchedConversation = conv
           const updated: ConversationSummary = {
             ...conv,
             lastMessage: message,
@@ -280,6 +289,16 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
             prev.some((m) => m.id === message.id) ? prev : [...prev, message]
           )
           if (!isMine) chatApi.markRead(conversationId).catch(() => {})
+        }
+        // Toast uniquement si le message n'est pas de moi et que sa conversation n'est pas déjà
+        // affichée à l'écran (widget ouvert + conversation active) — sinon redondant avec le fil.
+        const isOnScreen = openRef.current && isActive
+        if (!isMine && !isOnScreen && matchedConversation) {
+          const who =
+            matchedConversation.type === 'GROUP'
+              ? `${chatUserDisplayName(message.sender)} · ${conversationDisplayName(matchedConversation, currentUserId)}`
+              : chatUserDisplayName(message.sender)
+          toast.info(`${who} : ${fmtPreview(message)}`)
         }
       }
     )

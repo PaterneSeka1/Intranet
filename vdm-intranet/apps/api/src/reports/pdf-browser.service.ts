@@ -25,8 +25,15 @@ export class PdfBrowserService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async launch(): Promise<Browser> {
+    // Sur les postes Windows sous stratégie de contrôle d'application (WDAC/AppLocker),
+    // le Chromium téléchargé par Puppeteer dans le cache utilisateur peut être bloqué
+    // à l'exécution. PUPPETEER_EXECUTABLE_PATH permet de pointer vers un Chrome/Edge
+    // installé (signé, autorisé par la stratégie) à la place.
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+
     const browser = await puppeteer.launch({
       headless: true,
+      executablePath,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     })
     browser.on('disconnected', () => {
