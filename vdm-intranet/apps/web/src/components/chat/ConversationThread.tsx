@@ -35,6 +35,10 @@ function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
+function fmtFullDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
+}
+
 function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`
@@ -227,6 +231,7 @@ export function ConversationThread({
         <button
           onClick={onBack}
           aria-label="Retour"
+          title="Retour"
           className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors shrink-0"
         >
           <ArrowLeft className="w-4 h-4" strokeWidth={2} />
@@ -258,6 +263,7 @@ export function ConversationThread({
           <button
             onClick={onOpenGroupInfo}
             aria-label="Informations du groupe"
+            title="Informations du groupe"
             className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors shrink-0"
           >
             <Info className="w-4 h-4" strokeWidth={2} />
@@ -305,6 +311,7 @@ export function ConversationThread({
                         setOpenActionsId((prev) => (prev === message.id ? null : message.id))
                       }
                       aria-label="Actions du message"
+                      title="Actions du message"
                       aria-haspopup="menu"
                       aria-expanded={openActionsId === message.id}
                       className={`w-7 h-7 rounded-full items-center justify-center transition-colors ${
@@ -380,12 +387,16 @@ export function ConversationThread({
                         />
                         <button
                           onClick={saveEdit}
+                          aria-label="Enregistrer"
+                          title="Enregistrer"
                           className="text-white/90 hover:text-white shrink-0"
                         >
                           <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
                         </button>
                         <button
                           onClick={() => setEditingId(null)}
+                          aria-label="Annuler"
+                          title="Annuler"
                           className="text-white/90 hover:text-white shrink-0"
                         >
                           <X className="w-3.5 h-3.5" strokeWidth={2.5} />
@@ -404,6 +415,7 @@ export function ConversationThread({
                               key={attachment.id}
                               type="button"
                               onClick={() => setPreviewAttachment(attachment)}
+                              title={attachment.fileName}
                               className="block mt-1.5"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -418,6 +430,7 @@ export function ConversationThread({
                               key={attachment.id}
                               type="button"
                               onClick={() => setPreviewAttachment(attachment)}
+                              title={`${attachment.fileName} (${fmtSize(attachment.size)})`}
                               className={`mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs w-full text-left ${
                                 isMine
                                   ? 'bg-white/15 hover:bg-white/25'
@@ -436,14 +449,25 @@ export function ConversationThread({
                     )}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 px-1">
-                    <span className="text-[10px] text-gray-400">
+                    <span
+                      className="text-[10px] text-gray-400"
+                      title={fmtFullDateTime(message.createdAt)}
+                    >
                       {fmtTime(message.createdAt)}
                       {message.isEdited && !message.isDeleted ? ' · modifié' : ''}
                     </span>
                     {isRead ? (
-                      <CheckCheck className="w-3 h-3 text-[#F28C38]" strokeWidth={2} />
+                      <CheckCheck
+                        className="w-3 h-3 text-[#F28C38]"
+                        strokeWidth={2}
+                        aria-label="Lu"
+                      >
+                        <title>Lu</title>
+                      </CheckCheck>
                     ) : isMine && !message.isDeleted ? (
-                      <Check className="w-3 h-3 text-gray-300" strokeWidth={2} />
+                      <Check className="w-3 h-3 text-gray-300" strokeWidth={2} aria-label="Envoyé">
+                        <title>Envoyé</title>
+                      </Check>
                     ) : null}
                   </div>
                 </div>
@@ -468,9 +492,13 @@ export function ConversationThread({
                 key={`${file.name}-${i}`}
                 className="flex items-center gap-1 bg-gray-100 rounded-full pl-2 pr-1 py-1 text-xs text-gray-600"
               >
-                <span className="truncate max-w-[120px]">{file.name}</span>
+                <span className="truncate max-w-[120px]" title={file.name}>
+                  {file.name}
+                </span>
                 <button
                   onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                  aria-label={`Retirer ${file.name}`}
+                  title={`Retirer ${file.name}`}
                   className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-gray-200"
                 >
                   <X className="w-3 h-3" strokeWidth={2.5} />
@@ -490,6 +518,7 @@ export function ConversationThread({
           <button
             onClick={() => fileInputRef.current?.click()}
             aria-label="Joindre un fichier"
+            title="Joindre un fichier"
             className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors shrink-0"
           >
             <Paperclip className="w-[18px] h-[18px]" strokeWidth={1.75} />
@@ -512,6 +541,7 @@ export function ConversationThread({
             onClick={handleSend}
             disabled={!body.trim() && !pendingFiles.length}
             aria-label="Envoyer"
+            title="Envoyer"
             className="w-9 h-9 rounded-full flex items-center justify-center bg-[#F28C38] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-105 transition-all shrink-0"
           >
             <Send className="w-4 h-4" strokeWidth={2} />

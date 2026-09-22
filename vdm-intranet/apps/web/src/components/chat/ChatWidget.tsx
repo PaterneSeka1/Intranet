@@ -572,6 +572,7 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
           touchAction: 'none',
         }}
         aria-label="Messagerie (glisser pour déplacer)"
+        title="Messagerie (glisser pour déplacer)"
         className="fixed z-[8500] w-14 h-14 rounded-full bg-[#F28C38] text-white shadow-xl flex items-center justify-center hover:brightness-105 transition-transform active:scale-95 cursor-grab active:cursor-grabbing select-none"
       >
         {open ? (
@@ -580,7 +581,10 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
           <MessageCircle className="w-6 h-6" strokeWidth={2} />
         )}
         {!open && unreadConversationsCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white">
+          <span
+            title={`${unreadConversationsCount} conversation(s) non lue(s)`}
+            className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white"
+          >
             {unreadConversationsCount > 9 ? '9+' : unreadConversationsCount}
           </span>
         )}
@@ -615,6 +619,7 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                 <button
                   onClick={() => setShowNewConversation(true)}
                   aria-label="Nouvelle conversation"
+                  title="Nouvelle conversation"
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-[#F28C38] hover:brightness-105 transition-all"
                 >
                   <Plus className="w-4 h-4" strokeWidth={2.5} />
@@ -674,16 +679,28 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                                   aria-label="Épinglée"
                                 />
                               )}
-                              <span className="text-sm font-semibold text-gray-900 truncate">
+                              <span
+                                className="text-sm font-semibold text-gray-900 truncate"
+                                title={conversationDisplayName(conversation, currentUserId)}
+                              >
                                 {conversationDisplayName(conversation, currentUserId)}
                               </span>
                             </span>
-                            <span className="text-[10px] text-gray-400 shrink-0">
+                            <span
+                              className="text-[10px] text-gray-400 shrink-0"
+                              title={new Date(conversation.updatedAt).toLocaleString('fr-FR', {
+                                dateStyle: 'long',
+                                timeStyle: 'short',
+                              })}
+                            >
                               {fmtTime(conversation.updatedAt)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-2 mt-0.5">
-                            <p className="text-xs text-gray-500 truncate">
+                            <p
+                              className="text-xs text-gray-500 truncate"
+                              title={fmtPreview(conversation.lastMessage)}
+                            >
                               {fmtPreview(conversation.lastMessage)}
                             </p>
                             {conversation.unreadCount > 0 && (
@@ -698,6 +715,7 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                         <button
                           onClick={() => handleTogglePin(conversation)}
                           aria-label={conversation.isPinned ? 'Désépingler' : 'Épingler'}
+                          title={conversation.isPinned ? 'Désépingler' : 'Épingler'}
                           className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
                             conversation.isPinned
                               ? 'text-[#F28C38] hover:bg-[#F28C38]/10'
@@ -712,6 +730,7 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                         <button
                           onClick={() => handleDeleteConversation(conversation)}
                           aria-label="Supprimer la conversation"
+                          title="Supprimer la conversation"
                           className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
