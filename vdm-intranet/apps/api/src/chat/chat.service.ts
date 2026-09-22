@@ -84,7 +84,14 @@ export class ChatService {
       where: { participants: { some: { userId } } },
       select: {
         ...CONVERSATION_SELECT,
-        messages: { orderBy: { createdAt: 'desc' }, take: 1, select: MESSAGE_SELECT },
+        // Un message masqué ("supprimé pour moi") par cet utilisateur ne doit pas apparaître comme
+        // aperçu de la conversation dans sa propre liste, même s'il reste visible des autres.
+        messages: {
+          where: { deletions: { none: { userId } } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: MESSAGE_SELECT,
+        },
       },
       orderBy: { updatedAt: 'desc' },
       take: 200,
@@ -112,6 +119,10 @@ export class ChatService {
             AND m."isDeleted" = false
             AND m."senderId" != ${userId}
             AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")
+            AND NOT EXISTS (
+              SELECT 1 FROM "message_deletions" md
+              WHERE md."messageId" = m."id" AND md."userId" = ${userId}
+            )
           GROUP BY m."conversationId"
         `
       : []
@@ -288,7 +299,9 @@ export class ChatService {
     const take = Math.min(100, Math.max(1, limit))
 
     const messages = await this.prisma.message.findMany({
-      where: { conversationId },
+      // Un message que cet utilisateur a "supprimé pour lui" (MessageDeletion) n'est jamais renvoyé
+      // dans son propre fil, mais reste intact pour les autres participants.
+      where: { conversationId, deletions: { none: { userId } } },
       select: MESSAGE_SELECT,
       orderBy: { createdAt: 'desc' },
       take,
@@ -359,11 +372,33 @@ export class ChatService {
     return updated
   }
 
-  async deleteMessage(messageId: string, requester: Requester) {
+  /** `scope: 'me'` masque le message pour le seul demandeur (n'importe quel participant, sur
+   * n'importe quel message) — cf. MessageDeletion, calqué sur `deleteConversation`/`hiddenAt`.
+   * `scope: 'everyone'` (défaut) est la suppression globale existante, réservée à l'auteur. */
+  async deleteMessage(
+    messageId: string,
+    requester: Requester,
+    scope: 'me' | 'everyone' = 'everyone'
+  ) {
     const message = await this.prisma.message.findUnique({ where: { id: messageId } })
-    if (!message || message.isDeleted) throw new NotFoundException('Message introuvable.')
+    if (!message) throw new NotFoundException('Message introuvable.')
+
+    if (scope === 'me') {
+      await this.assertParticipant(message.conversationId, requester.id)
+      await this.prisma.messageDeletion.upsert({
+        where: { messageId_userId: { messageId, userId: requester.id } },
+        create: { messageId, userId: requester.id },
+        update: {},
+      })
+      this.gateway.emitMessageHiddenForUser(requester.id, message.conversationId, messageId)
+      return { deleted: true, scope: 'me' as const }
+    }
+
+    if (message.isDeleted) throw new NotFoundException('Message introuvable.')
     if (message.senderId !== requester.id) {
-      throw new ForbiddenException('Vous ne pouvez supprimer que vos propres messages.')
+      throw new ForbiddenException(
+        'Vous ne pouvez supprimer pour tout le monde que vos propres messages.'
+      )
     }
 
     await this.prisma.message.update({
@@ -371,7 +406,7 @@ export class ChatService {
       data: { isDeleted: true, body: null },
     })
     this.gateway.emitMessageDeleted(message.conversationId, messageId)
-    return { deleted: true }
+    return { deleted: true, scope: 'everyone' as const }
   }
 
   async markRead(conversationId: string, requester: Requester) {

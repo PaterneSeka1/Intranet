@@ -117,8 +117,12 @@ export const chatApi = {
   editMessage: (id: string, body: string) =>
     req<ChatMessage>(`/chat/messages/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }),
 
-  deleteMessage: (id: string) =>
-    req<{ deleted: boolean }>(`/chat/messages/${id}`, { method: 'DELETE' }),
+  // scope 'me' : masque le message pour l'utilisateur courant seulement (n'importe quel message).
+  // scope 'everyone' (défaut) : suppression globale, réservée à l'auteur du message.
+  deleteMessage: (id: string, scope: 'me' | 'everyone' = 'everyone') =>
+    req<{ deleted: boolean; scope: 'me' | 'everyone' }>(`/chat/messages/${id}?scope=${scope}`, {
+      method: 'DELETE',
+    }),
 
   markRead: (id: string) =>
     req<{ lastReadAt: string }>(`/chat/conversations/${id}/read`, { method: 'PATCH' }),

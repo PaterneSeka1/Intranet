@@ -338,6 +338,19 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
       }
     )
 
+    // "Supprimer pour moi" déclenché depuis un autre onglet/appareil du même utilisateur (room
+    // privée `user:{id}`, cf. ChatGateway.emitMessageHiddenForUser) — jamais reçu pour un message
+    // supprimé par quelqu'un d'autre dans la conversation.
+    socket.on(
+      'message:hidden-for-me',
+      ({ conversationId, messageId }: { conversationId: string; messageId: string }) => {
+        if (activeConversationIdRef.current === conversationId) {
+          setActiveMessages((prev) => prev.filter((m) => m.id !== messageId))
+        }
+        refreshConversations()
+      }
+    )
+
     socket.on('conversation:new', () => refreshConversations())
     socket.on('conversation:updated', ({ conversationId }: { conversationId: string }) => {
       refreshConversations()
@@ -484,12 +497,19 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     }
   }
 
-  async function handleDeleteMessage(messageId: string) {
+  async function handleDeleteMessage(messageId: string, scope: 'me' | 'everyone') {
     try {
-      await chatApi.deleteMessage(messageId)
-      setActiveMessages((prev) =>
-        prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true, body: null } : m))
-      )
+      await chatApi.deleteMessage(messageId, scope)
+      if (scope === 'everyone') {
+        setActiveMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true, body: null } : m))
+        )
+      } else {
+        // Masquage propre à l'utilisateur : le message disparaît sans laisser de trace, contrairement
+        // à la suppression "pour tout le monde" qui garde un placeholder "Message supprimé".
+        setActiveMessages((prev) => prev.filter((m) => m.id !== messageId))
+        refreshConversations()
+      }
     } catch {
       toast.error('Échec de la suppression du message.')
     }

@@ -63,7 +63,7 @@ interface ConversationThreadProps {
   onSend: (body: string, files: File[]) => void
   onTyping: (isTyping: boolean) => void
   onEditMessage: (messageId: string, body: string) => void
-  onDeleteMessage: (messageId: string) => void
+  onDeleteMessage: (messageId: string, scope: 'me' | 'everyone') => void
   onOpenGroupInfo: () => void
 }
 
@@ -218,12 +218,15 @@ export function ConversationThread({
     setEditingId(null)
   }
 
-  async function handleDelete(messageId: string) {
+  async function handleDelete(messageId: string, scope: 'me' | 'everyone') {
     const ok = await confirm({
-      message: 'Supprimer ce message ? Cette action est irréversible.',
-      destructive: true,
+      message:
+        scope === 'everyone'
+          ? 'Supprimer ce message pour tout le monde ? Cette action est irréversible.'
+          : 'Supprimer ce message uniquement pour vous ? Il restera visible pour les autres.',
+      destructive: scope === 'everyone',
     })
-    if (ok) onDeleteMessage(messageId)
+    if (ok) onDeleteMessage(messageId, scope)
   }
 
   return (
@@ -298,68 +301,86 @@ export function ConversationThread({
             new Date(other.lastReadAt) >= new Date(message.createdAt)
           const isEditing = editingId === message.id
 
+          // Bouton d'actions : sur tout message non supprimé, mien ou non (nécessaire pour
+          // "supprimer pour moi", disponible sur les messages des autres). Positionné avant la
+          // bulle pour mes propres messages, après pour ceux des autres — cf. placement plus bas.
+          const actionsButton = !message.isDeleted && !isEditing && (
+            <div
+              className="relative shrink-0"
+              ref={openActionsId === message.id ? actionsMenuRef : undefined}
+            >
+              <Tooltip label="Actions du message">
+                <button
+                  onClick={() =>
+                    setOpenActionsId((prev) => (prev === message.id ? null : message.id))
+                  }
+                  aria-label="Actions du message"
+                  aria-haspopup="menu"
+                  aria-expanded={openActionsId === message.id}
+                  className={`w-7 h-7 rounded-full items-center justify-center transition-colors ${
+                    openActionsId === message.id
+                      ? 'flex bg-gray-100 text-gray-700'
+                      : 'hidden group-hover:flex text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <MoreVertical className="w-4 h-4" strokeWidth={2} />
+                </button>
+              </Tooltip>
+              {openActionsId === message.id && (
+                <div
+                  ref={actionsDropdownRef}
+                  role="menu"
+                  className="absolute right-0 top-full mt-1 w-48 py-1 bg-white rounded-xl border border-gray-100 shadow-xl z-10 overflow-hidden"
+                >
+                  {isMine && message.type === 'TEXT' && (
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setOpenActionsId(null)
+                        startEdit(message)
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" strokeWidth={2} />
+                      Modifier
+                    </button>
+                  )}
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setOpenActionsId(null)
+                      handleDelete(message.id, 'me')
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                    Supprimer pour moi
+                  </button>
+                  {isMine && (
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setOpenActionsId(null)
+                        handleDelete(message.id, 'everyone')
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                      Supprimer pour tout le monde
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+
           return (
             <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
               {/* Actions et bulle en frères dans un même flex row (plutôt qu'en position absolute
                   hors-flux) : un vide entre les deux ferait perdre le survol du groupe avant même
                   d'atteindre les boutons, les rendant quasi impossibles à cliquer. */}
               <div className="group flex items-center gap-1 max-w-[80%] min-w-0">
-                {!message.isDeleted && isMine && !isEditing && (
-                  <div
-                    className="relative shrink-0"
-                    ref={openActionsId === message.id ? actionsMenuRef : undefined}
-                  >
-                    <Tooltip label="Actions du message">
-                      <button
-                        onClick={() =>
-                          setOpenActionsId((prev) => (prev === message.id ? null : message.id))
-                        }
-                        aria-label="Actions du message"
-                        aria-haspopup="menu"
-                        aria-expanded={openActionsId === message.id}
-                        className={`w-7 h-7 rounded-full items-center justify-center transition-colors ${
-                          openActionsId === message.id
-                            ? 'flex bg-gray-100 text-gray-700'
-                            : 'hidden group-hover:flex text-gray-400 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        <MoreVertical className="w-4 h-4" strokeWidth={2} />
-                      </button>
-                    </Tooltip>
-                    {openActionsId === message.id && (
-                      <div
-                        ref={actionsDropdownRef}
-                        role="menu"
-                        className="absolute right-0 top-full mt-1 w-36 py-1 bg-white rounded-xl border border-gray-100 shadow-xl z-10 overflow-hidden"
-                      >
-                        {message.type === 'TEXT' && (
-                          <button
-                            role="menuitem"
-                            onClick={() => {
-                              setOpenActionsId(null)
-                              startEdit(message)
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5" strokeWidth={2} />
-                            Modifier
-                          </button>
-                        )}
-                        <button
-                          role="menuitem"
-                          onClick={() => {
-                            setOpenActionsId(null)
-                            handleDelete(message.id)
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
-                          Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {isMine && actionsButton}
                 <div className={`flex flex-col min-w-0 ${isMine ? 'items-end' : 'items-start'}`}>
                   {conversation.type === 'GROUP' && !isMine && (
                     <span className="text-[10px] text-gray-400 mb-0.5 px-1">
@@ -490,6 +511,7 @@ export function ConversationThread({
                     ) : null}
                   </div>
                 </div>
+                {!isMine && actionsButton}
               </div>
             </div>
           )

@@ -152,8 +152,12 @@ export class ChatController {
   }
 
   @Delete('messages/:id')
-  deleteMessage(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.chatService.deleteMessage(id, user)
+  deleteMessage(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Query('scope') scope?: string
+  ) {
+    return this.chatService.deleteMessage(id, user, scope === 'me' ? 'me' : 'everyone')
   }
 
   @Get('attachments/:id')

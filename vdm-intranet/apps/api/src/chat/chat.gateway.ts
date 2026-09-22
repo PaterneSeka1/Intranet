@@ -165,6 +165,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('message:deleted', { conversationId, messageId })
   }
 
+  // "Supprimer pour moi" : masquage privé, jamais diffusé aux autres participants de la conversation
+  // (contrairement à emitMessageDeleted) — seulement synchronisé entre les onglets/appareils de
+  // ce même utilisateur, comme emitConversationHidden.
+  emitMessageHiddenForUser(userId: string, conversationId: string, messageId: string) {
+    this.server?.to(`user:${userId}`).emit('message:hidden-for-me', { conversationId, messageId })
+  }
+
   emitConversationNew(conversation: ConversationPayload, participantIds: string[]) {
     this.joinConversation(conversation.id, participantIds)
     this.server

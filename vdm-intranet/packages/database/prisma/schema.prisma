@@ -186,6 +186,7 @@ model User {
   createdConversations       Conversation[]            @relation("ConversationCreator")
   conversationParticipations ConversationParticipant[]
   messages                   Message[]
+  messageDeletions           MessageDeletion[]
 
   @@map("users")
 }
@@ -575,9 +576,27 @@ model Message {
   conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User                @relation(fields: [senderId], references: [id])
   attachments  MessageAttachment[]
+  deletions    MessageDeletion[]
 
   @@index([conversationId, createdAt])
   @@map("messages")
+}
+
+// "Suppression pour moi" : masquage d'un message propre à un participant, indépendant des autres —
+// plusieurs participants d'un groupe peuvent chacun le masquer sans s'affecter mutuellement.
+// Distinct de Message.isDeleted, qui est la suppression globale ("pour tout le monde").
+model MessageDeletion {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  deletedAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("message_deletions")
 }
 
 model MessageAttachment {
