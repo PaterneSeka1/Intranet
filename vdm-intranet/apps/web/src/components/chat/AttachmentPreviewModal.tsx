@@ -204,10 +204,15 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
                   {activeRows.map((row, i) => (
                     <tr
                       key={i}
-                      className={i === 0 ? 'bg-gray-50 font-semibold' : 'odd:bg-white even:bg-gray-50/50'}
+                      className={
+                        i === 0 ? 'bg-gray-50 font-semibold' : 'odd:bg-white even:bg-gray-50/50'
+                      }
                     >
                       {row.map((cell, j) => (
-                        <td key={j} className="px-2.5 py-1.5 border border-gray-100 whitespace-nowrap">
+                        <td
+                          key={j}
+                          className="px-2.5 py-1.5 border border-gray-100 whitespace-nowrap"
+                        >
                           {String(cell ?? '')}
                         </td>
                       ))}
