@@ -553,7 +553,9 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
     }
   }
 
-  const totalUnread = conversations?.reduce((sum, c) => sum + c.unreadCount, 0) ?? 0
+  // Badge du bouton flottant : nombre de conversations non lues (pas le total de messages non lus,
+  // qui reste affiché par conversation dans la liste ci-dessous).
+  const unreadConversationsCount = conversations?.filter((c) => c.unreadCount > 0).length ?? 0
 
   return (
     <>
@@ -577,9 +579,9 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
         ) : (
           <MessageCircle className="w-6 h-6" strokeWidth={2} />
         )}
-        {!open && totalUnread > 0 && (
+        {!open && unreadConversationsCount > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white">
-            {totalUnread > 9 ? '9+' : totalUnread}
+            {unreadConversationsCount > 9 ? '9+' : unreadConversationsCount}
           </span>
         )}
       </button>

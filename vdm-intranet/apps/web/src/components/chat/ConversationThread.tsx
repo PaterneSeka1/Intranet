@@ -20,8 +20,10 @@ import {
   conversationDisplayName,
   type ChatMessage,
   type Conversation,
+  type MessageAttachment,
 } from '@/lib/chat'
 import { Avatar } from '@/components/ui/Avatar'
+import { AttachmentPreviewModal } from './AttachmentPreviewModal'
 import { confirm } from '@/lib/confirm'
 import { toast } from '@/lib/toast'
 
@@ -78,6 +80,7 @@ export function ConversationThread({
 }: ConversationThreadProps) {
   const [body, setBody] = useState('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [previewAttachment, setPreviewAttachment] = useState<MessageAttachment | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
   // Menu d'actions (Modifier/Supprimer) d'un message : un seul ouvert à la fois, contrôlé par clic
@@ -397,11 +400,10 @@ export function ConversationThread({
                         )}
                         {message.attachments.map((attachment) =>
                           isImage(attachment.mimeType) ? (
-                            <a
+                            <button
                               key={attachment.id}
-                              href={chatApi.attachmentUrl(attachment.id)}
-                              target="_blank"
-                              rel="noreferrer"
+                              type="button"
+                              onClick={() => setPreviewAttachment(attachment)}
                               className="block mt-1.5"
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -410,14 +412,13 @@ export function ConversationThread({
                                 alt={attachment.fileName}
                                 className="max-w-full max-h-48 rounded-lg object-cover"
                               />
-                            </a>
+                            </button>
                           ) : (
-                            <a
+                            <button
                               key={attachment.id}
-                              href={chatApi.attachmentUrl(attachment.id)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={`mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ${
+                              type="button"
+                              onClick={() => setPreviewAttachment(attachment)}
+                              className={`mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs w-full text-left ${
                                 isMine
                                   ? 'bg-white/15 hover:bg-white/25'
                                   : 'bg-white hover:bg-gray-50 border border-gray-200'
@@ -428,7 +429,7 @@ export function ConversationThread({
                               <span className="opacity-70 shrink-0">
                                 {fmtSize(attachment.size)}
                               </span>
-                            </a>
+                            </button>
                           )
                         )}
                       </>
@@ -517,6 +518,11 @@ export function ConversationThread({
           </button>
         </div>
       </div>
+
+      <AttachmentPreviewModal
+        attachment={previewAttachment}
+        onClose={() => setPreviewAttachment(null)}
+      />
     </>
   )
 }
