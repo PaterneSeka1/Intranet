@@ -23,6 +23,7 @@ import {
   type MessageAttachment,
 } from '@/lib/chat'
 import { Avatar } from '@/components/ui/Avatar'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { AttachmentPreviewModal } from './AttachmentPreviewModal'
 import { confirm } from '@/lib/confirm'
 import { toast } from '@/lib/toast'
@@ -228,14 +229,15 @@ export function ConversationThread({
   return (
     <>
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 shrink-0">
-        <button
-          onClick={onBack}
-          aria-label="Retour"
-          title="Retour"
-          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors shrink-0"
-        >
-          <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-        </button>
+        <Tooltip label="Retour" className="shrink-0">
+          <button
+            onClick={onBack}
+            aria-label="Retour"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+          </button>
+        </Tooltip>
         {conversation.type === 'GROUP' ? (
           <Avatar username={conversation.name ?? 'Groupe'} size="sm" />
         ) : (
@@ -260,14 +262,15 @@ export function ConversationThread({
           </div>
         </div>
         {conversation.type === 'GROUP' && (
-          <button
-            onClick={onOpenGroupInfo}
-            aria-label="Informations du groupe"
-            title="Informations du groupe"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors shrink-0"
-          >
-            <Info className="w-4 h-4" strokeWidth={2} />
-          </button>
+          <Tooltip label="Informations du groupe" className="shrink-0">
+            <button
+              onClick={onOpenGroupInfo}
+              aria-label="Informations du groupe"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+            >
+              <Info className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </Tooltip>
         )}
       </div>
 
@@ -306,22 +309,23 @@ export function ConversationThread({
                     className="relative shrink-0"
                     ref={openActionsId === message.id ? actionsMenuRef : undefined}
                   >
-                    <button
-                      onClick={() =>
-                        setOpenActionsId((prev) => (prev === message.id ? null : message.id))
-                      }
-                      aria-label="Actions du message"
-                      title="Actions du message"
-                      aria-haspopup="menu"
-                      aria-expanded={openActionsId === message.id}
-                      className={`w-7 h-7 rounded-full items-center justify-center transition-colors ${
-                        openActionsId === message.id
-                          ? 'flex bg-gray-100 text-gray-700'
-                          : 'hidden group-hover:flex text-gray-400 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <MoreVertical className="w-4 h-4" strokeWidth={2} />
-                    </button>
+                    <Tooltip label="Actions du message">
+                      <button
+                        onClick={() =>
+                          setOpenActionsId((prev) => (prev === message.id ? null : message.id))
+                        }
+                        aria-label="Actions du message"
+                        aria-haspopup="menu"
+                        aria-expanded={openActionsId === message.id}
+                        className={`w-7 h-7 rounded-full items-center justify-center transition-colors ${
+                          openActionsId === message.id
+                            ? 'flex bg-gray-100 text-gray-700'
+                            : 'hidden group-hover:flex text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <MoreVertical className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                    </Tooltip>
                     {openActionsId === message.id && (
                       <div
                         ref={actionsDropdownRef}
@@ -385,22 +389,24 @@ export function ConversationThread({
                           }}
                           className="text-sm text-gray-900 bg-white rounded-lg px-2 py-1 outline-none min-w-[140px]"
                         />
-                        <button
-                          onClick={saveEdit}
-                          aria-label="Enregistrer"
-                          title="Enregistrer"
-                          className="text-white/90 hover:text-white shrink-0"
-                        >
-                          <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          aria-label="Annuler"
-                          title="Annuler"
-                          className="text-white/90 hover:text-white shrink-0"
-                        >
-                          <X className="w-3.5 h-3.5" strokeWidth={2.5} />
-                        </button>
+                        <Tooltip label="Enregistrer" className="shrink-0">
+                          <button
+                            onClick={saveEdit}
+                            aria-label="Enregistrer"
+                            className="text-white/90 hover:text-white"
+                          >
+                            <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip label="Annuler" className="shrink-0">
+                          <button
+                            onClick={() => setEditingId(null)}
+                            aria-label="Annuler"
+                            className="text-white/90 hover:text-white"
+                          >
+                            <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                          </button>
+                        </Tooltip>
                       </div>
                     ) : (
                       <>
@@ -411,63 +417,76 @@ export function ConversationThread({
                         )}
                         {message.attachments.map((attachment) =>
                           isImage(attachment.mimeType) ? (
-                            <button
+                            <Tooltip
                               key={attachment.id}
-                              type="button"
-                              onClick={() => setPreviewAttachment(attachment)}
-                              title={attachment.fileName}
-                              className="block mt-1.5"
+                              label={attachment.fileName}
+                              block
+                              className="mt-1.5"
                             >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={chatApi.attachmentUrl(attachment.id)}
-                                alt={attachment.fileName}
-                                className="max-w-full max-h-48 rounded-lg object-cover"
-                              />
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => setPreviewAttachment(attachment)}
+                                className="block"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={chatApi.attachmentUrl(attachment.id)}
+                                  alt={attachment.fileName}
+                                  className="max-w-full max-h-48 rounded-lg object-cover"
+                                />
+                              </button>
+                            </Tooltip>
                           ) : (
-                            <button
+                            <Tooltip
                               key={attachment.id}
-                              type="button"
-                              onClick={() => setPreviewAttachment(attachment)}
-                              title={`${attachment.fileName} (${fmtSize(attachment.size)})`}
-                              className={`mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs w-full text-left ${
-                                isMine
-                                  ? 'bg-white/15 hover:bg-white/25'
-                                  : 'bg-white hover:bg-gray-50 border border-gray-200'
-                              }`}
+                              label={`${attachment.fileName} (${fmtSize(attachment.size)})`}
+                              block
+                              className="mt-1.5"
                             >
-                              <Paperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-                              <span className="truncate flex-1">{attachment.fileName}</span>
-                              <span className="opacity-70 shrink-0">
-                                {fmtSize(attachment.size)}
-                              </span>
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => setPreviewAttachment(attachment)}
+                                className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs w-full text-left ${
+                                  isMine
+                                    ? 'bg-white/15 hover:bg-white/25'
+                                    : 'bg-white hover:bg-gray-50 border border-gray-200'
+                                }`}
+                              >
+                                <Paperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                                <span className="truncate flex-1">{attachment.fileName}</span>
+                                <span className="opacity-70 shrink-0">
+                                  {fmtSize(attachment.size)}
+                                </span>
+                              </button>
+                            </Tooltip>
                           )
                         )}
                       </>
                     )}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 px-1">
-                    <span
-                      className="text-[10px] text-gray-400"
-                      title={fmtFullDateTime(message.createdAt)}
-                    >
-                      {fmtTime(message.createdAt)}
-                      {message.isEdited && !message.isDeleted ? ' · modifié' : ''}
-                    </span>
+                    <Tooltip label={fmtFullDateTime(message.createdAt)}>
+                      <span className="text-[10px] text-gray-400">
+                        {fmtTime(message.createdAt)}
+                        {message.isEdited && !message.isDeleted ? ' · modifié' : ''}
+                      </span>
+                    </Tooltip>
                     {isRead ? (
-                      <CheckCheck
-                        className="w-3 h-3 text-[#F28C38]"
-                        strokeWidth={2}
-                        aria-label="Lu"
-                      >
-                        <title>Lu</title>
-                      </CheckCheck>
+                      <Tooltip label="Lu">
+                        <CheckCheck
+                          className="w-3 h-3 text-[#F28C38]"
+                          strokeWidth={2}
+                          aria-label="Lu"
+                        />
+                      </Tooltip>
                     ) : isMine && !message.isDeleted ? (
-                      <Check className="w-3 h-3 text-gray-300" strokeWidth={2} aria-label="Envoyé">
-                        <title>Envoyé</title>
-                      </Check>
+                      <Tooltip label="Envoyé">
+                        <Check
+                          className="w-3 h-3 text-gray-300"
+                          strokeWidth={2}
+                          aria-label="Envoyé"
+                        />
+                      </Tooltip>
                     ) : null}
                   </div>
                 </div>
@@ -492,17 +511,18 @@ export function ConversationThread({
                 key={`${file.name}-${i}`}
                 className="flex items-center gap-1 bg-gray-100 rounded-full pl-2 pr-1 py-1 text-xs text-gray-600"
               >
-                <span className="truncate max-w-[120px]" title={file.name}>
-                  {file.name}
-                </span>
-                <button
-                  onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                  aria-label={`Retirer ${file.name}`}
-                  title={`Retirer ${file.name}`}
-                  className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-gray-200"
-                >
-                  <X className="w-3 h-3" strokeWidth={2.5} />
-                </button>
+                <Tooltip label={file.name}>
+                  <span className="truncate max-w-[120px]">{file.name}</span>
+                </Tooltip>
+                <Tooltip label={`Retirer ${file.name}`}>
+                  <button
+                    onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    aria-label={`Retirer ${file.name}`}
+                    className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-gray-200"
+                  >
+                    <X className="w-3 h-3" strokeWidth={2.5} />
+                  </button>
+                </Tooltip>
               </span>
             ))}
           </div>
@@ -515,14 +535,15 @@ export function ConversationThread({
             hidden
             onChange={(e) => handleFilePick(e.target.files)}
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Joindre un fichier"
-            title="Joindre un fichier"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors shrink-0"
-          >
-            <Paperclip className="w-[18px] h-[18px]" strokeWidth={1.75} />
-          </button>
+          <Tooltip label="Joindre un fichier" className="shrink-0">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Joindre un fichier"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            >
+              <Paperclip className="w-[18px] h-[18px]" strokeWidth={1.75} />
+            </button>
+          </Tooltip>
           <textarea
             ref={textareaRef}
             value={body}
@@ -537,15 +558,16 @@ export function ConversationThread({
             rows={1}
             className="flex-1 resize-none max-h-24 rounded-2xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#F28C38] transition-colors"
           />
-          <button
-            onClick={handleSend}
-            disabled={!body.trim() && !pendingFiles.length}
-            aria-label="Envoyer"
-            title="Envoyer"
-            className="w-9 h-9 rounded-full flex items-center justify-center bg-[#F28C38] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-105 transition-all shrink-0"
-          >
-            <Send className="w-4 h-4" strokeWidth={2} />
-          </button>
+          <Tooltip label="Envoyer" className="shrink-0">
+            <button
+              onClick={handleSend}
+              disabled={!body.trim() && !pendingFiles.length}
+              aria-label="Envoyer"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-[#F28C38] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-105 transition-all"
+            >
+              <Send className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

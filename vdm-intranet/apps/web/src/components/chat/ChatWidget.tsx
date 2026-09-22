@@ -22,6 +22,7 @@ import {
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
 import { Avatar } from '@/components/ui/Avatar'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { ConversationThread } from './ConversationThread'
 import { NewConversationModal } from './NewConversationModal'
 import { GroupInfoModal } from './GroupInfoModal'
@@ -572,14 +573,19 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
           touchAction: 'none',
         }}
         aria-label="Messagerie (glisser pour déplacer)"
-        title="Messagerie (glisser pour déplacer)"
-        className="fixed z-[8500] w-14 h-14 rounded-full bg-[#F28C38] text-white shadow-xl flex items-center justify-center hover:brightness-105 transition-transform active:scale-95 cursor-grab active:cursor-grabbing select-none"
+        className="group fixed z-[8500] w-14 h-14 rounded-full bg-[#F28C38] text-white shadow-xl flex items-center justify-center hover:brightness-105 transition-transform active:scale-95 cursor-grab active:cursor-grabbing select-none"
       >
         {open ? (
           <X className="w-6 h-6" strokeWidth={2} />
         ) : (
           <MessageCircle className="w-6 h-6" strokeWidth={2} />
         )}
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100"
+        >
+          {open ? 'Fermer' : 'Messagerie'}
+        </span>
         {!open && unreadConversationsCount > 0 && (
           <span
             title={`${unreadConversationsCount} conversation(s) non lue(s)`}
@@ -616,14 +622,15 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
             <>
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
                 <span className="font-bold text-sm text-gray-900">Messagerie</span>
-                <button
-                  onClick={() => setShowNewConversation(true)}
-                  aria-label="Nouvelle conversation"
-                  title="Nouvelle conversation"
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-[#F28C38] hover:brightness-105 transition-all"
-                >
-                  <Plus className="w-4 h-4" strokeWidth={2.5} />
-                </button>
+                <Tooltip label="Nouvelle conversation" side="left">
+                  <button
+                    onClick={() => setShowNewConversation(true)}
+                    aria-label="Nouvelle conversation"
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-[#F28C38] hover:brightness-105 transition-all"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={2.5} />
+                  </button>
+                </Tooltip>
               </div>
               <div className="flex-1 overflow-y-auto">
                 {conversations === null && (
@@ -712,29 +719,31 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                         </div>
                       </button>
                       <div className="hidden group-hover:flex items-center gap-0.5 pr-2 shrink-0">
-                        <button
-                          onClick={() => handleTogglePin(conversation)}
-                          aria-label={conversation.isPinned ? 'Désépingler' : 'Épingler'}
-                          title={conversation.isPinned ? 'Désépingler' : 'Épingler'}
-                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                            conversation.isPinned
-                              ? 'text-[#F28C38] hover:bg-[#F28C38]/10'
-                              : 'text-gray-400 hover:text-[#F28C38] hover:bg-[#F28C38]/10'
-                          }`}
-                        >
-                          <Pin
-                            className={`w-3.5 h-3.5 ${conversation.isPinned ? 'fill-current' : ''}`}
-                            strokeWidth={2}
-                          />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteConversation(conversation)}
-                          aria-label="Supprimer la conversation"
-                          title="Supprimer la conversation"
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
-                        </button>
+                        <Tooltip label={conversation.isPinned ? 'Désépingler' : 'Épingler'}>
+                          <button
+                            onClick={() => handleTogglePin(conversation)}
+                            aria-label={conversation.isPinned ? 'Désépingler' : 'Épingler'}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                              conversation.isPinned
+                                ? 'text-[#F28C38] hover:bg-[#F28C38]/10'
+                                : 'text-gray-400 hover:text-[#F28C38] hover:bg-[#F28C38]/10'
+                            }`}
+                          >
+                            <Pin
+                              className={`w-3.5 h-3.5 ${conversation.isPinned ? 'fill-current' : ''}`}
+                              strokeWidth={2}
+                            />
+                          </button>
+                        </Tooltip>
+                        <Tooltip label="Supprimer la conversation">
+                          <button
+                            onClick={() => handleDeleteConversation(conversation)}
+                            aria-label="Supprimer la conversation"
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                   )
