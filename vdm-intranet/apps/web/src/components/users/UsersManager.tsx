@@ -527,7 +527,7 @@ export function UsersManager({
                 ? 'Identité, mot de passe et planning de votre périmètre'
                 : 'Planning de votre périmètre'
               : 'Mise à jour du compte'
-            : 'Créer un nouveau compte sur le portail'
+            : 'Créer un nouveau compte sur VdM Intranet'
         }
         size="xl"
       >
@@ -559,7 +559,7 @@ export function UsersManager({
           </div>
 
           {/* Employé CONGE existant — uniquement à la création, si l'intégration est active et
-              qu'il reste des employés CONGE sans compte Intranet correspondant */}
+              qu'il reste des employés CONGE sans compte VdM Intranet correspondant */}
           {!editing && congeConfigured && congeEmployees.length > 0 && (
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">

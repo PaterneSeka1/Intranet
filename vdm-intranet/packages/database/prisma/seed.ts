@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('Seed Module 4 — VDM Intranet')
+  console.log('Seed Module 4 — VdM Intranet')
 
   const seedPassword = process.env.SEED_PASSWORD
   if (!seedPassword) {

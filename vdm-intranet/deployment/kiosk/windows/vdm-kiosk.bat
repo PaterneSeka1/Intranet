@@ -1,5 +1,5 @@
 @echo off
-:: VDM Intranet — Lancement en mode kiosque (Windows)
+:: VdM Intranet — Lancement en mode kiosque (Windows)
 :: Remplacez l'URL ci-dessous si ce poste ne doit pas pointer vers la prod
 :: Détecte automatiquement le navigateur installé (Chrome > Edge > Brave >
 :: Firefox). Lanceur manuel simple — pour un déploiement avec politique de

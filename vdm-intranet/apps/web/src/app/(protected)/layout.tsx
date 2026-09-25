@@ -16,7 +16,6 @@ import { ServiceUnavailablePage } from '@/components/ui/ServiceUnavailablePage'
 import { fetchSettings } from '@/lib/settings'
 import { NotificationsBell } from '@/components/notifications/NotificationsBell'
 import { ChatWidget } from '@/components/chat/ChatWidget'
-import { ChatbotAssistant } from '@/components/chatbot/ChatbotAssistant'
 
 async function getActiveAnnouncements(): Promise<Announcement[]> {
   try {
@@ -51,7 +50,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const announcements = await getActiveAnnouncements()
   const settings = await fetchSettings()
   const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
-  const appName = s['vdm_app_name'] || 'VDM Intranet'
+  const appName = s['vdm_app_name'] || 'VdM Intranet'
   const appSubtitle = s['vdm_app_subtitle'] || 'Veilleur des Médias'
   const logo = s['vdm_logo']
 
@@ -104,7 +103,6 @@ export default async function ProtectedLayout({ children }: { children: React.Re
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </div>
         <ChatWidget currentUserId={user.id} />
-        <ChatbotAssistant />
       </div>
     )
   }
@@ -120,7 +118,6 @@ export default async function ProtectedLayout({ children }: { children: React.Re
       <MustChangePasswordGuard mustChangePassword={!!user.mustChangePassword} />
       {children}
       <ChatWidget currentUserId={user.id} />
-      <ChatbotAssistant />
     </MobileSidebarToggle>
   )
 }

@@ -1,5 +1,5 @@
 /**
- * Configuration PM2 — VDM Intranet (API NestJS + Frontend Next.js).
+ * Configuration PM2 — VdM Intranet (API NestJS + Frontend Next.js).
  *
  * Utilisation (depuis la racine du dépôt, après npm run build:api / npm run build:web) :
  *   pm2 start ecosystem.config.js

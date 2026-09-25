@@ -1,4 +1,4 @@
-# VDM Intranet — Installation complète (Windows)
+# VdM Intranet — Installation complète (Windows)
 # Exécuter en Administrateur : clic droit → "Exécuter avec PowerShell"
 # Usage (poste standard, aucun paramètre requis) : .\installer-demarrage.ps1
 # Usage (URL différente, cas particulier) : .\installer-demarrage.ps1 -VdmUrl "https://autre-adresse"
@@ -37,7 +37,7 @@ Get-ChildItem -Path $ScriptDir -File -ErrorAction SilentlyContinue |
     Unblock-File -ErrorAction SilentlyContinue
 
 Write-Host "╔══════════════════════════════════════════╗"
-Write-Host "║   VDM Intranet — Installation kiosque   ║"
+Write-Host "║   VdM Intranet — Installation kiosque   ║"
 Write-Host "╚══════════════════════════════════════════╝"
 Write-Host "  URL : $VdmUrl"
 Write-Host ""
@@ -156,14 +156,14 @@ $StateFile = Join-Path $StartupFolder "vdm-kiosk-state.json"
 } | ConvertTo-Json | Set-Content $StateFile
 
 # Raccourci dans Démarrage qui exécute le script PowerShell
-$ShortcutPath  = Join-Path $StartupFolder "VDM Intranet.lnk"
+$ShortcutPath  = Join-Path $StartupFolder "VdM Intranet.lnk"
 $WScript  = New-Object -ComObject WScript.Shell
 $Shortcut = $WScript.CreateShortcut($ShortcutPath)
 $Shortcut.TargetPath       = "powershell.exe"
 $Shortcut.Arguments        = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$LaunchFile`""
 $Shortcut.WorkingDirectory = $ScriptDir
 $Shortcut.WindowStyle      = 7
-$Shortcut.Description      = "VDM Intranet — Portail Veilleur des Médias"
+$Shortcut.Description      = "VdM Intranet — Veilleur des Médias"
 $Shortcut.Save()
 
 Write-Host ""

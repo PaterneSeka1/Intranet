@@ -314,9 +314,9 @@ Demande : intégrer un nouveau logo pour la PWA, puis un second logo distinct co
 
 //SESSION TERMINEE
 
-# Plan d'implémentation — Sécurité & Bugs Intranet VDM
+# Plan d'implémentation — Sécurité & Bugs VdM Intranet
 
-Ce plan détaille les modifications à apporter au portail intranet pour corriger les failles de sécurité (haute, moyenne, faible) et résoudre les anomalies critiques, élevées, moyennes et faibles identifiées.
+Ce plan détaille les modifications à apporter à VdM Intranet pour corriger les failles de sécurité (haute, moyenne, faible) et résoudre les anomalies critiques, élevées, moyennes et faibles identifiées.
 
 ## User Review Required
 
@@ -712,7 +712,7 @@ Demande : analyser l'intégralité du dépôt pour relever les incohérences/inc
 
 ## Intégration Congés — statut EN_CONGE & widget "Employés en congé" — 2026-08-04
 
-Demande : un employé en congé approuvé ne doit plus être marqué "Absent" ; ajouter un widget "Employés en congé" visible par tout le monde. L'app externe VEDEM/CONGE (`/Users/macbookpro/VEDEM/CONGE`, Next.js/Prisma/MongoDB, séparée de ce repo) est la source de vérité des congés. Décisions actées avec l'utilisateur avant implémentation : rapprochement par matricule Congé == login (`username`) Intranet, avec email en repli ; widget sur la page Accueil uniquement (visible par tous les rôles, y compris accueil) ; modification du repo VEDEM/CONGE autorisée.
+Demande : un employé en congé approuvé ne doit plus être marqué "Absent" ; ajouter un widget "Employés en congé" visible par tout le monde. L'app externe VEDEM/CONGE (`/Users/macbookpro/VEDEM/CONGE`, Next.js/Prisma/MongoDB, séparée de ce repo) est la source de vérité des congés. Décisions actées avec l'utilisateur avant implémentation : rapprochement par matricule Congé == login (`username`) VdM Intranet, avec email en repli ; widget sur la page Accueil uniquement (visible par tous les rôles, y compris accueil) ; modification du repo VEDEM/CONGE autorisée.
 
 - `[x]` [NEW] Côté CONGE — [route.ts](file:///Users/macbookpro/VEDEM/CONGE/app/api/leaves/active/route.ts) : nouvel endpoint `GET /api/leaves/active` (jour unique `?date=` ou plage `?from=&to=` pour les rapports), renvoie les congés `APPROVED` chevauchant la fenêtre, protégé par secret partagé `INTRANET_SYNC_SECRET` (header `x-intranet-secret` ou `Authorization: Bearer`), variable ajoutée à `.env.example`/`.env.production.example`.
 - `[x]` [NEW] Côté vdm-intranet — module `apps/api/src/leaves/` : [leave-sync.service.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/leaves/leave-sync.service.ts) (client HTTP + cache 60s, dégradation silencieuse si `CONGE_API_URL`/`CONGE_API_SECRET` absents — jamais de crash), [leave-match.util.ts](file:///Users/macbookpro/YAGAMI/Intranet/vdm-intranet/apps/api/src/leaves/leave-match.util.ts) (rapprochement matricule/email + labels FR des types de congé), `leaves.service.ts`/`leaves.controller.ts` (`GET /leaves/on-leave/today`, volontairement sans le type de congé — donnée de santé sensible pour un endpoint visible par tous sans restriction de rôle).
@@ -731,7 +731,7 @@ Demande : un employé en congé approuvé ne doit plus être marqué "Absent" ; 
 
 - Le statut `EN_CONGE` suit exactement le même principe que `ABSENT` : jamais écrit en base, calculé à la volée à chaque lecture — aucune migration Prisma requise sur `vdm-intranet`.
 - Confidentialité : seules les vues déjà scopées par rôle (`/presence/today` pour soi-même, `/presence/today/all` pour les managers via `leaveTypeLabel`) reçoivent le type de congé ; le widget public `GET /leaves/on-leave/today` ne le renvoie jamais, pour ne pas exposer des catégories de santé sensibles (maladie, menstruel, maternité/paternité) à toute l'entreprise.
-- Rapprochement d'identité confirmé par l'utilisateur : en déploiement, le `matricule` Congé correspond au `username` (login) Intranet et à l'email — `matchLeaveToUser` teste matricule d'abord, email en repli.
+- Rapprochement d'identité confirmé par l'utilisateur : en déploiement, le `matricule` Congé correspond au `username` (login) VdM Intranet et à l'email — `matchLeaveToUser` teste matricule d'abord, email en repli.
 - `npm run build:api` : OK.
 - `npm run build:web` : OK.
 - Contexte détaillé et contrat d'intégration consignés en mémoire (`reference_conge_app.md`) pour les futures sessions.
@@ -1047,11 +1047,11 @@ Suite directe du point « Non fait » de la session d'audit du même jour ci-des
 
 ## Sélecteur "employé CONGE existant" à la création d'un compte — 2026-08-24
 
-Demande : à la création d'un employé dans `/utilisateurs`, pouvoir choisir parmi les employés déjà connus de la plateforme CONGE (app externe VEDEM/CONGE, dépôt séparé — cf. section « Intégration Congés » plus haut), pour garantir que c'est bien le même employé des deux côtés au lieu d'une saisie manuelle du matricule/identité pouvant diverger. Question posée explicitement à l'utilisateur avant implémentation (3 pistes : sélection depuis CONGE / validation stricte bloquante / provisionnement automatique CONGE ← Intranet) — décision actée : **sélection optionnelle depuis CONGE**, sans validation bloquante ni écriture vers CONGE.
+Demande : à la création d'un employé dans `/utilisateurs`, pouvoir choisir parmi les employés déjà connus de la plateforme CONGE (app externe VEDEM/CONGE, dépôt séparé — cf. section « Intégration Congés » plus haut), pour garantir que c'est bien le même employé des deux côtés au lieu d'une saisie manuelle du matricule/identité pouvant diverger. Question posée explicitement à l'utilisateur avant implémentation (3 pistes : sélection depuis CONGE / validation stricte bloquante / provisionnement automatique CONGE ← VdM Intranet) — décision actée : **sélection optionnelle depuis CONGE**, sans validation bloquante ni écriture vers CONGE.
 
 - `[x]` [MODIFY] [leave-sync.service.ts](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/api/src/leaves/leave-sync.service.ts) — nouvelle méthode `getEmployees()` : `GET {CONGE_API_URL}/api/employees` (même en-tête `x-intranet-secret` que `/api/leaves/active`), cache 5 min (référentiel employés plus stable que les congés actifs, TTL 1 min), dégradation silencieuse (`[]`) si non configuré/indisponible — jamais de crash, même principe que le reste du module. `isConfigured()` ajouté pour que l'appelant distingue "intégration désactivée" de "aucun résultat".
 - `[x]` [MODIFY] [leave-match.util.ts](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/api/src/leaves/leave-match.util.ts) — `matchLeaveToUser` généralisé pour accepter toute identité `{matricule, email}` (type `MatchableCongeIdentity`) au lieu du seul type `ActiveLeave`, pour être réutilisable sur le référentiel employés sans dupliquer la logique de rapprochement.
-- `[x]` [NEW] [leaves.service.ts](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/api/src/leaves/leaves.service.ts) — `getCongeEmployeeCandidates()` : ne renvoie que les employés CONGE n'ayant pas déjà de compte Intranet correspondant (même rapprochement matricule/email), pour éviter les doublons dans le sélecteur.
+- `[x]` [NEW] [leaves.service.ts](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/api/src/leaves/leaves.service.ts) — `getCongeEmployeeCandidates()` : ne renvoie que les employés CONGE n'ayant pas déjà de compte VdM Intranet correspondant (même rapprochement matricule/email), pour éviter les doublons dans le sélecteur.
 - `[x]` [NEW] `GET /leaves/conge-employees` ([leaves.controller.ts](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/api/src/leaves/leaves.controller.ts)) — réservé à `CAN_MANAGE_USERS` (CTO_ADMIN, PDG), mêmes rôles que `POST /users` (contrairement à `GET /leaves/on-leave/today`, ouvert à tous).
 - `[x]` [MODIFY] [UsersManager.tsx](file:///c:/Users/ACCES%20LIBRE/VEDEM/Intranet/vdm-intranet/apps/web/src/components/users/UsersManager.tsx) — formulaire "Nouvel utilisateur" (jamais affiché en édition) : menu déroulant optionnel "Employé CONGE existant" listant ces candidats (nom, matricule, département), pré-remplit identifiant(=matricule)/prénom/nom/email au choix ; champs restent modifiables ensuite. Masqué si l'intégration n'est pas configurée ou si aucun candidat ne reste.
 - `[x]` Validation — `npm run build:api` OK, `npm run build:web` OK, `npx jest` (`presence.service`, `presence.schedule-groups`, `reports.service`, `users.service`) 59/59 OK (aucune régression), `npx prettier --write` sur les 6 fichiers modifiés OK.

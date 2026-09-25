@@ -1,5 +1,5 @@
 #!/bin/bash
-# VDM Intranet — Installation complète du kiosque (macOS)
+# VdM Intranet — Installation complète du kiosque (macOS)
 # Usage (poste standard, aucun paramètre requis) : bash installer-demarrage.sh
 # Usage (URL différente, cas particulier)        : bash installer-demarrage.sh https://autre-adresse
 #
@@ -20,11 +20,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIOSK_SCRIPT="/usr/local/bin/kiosk-vdm.sh"
 DETECT_SCRIPT="/usr/local/bin/vdm-browser-detect.sh"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.vdm.intranet.plist"
-SUPPORT_DIR="$HOME/Library/Application Support/VDM Intranet"
+SUPPORT_DIR="$HOME/Library/Application Support/VdM Intranet"
 INSTALL_STATE="$SUPPORT_DIR/kiosk-install-state.txt"
 
 echo "╔══════════════════════════════════════════╗"
-echo "║   VDM Intranet — Installation kiosque   ║"
+echo "║   VdM Intranet — Installation kiosque   ║"
 echo "╚══════════════════════════════════════════╝"
 echo "  URL : $VDM_URL"
 echo ""

@@ -1,4 +1,4 @@
-# VDM Intranet — Kiosque macOS
+# VdM Intranet — Kiosque macOS
 
 ## Navigateur utilisé
 

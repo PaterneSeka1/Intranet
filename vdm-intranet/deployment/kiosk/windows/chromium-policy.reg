@@ -1,6 +1,6 @@
 Windows Registry Editor Version 5.00
 
-; VDM Intranet — Politique de verrouillage (Windows)
+; VdM Intranet — Politique de verrouillage (Windows)
 ; Modèle PARTAGÉ par tous les navigateurs de la famille Chromium (Chrome,
 ; Edge, Brave — même schéma de politique, seule la clé de registre
 ; [HKEY_LOCAL_MACHINE\...] change selon l'éditeur, substituée par

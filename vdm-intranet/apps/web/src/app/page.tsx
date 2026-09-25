@@ -51,7 +51,7 @@ export default function LandingPage() {
               <img src="/logo_entreprise.png" alt="Veilleur des Médias" />
             </div>
             <div className="seal-rule" />
-            <div className="seal-sub">Portail interne · Abidjan, Côte d&rsquo;Ivoire</div>
+            <div className="seal-sub">VdM Intranet · Abidjan, Côte d&rsquo;Ivoire</div>
           </div>
         </div>
 

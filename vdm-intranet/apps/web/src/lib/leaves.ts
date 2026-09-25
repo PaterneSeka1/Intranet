@@ -31,7 +31,7 @@ export type CongeEmployeeCandidatesResult = {
 
 export const leavesApi = {
   onLeaveToday: () => apiFetch<OnLeaveTodayResult>('/leaves/on-leave/today'),
-  // Employés CONGE sans compte Intranet correspondant — utilisé par le sélecteur
+  // Employés CONGE sans compte VdM Intranet correspondant — utilisé par le sélecteur
   // "employé existant" du formulaire de création dans /utilisateurs.
   congeEmployeeCandidates: () => apiFetch<CongeEmployeeCandidatesResult>('/leaves/conge-employees'),
 }

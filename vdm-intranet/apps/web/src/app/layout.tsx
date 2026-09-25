@@ -12,12 +12,12 @@ import { opacitySettingToCss } from '@/lib/theme-settings'
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await fetchSettings()
   const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
-  const appName = s['vdm_app_name'] || 'VDM Intranet'
+  const appName = s['vdm_app_name'] || 'VdM Intranet'
   const favicon = s['vdm_favicon'] || s['vdm_logo'] || '/icon-192.png'
 
   return {
     title: appName,
-    description: "Portail interne Veilleur des Médias — Abidjan, Côte d'Ivoire",
+    description: "VdM Intranet — Veilleur des Médias — Abidjan, Côte d'Ivoire",
     manifest: '/manifest.webmanifest',
     appleWebApp: {
       capable: true,

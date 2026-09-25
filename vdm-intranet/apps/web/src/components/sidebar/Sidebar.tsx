@@ -90,7 +90,7 @@ interface SidebarProps {
 export function Sidebar({
   user,
   onClose,
-  appName = 'VDM Intranet',
+  appName = 'VdM Intranet',
   appSubtitle = 'Veilleur des Médias',
   logo,
 }: SidebarProps) {

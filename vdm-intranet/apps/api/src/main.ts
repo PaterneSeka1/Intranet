@@ -39,8 +39,8 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV !== 'production') {
     const swagger = new DocumentBuilder()
-      .setTitle('VDM Intranet API')
-      .setDescription('API du portail intranet — Veilleur des Médias')
+      .setTitle('VdM Intranet API')
+      .setDescription('API de VdM Intranet — Veilleur des Médias')
       .setVersion('1.0')
       .addCookieAuth('access_token')
       .build()

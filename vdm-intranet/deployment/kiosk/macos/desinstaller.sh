@@ -1,5 +1,5 @@
 #!/bin/bash
-# VDM Intranet — Désinstallation complète du kiosque (macOS)
+# VdM Intranet — Désinstallation complète du kiosque (macOS)
 #
 # Retire tout ce que installer-demarrage.sh a mis en place : le LaunchAgent,
 # les scripts de lancement et la politique du navigateur détecté à
@@ -8,7 +8,7 @@
 
 set -e
 
-SUPPORT_DIR="$HOME/Library/Application Support/VDM Intranet"
+SUPPORT_DIR="$HOME/Library/Application Support/VdM Intranet"
 INSTALL_STATE="$SUPPORT_DIR/kiosk-install-state.txt"
 
 echo "→ Suppression du LaunchAgent..."

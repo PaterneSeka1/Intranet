@@ -1,4 +1,4 @@
-# VDM Intranet — Désinstallation complète du kiosque (Windows)
+# VdM Intranet — Désinstallation complète du kiosque (Windows)
 # Exécuter en Administrateur : clic droit → "Exécuter avec PowerShell"
 #
 # Retire tout ce que installer-demarrage.ps1 a mis en place :
@@ -23,7 +23,7 @@ $StartupFolder = [Environment]::GetFolderPath("Startup")
 $StateFile = Join-Path $StartupFolder "vdm-kiosk-state.json"
 
 Write-Host "→ Suppression du démarrage automatique..."
-Remove-Item (Join-Path $StartupFolder "VDM Intranet.lnk") -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $StartupFolder "VdM Intranet.lnk") -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $StartupFolder "vdm-launch.ps1") -Force -ErrorAction SilentlyContinue
 
 Write-Host "→ Suppression de la politique de verrouillage..."

@@ -563,7 +563,7 @@ export function ParametresClient({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Paramètres</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Configuration du portail</p>
+          <p className="text-sm text-gray-500 mt-0.5">Configuration de VdM Intranet</p>
         </div>
       </div>
 
@@ -1390,7 +1390,7 @@ function IdentityPanel({ initialSettings }: { initialSettings: Record<string, st
           type="text"
           value={appName}
           onChange={(e) => applyAppName(e.target.value)}
-          placeholder="VDM Intranet"
+          placeholder="VdM Intranet"
           className={INPUT}
         />
       </div>

@@ -48,7 +48,7 @@ function Shell({
 
 export function ResetPasswordClient({
   token,
-  initialAppName = 'VDM Intranet',
+  initialAppName = 'VdM Intranet',
   initialAppSubtitle = 'Veilleur des Médias — Abidjan',
   initialLogo,
 }: Props) {

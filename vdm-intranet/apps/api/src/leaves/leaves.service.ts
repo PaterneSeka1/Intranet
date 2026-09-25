@@ -70,7 +70,7 @@ export class LeavesService {
   }
 
   // Alimente le formulaire de création d'employé : ne propose que les employés CONGE qui
-  // n'ont pas déjà un compte Intranet (rapprochement matricule/email), pour garantir qu'on
+  // n'ont pas déjà un compte VdM Intranet (rapprochement matricule/email), pour garantir qu'on
   // crée bien "le même employé" et éviter les doublons de sélection.
   async getCongeEmployeeCandidates(): Promise<{
     configured: boolean

@@ -6,7 +6,7 @@ export type MatchableUser = { username: string; matricule?: string | null; email
 /// congé actif (ActiveLeave) que par un employé du référentiel (CongeEmployee).
 export type MatchableCongeIdentity = { matricule: string | null; email: string | null }
 
-/// Rapprochement Intranet ↔ Congé : comparé au champ `matricule` Intranet (identifiant de
+/// Rapprochement VdM Intranet ↔ Congé : comparé au champ `matricule` VdM Intranet (identifiant de
 /// connexion, aligné en déploiement sur le matricule CONGE) quand il est chargé par l'appelant ;
 /// sinon replié sur `username` par compatibilité historique (matricule == username pour tous les
 /// comptes importés avant l'introduction du champ `matricule`, cf. migration

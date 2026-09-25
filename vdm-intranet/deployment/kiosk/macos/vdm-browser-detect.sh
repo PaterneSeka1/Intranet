@@ -1,5 +1,5 @@
 #!/bin/bash
-# VDM Intranet — Détection du navigateur disponible (macOS)
+# VdM Intranet — Détection du navigateur disponible (macOS)
 #
 # Logique PARTAGÉE entre installer-demarrage.sh (au moment de l'installation,
 # pour savoir quelle politique appliquer) et kiosk-vdm.sh (à chaque démarrage,

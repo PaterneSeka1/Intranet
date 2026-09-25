@@ -1,5 +1,5 @@
 #!/bin/bash
-# VDM Intranet — Lancement en mode kiosque (macOS)
+# VdM Intranet — Lancement en mode kiosque (macOS)
 #
 # Détecte automatiquement le navigateur installé (Chrome > Edge > Brave >
 # Chromium > Firefox > Safari en dernier recours — voir vdm-browser-detect.sh)

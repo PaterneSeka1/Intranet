@@ -1,6 +1,6 @@
-# VDM Intranet
+# VdM Intranet
 
-Portail intranet de **Veilleur des Médias** — gestion des présences, rôles, BU, onglets, annonces, pilotage et exports.
+VdM Intranet — **Veilleur des Médias** — gestion des présences, rôles, BU, onglets, annonces, pilotage et exports.
 
 ## Stack technique
 
@@ -191,7 +191,7 @@ Pour un redéploiement (mise à jour de code existante) : `git pull`, `npm ci`, 
 
 ### Checklist intégration Congés (VEDEM/CONGE — déjà en ligne)
 
-L'app CONGE (dépôt séparé, Next.js/Prisma/MongoDB) est **déjà déployée en production**, contrairement au reste de cet Intranet. À ne pas oublier lors du déploiement pour que l'intégration fonctionne réellement (statut "en congé", widget "Employés en congé", sélecteur "employé CONGE existant" à la création d'un compte) :
+L'app CONGE (dépôt séparé, Next.js/Prisma/MongoDB) est **déjà déployée en production**, contrairement au reste de VdM Intranet. À ne pas oublier lors du déploiement pour que l'intégration fonctionne réellement (statut "en congé", widget "Employés en congé", sélecteur "employé CONGE existant" à la création d'un compte) :
 
 1. **Renseigner en production** `CONGE_API_URL` et `CONGE_API_SECRET` (`.env` de vdm-intranet) — voir `.env.example` pour le format ; tant qu'ils sont vides, toute l'intégration reste désactivée en silence (aucune erreur, mais aucun effet non plus).
 2. `CONGE_API_SECRET` doit être **strictement identique** à `INTRANET_SYNC_SECRET` côté CONGE en production.

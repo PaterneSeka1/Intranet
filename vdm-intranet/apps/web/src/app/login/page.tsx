@@ -7,7 +7,7 @@ export default async function LoginPage() {
 
   return (
     <LoginClient
-      initialAppName={s['vdm_app_name'] || 'Intranet Veilleur des Médias'}
+      initialAppName={s['vdm_app_name'] || 'VdM Intranet'}
       initialAppSubtitle={s['vdm_app_subtitle'] || 'Veilleur des Médias — Abidjan'}
       initialLogo={s['vdm_logo']}
     />

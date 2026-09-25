@@ -16,7 +16,7 @@
     <string>/usr/local/bin/kiosk-vdm.sh</string>
   </array>
 
-  <!-- Variable d'environnement : URL de l'intranet -->
+  <!-- Variable d'environnement : URL de VdM Intranet -->
   <key>EnvironmentVariables</key>
   <dict>
     <key>VDM_URL</key>

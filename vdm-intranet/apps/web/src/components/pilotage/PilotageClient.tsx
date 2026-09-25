@@ -120,7 +120,7 @@ const REPORTS: ReportConfig[] = [
   {
     key: 'activity',
     label: "Journal d'activité",
-    description: 'Actions effectuées dans le portail (créations, modifications, exports).',
+    description: 'Actions effectuées dans VdM Intranet (créations, modifications, exports).',
     icon: ClipboardList,
     filename: 'activite.xlsx',
     hasDateRange: true,

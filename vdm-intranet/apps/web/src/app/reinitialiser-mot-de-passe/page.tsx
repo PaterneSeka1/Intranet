@@ -12,7 +12,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
   return (
     <ResetPasswordClient
       token={searchParams.token}
-      initialAppName={s['vdm_app_name'] || 'VDM Intranet'}
+      initialAppName={s['vdm_app_name'] || 'VdM Intranet'}
       initialAppSubtitle={s['vdm_app_subtitle'] || 'Veilleur des Médias — Abidjan'}
       initialLogo={s['vdm_logo']}
     />

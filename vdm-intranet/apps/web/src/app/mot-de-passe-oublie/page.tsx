@@ -7,7 +7,7 @@ export default async function ForgotPasswordPage() {
 
   return (
     <ForgotPasswordClient
-      initialAppName={s['vdm_app_name'] || 'VDM Intranet'}
+      initialAppName={s['vdm_app_name'] || 'VdM Intranet'}
       initialAppSubtitle={s['vdm_app_subtitle'] || 'Veilleur des Médias — Abidjan'}
       initialLogo={s['vdm_logo']}
     />

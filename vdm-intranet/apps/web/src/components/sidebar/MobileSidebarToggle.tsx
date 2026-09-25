@@ -23,7 +23,7 @@ export function MobileSidebarToggle({
   user,
   announcements,
   children,
-  appName = 'VDM Intranet',
+  appName = 'VdM Intranet',
   appSubtitle = 'Veilleur des Médias',
   logo,
 }: Props) {

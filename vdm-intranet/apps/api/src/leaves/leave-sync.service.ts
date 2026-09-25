@@ -67,7 +67,7 @@ export class LeaveSyncService {
   }
 
   /// Référentiel des employés CONGE — alimente la sélection proposée à la création d'un
-  /// employé Intranet (cf. matchLeaveToUser : matricule CONGE == username Intranet).
+  /// employé VdM Intranet (cf. matchLeaveToUser : matricule CONGE == username VdM Intranet).
   async getEmployees(): Promise<CongeEmployee[]> {
     const config = this.getConfig()
     if (!config) return []

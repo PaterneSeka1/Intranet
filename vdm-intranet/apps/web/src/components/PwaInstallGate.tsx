@@ -70,9 +70,9 @@ export function PwaInstallGate() {
             <img src="/icon-192.png" alt="Veilleur des Médias" />
           </div>
 
-          <h2 className="pwa-title">Installer VDM Intranet</h2>
+          <h2 className="pwa-title">Installer VdM Intranet</h2>
           <p className="pwa-desc">
-            Accédez au portail directement depuis votre bureau — sans navigateur, comme une
+            Accédez à VdM Intranet directement depuis votre bureau — sans navigateur, comme une
             application native.
           </p>
 

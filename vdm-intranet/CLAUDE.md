@@ -1,4 +1,4 @@
-# CLAUDE.md - Portail Intranet Veilleur des Médias
+# CLAUDE.md - VdM Intranet — Veilleur des Médias
 
 Ce fichier sert de guide pour les modèles d'IA afin de comprendre l'environnement de développement, les commandes de build, l'architecture du projet et les standards de codage.
 

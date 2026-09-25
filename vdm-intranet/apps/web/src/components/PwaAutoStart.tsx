@@ -8,7 +8,7 @@ type OS = 'macos' | 'windows' | 'other'
 type Phase = 'idle' | 'ask' | 'downloading' | 'done'
 
 const STORAGE_KEY = 'vdm_autostart_done'
-const DEFAULT_APP_NAME = 'VDM Intranet'
+const DEFAULT_APP_NAME = 'VdM Intranet'
 
 // Support limité (Chrome/Edge desktop) — absent sur Firefox/Safari.
 interface NavigatorWithRelatedApps extends Navigator {
@@ -62,11 +62,11 @@ function macosScript(appUrl: string, appName: string): string {
   const lines = [
     '#!/bin/bash',
     `APP_URL='${appUrl}'`,
-    'SUPPORT_DIR="$HOME/Library/Application Support/VDM Intranet"',
+    'SUPPORT_DIR="$HOME/Library/Application Support/VdM Intranet"',
     'LAUNCHER="$SUPPORT_DIR/vdm-launch.sh"',
     'PLIST="$HOME/Library/LaunchAgents/com.vdm.intranet.plist"',
     '',
-    'echo "Configuration du démarrage automatique VDM Intranet..."',
+    'echo "Configuration du démarrage automatique VdM Intranet..."',
     'mkdir -p "$SUPPORT_DIR"',
     '',
     "# Script de lancement exécuté à chaque connexion : vérifie d'abord que",
@@ -120,7 +120,7 @@ function macosScript(appUrl: string, appName: string): string {
     'launchctl load "$PLIST"',
     '',
     'echo ""',
-    'echo "✓ VDM Intranet s\'ouvrira automatiquement au prochain démarrage."',
+    'echo "✓ VdM Intranet s\'ouvrira automatiquement au prochain démarrage."',
     'echo ""',
     'read -p "Appuyez sur Entrée pour fermer..."',
   ]
@@ -133,7 +133,7 @@ function windowsScript(appUrl: string, appName: string): string {
   const lines = [
     '@echo off',
     'chcp 65001 >nul',
-    'title VDM Intranet — Démarrage automatique',
+    'title VdM Intranet — Démarrage automatique',
     'echo.',
     'echo Configuration du démarrage automatique...',
     'echo.',
@@ -159,7 +159,7 @@ function windowsScript(appUrl: string, appName: string): string {
     ":: l'application est toujours installée avant de l'ouvrir. On le place",
     ':: dans le démarrage Windows plutôt que la commande Chrome directement,',
     ":: pour pouvoir s'auto-désactiver en cas de désinstallation.",
-    'set "VDM_DIR=%LocalAppData%\\VDM Intranet"',
+    'set "VDM_DIR=%LocalAppData%\\VdM Intranet"',
     'set "LAUNCHER=%VDM_DIR%\\vdm-launch.bat"',
     // Chrome place le raccourci de la PWA installée dans un sous-dossier de
     // Start Menu\Programs\ dont le nom dépend de la langue de Chrome
@@ -184,14 +184,14 @@ function windowsScript(appUrl: string, appName: string): string {
     // clé de démarrage : l'app s'ouvre une fois puis plus jamais.
     'echo exit /b 0 >>"%LAUNCHER%"',
     'echo :cleanup>>"%LAUNCHER%"',
-    'echo reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "VDM Intranet" /f>>"%LAUNCHER%"',
+    'echo reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "VdM Intranet" /f>>"%LAUNCHER%"',
     '',
     ':: Ajouter le lanceur au démarrage Windows',
     'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" ^',
-    '  /v "VDM Intranet" /t REG_SZ ^',
+    '  /v "VdM Intranet" /t REG_SZ ^',
     '  /d "\\"%LAUNCHER%\\"" /f >nul',
     '',
-    "echo ✓ VDM Intranet s'ouvrira automatiquement au prochain démarrage.",
+    "echo ✓ VdM Intranet s'ouvrira automatiquement au prochain démarrage.",
     'echo.',
     'pause',
   ]
@@ -297,7 +297,7 @@ export function PwaAutoStart() {
               </div>
               <h2 className="as-title">Application installée !</h2>
               <p className="as-desc">
-                Voulez-vous que <strong>VDM Intranet</strong> s&rsquo;ouvre automatiquement à chaque
+                Voulez-vous que <strong>VdM Intranet</strong> s&rsquo;ouvre automatiquement à chaque
                 démarrage de l&rsquo;ordinateur ?
               </p>
               <div className="as-actions">

@@ -1,4 +1,4 @@
-// VDM Intranet — Service Worker v2
+// VdM Intranet — Service Worker v2
 // Cache la page offline et la sert quand le réseau est indisponible.
 
 const VERSION = 'vdm-v2'

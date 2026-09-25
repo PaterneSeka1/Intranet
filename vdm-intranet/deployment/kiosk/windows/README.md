@@ -1,4 +1,4 @@
-# VDM Intranet — Kiosque Windows
+# VdM Intranet — Kiosque Windows
 
 ## Navigateur utilisé
 
@@ -45,7 +45,7 @@ quelques restrictions en moins (voir plus bas).
 ## Téléchargement en ligne
 
 Ce dossier est aussi distribué en `.zip` depuis le site (accès réservé aux
-employés connectés — le middleware de l'intranet protège cette URL comme le
+employés connectés — le middleware de VdM Intranet protège cette URL comme le
 reste du site) :
 
 ```

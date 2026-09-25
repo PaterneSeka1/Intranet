@@ -2,7 +2,7 @@
   "name": "vdm-intranet",
   "version": "0.1.0",
   "private": true,
-  "description": "Portail Intranet — Veilleur des Médias",
+  "description": "VdM Intranet — Veilleur des Médias",
   "workspaces": [
     "apps/*",
     "packages/*"

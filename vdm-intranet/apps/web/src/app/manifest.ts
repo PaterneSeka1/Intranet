@@ -31,14 +31,14 @@ function detectImageMimeType(src: string): string {
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await fetchSettings()
   const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
-  const appName = s['vdm_app_name'] || 'VDM Intranet'
-  const shortName = appName.split(' ')[0] || 'VDM'
+  const appName = s['vdm_app_name'] || 'VdM Intranet'
+  const shortName = appName.split(' ')[0] || 'VdM'
   const customIcon = s['vdm_favicon'] || s['vdm_logo']
 
   return {
     name: appName,
     short_name: shortName,
-    description: "Portail interne Veilleur des Médias — Abidjan, Côte d'Ivoire",
+    description: "VdM Intranet — Veilleur des Médias — Abidjan, Côte d'Ivoire",
     start_url: '/accueil',
     display: 'standalone',
     orientation: 'any',

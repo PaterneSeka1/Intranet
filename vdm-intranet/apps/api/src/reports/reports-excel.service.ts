@@ -310,7 +310,7 @@ export class ReportsExcelService {
 
   private newWorkbook(): ExcelJS.Workbook {
     const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'Portail Intranet — Veilleur des Médias'
+    workbook.creator = 'VdM Intranet — Veilleur des Médias'
     workbook.created = new Date()
     return workbook
   }
@@ -401,7 +401,7 @@ export class ReportsExcelService {
     footerCell.value =
       opts.rows.length === 0
         ? 'Aucune donnée sur la période sélectionnée.'
-        : `${opts.rows.length} ligne(s) — document généré automatiquement par le portail Intranet Veilleur des Médias.`
+        : `${opts.rows.length} ligne(s) — document généré automatiquement par VdM Intranet.`
     footerCell.font = { italic: true, size: 8, color: { argb: BRAND_GRAY } }
   }
 }
