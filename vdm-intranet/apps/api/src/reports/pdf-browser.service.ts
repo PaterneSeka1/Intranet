@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import puppeteer, { Browser, Page } from 'puppeteer'
 
 /**
@@ -7,10 +7,20 @@ import puppeteer, { Browser, Page } from 'puppeteer'
  */
 @Injectable()
 export class PdfBrowserService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PdfBrowserService.name)
   private browser?: Browser
+  private launching?: Promise<Browser>
 
   async onModuleInit() {
-    this.browser = await this.launch()
+    // Pré-lancement opportuniste : un Chromium absent ou bloqué ne doit pas empêcher
+    // toute l'API de démarrer — seule la génération de PDF échouera, avec une erreur claire.
+    try {
+      await this.ensureBrowser()
+    } catch (err) {
+      this.logger.error(
+        `Chromium indisponible au démarrage, les exports PDF échoueront tant qu'il ne l'est pas : ${(err as Error).message}`,
+      )
+    }
   }
 
   async onModuleDestroy() {
@@ -18,10 +28,19 @@ export class PdfBrowserService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getPage(): Promise<Page> {
-    if (!this.browser?.connected) {
-      this.browser = await this.launch()
-    }
-    return this.browser.newPage()
+    const browser = await this.ensureBrowser()
+    return browser.newPage()
+  }
+
+  // Mutualise les lancements concurrents : deux exports simultanés après un crash de
+  // Chromium ne doivent pas démarrer deux navigateurs.
+  private async ensureBrowser(): Promise<Browser> {
+    if (this.browser?.connected) return this.browser
+    this.launching ??= this.launch().finally(() => {
+      this.launching = undefined
+    })
+    this.browser = await this.launching
+    return this.browser
   }
 
   private async launch(): Promise<Browser> {

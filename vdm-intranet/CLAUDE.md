@@ -25,6 +25,7 @@ Toutes les commandes doivent être exécutées depuis le répertoire racine (`/v
 - **Lancer le Frontend Web en mode dev** : `npm run dev:web`
 - **Compiler l'API (production)** : `npm run build:api`
 - **Compiler le Frontend Web (production)** : `npm run build:web`
+- **Déployer en prod (VPS)** : `bash scripts/deploy.sh` — installe si besoin, sauvegarde la base puis migre si une migration est en attente, builde et **vérifie** les builds avant `pm2 restart`, puis contrôle les URL publiques. Ne jamais redémarrer pm2 à la main sur un build non vérifié.
 - **Build Web propre si cache/PWA incohérent** : supprimer `apps/web/.next`, puis relancer `npm run build:web`
 - **Formater automatiquement le code (Prettier)** : `npm run format`
 

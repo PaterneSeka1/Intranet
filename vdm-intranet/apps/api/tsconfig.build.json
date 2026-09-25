@@ -1,4 +1,10 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Pas de build incrémental pour le build de prod : nest-cli.json vide dist/ (deleteOutDir)
+    // mais laissait tsconfig.build.tsbuildinfo en place — tsc croyait alors tout à jour et
+    // n'émettait rien (exit 0, dist/ vide ou partiel → MODULE_NOT_FOUND au redémarrage pm2).
+    "incremental": false
+  },
   "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"]
 }
