@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
+import { ArrayMaxSize, IsArray, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
 
 export class CreateTabFolderDto {
   @IsString()
@@ -20,4 +20,12 @@ export class CreateTabFolderDto {
   @IsOptional()
   @IsString()
   businessUnitId?: string
+
+  // BU supplémentaires qui voient aussi le dossier et ses onglets — réservé aux gestionnaires
+  // globaux, cf. TabsService.resolveSharedBuIds.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  sharedBusinessUnitIds?: string[]
 }

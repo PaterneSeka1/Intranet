@@ -58,10 +58,23 @@ const TAB_SELECT = {
 } as const
 
 /**
- * Onglets visibles pour une BU : globaux, propres à la BU, ou partagés avec elle (PortalTabShare).
- * Même règle pour findAll(), assertCanViewTab() et SearchService.searchTabs().
+ * Onglets visibles pour une BU : globaux, propres à la BU, partagés avec elle (PortalTabShare) ou
+ * rangés dans un dossier partagé avec elle (PortalTabFolderShare). Même règle pour findAll(),
+ * assertCanViewTab() et SearchService.searchTabs().
  */
 export function tabsVisibleToBu(buId: string | null | undefined): Prisma.PortalTabWhereInput[] {
+  return buId
+    ? [
+        { businessUnitId: null },
+        { businessUnitId: buId },
+        { shares: { some: { businessUnitId: buId } } },
+        { folder: { shares: { some: { businessUnitId: buId } } } },
+      ]
+    : [{ businessUnitId: null }]
+}
+
+/** Dossiers visibles pour une BU : globaux, propres à la BU ou partagés avec elle. */
+function foldersVisibleToBu(buId: string | null | undefined): Prisma.PortalTabFolderWhereInput[] {
   return buId
     ? [
         { businessUnitId: null },
@@ -83,6 +96,10 @@ const FOLDER_SELECT = {
   updatedAt: true,
   businessUnit: { select: { id: true, name: true, code: true } },
   createdBy: { select: { id: true, username: true, fullName: true } },
+  shares: {
+    select: { businessUnit: { select: { id: true, name: true, code: true } } },
+    orderBy: { businessUnit: { name: 'asc' } },
+  },
 } as const
 
 @Injectable()
@@ -300,13 +317,18 @@ export class TabsService {
     const sharedBuIds = await this.resolveSharedBuIds(
       requester,
       targetBuId,
-      dto.sharedBusinessUnitIds
+      dto.sharedBusinessUnitIds,
+      'onglet'
     )
+    const folderId = await this.resolveFolderId(dto.folderId ?? null, targetBuId)
     if (targetBuId !== null) {
-      await this.assertUrlFreeForBus(dto.url, [targetBuId, ...(sharedBuIds ?? [])])
+      await this.assertUrlFreeForBus(dto.url, [
+        targetBuId,
+        ...(sharedBuIds ?? []),
+        ...(await this.folderShareBuIds(folderId ?? null)),
+      ])
     }
 
-    const folderId = await this.resolveFolderId(dto.folderId ?? null, targetBuId)
     const order = await this.nextTabOrder(folderId ?? null, targetBuId)
 
     const tab = await this.prisma.portalTab.create({
@@ -350,9 +372,11 @@ export class TabsService {
     const sharedBuIds = await this.resolveSharedBuIds(
       requester,
       tab.businessUnitId,
-      sharedBusinessUnitIds
+      sharedBusinessUnitIds,
+      'onglet'
     )
     const urlChanged = !!dto.url && dto.url !== tab.url
+    const folderChanged = dto.folderId !== undefined && dto.folderId !== tab.folderId
 
     if (urlChanged && tab.businessUnitId === null) {
       // Même contrôle manuel que create() : @@unique([businessUnitId, url]) ignore les NULL,
@@ -361,14 +385,20 @@ export class TabsService {
         where: { businessUnitId: null, url: dto.url, NOT: { id } },
       })
       if (existing) throw new BadRequestException('Cet URL existe déjà dans les onglets globaux.')
-    } else if (tab.businessUnitId !== null && (urlChanged || sharedBuIds !== undefined)) {
-      // Nouvelle URL : vérifiée pour la BU propriétaire et toutes les BU destinataires.
-      // Partages seuls modifiés : seules les BU destinataires peuvent entrer en conflit.
-      const effectiveShares = sharedBuIds ?? tab.shares.map((s) => s.businessUnitId)
+    } else if (
+      tab.businessUnitId !== null &&
+      (urlChanged || folderChanged || sharedBuIds !== undefined)
+    ) {
+      // Toutes les BU qui verront l'onglet après la modification : propriétaire, partages
+      // directs, et BU destinataires de son dossier (futur ou actuel).
       await this.assertUrlFreeForBus(
         dto.url ?? tab.url,
-        urlChanged ? [tab.businessUnitId, ...effectiveShares] : effectiveShares,
-        id
+        [
+          tab.businessUnitId,
+          ...(sharedBuIds ?? tab.shares.map((s) => s.businessUnitId)),
+          ...(await this.folderShareBuIds(folderChanged ? (dto.folderId ?? null) : tab.folderId)),
+        ],
+        [id]
       )
     }
 
@@ -504,7 +534,7 @@ export class TabsService {
 
   async findAllFolders(requester: Requester, buId?: string) {
     if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
-      const where = buId ? { OR: [{ businessUnitId: buId }, { businessUnitId: null }] } : {}
+      const where = buId ? { OR: foldersVisibleToBu(buId) } : {}
       return this.prisma.portalTabFolder.findMany({
         where,
         select: FOLDER_SELECT,
@@ -517,11 +547,8 @@ export class TabsService {
       CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) ||
       CAN_VIEW_TABS_OWN_BU.includes(requester.role)
     ) {
-      const orConditions = requester.businessUnitId
-        ? [{ businessUnitId: requester.businessUnitId }, { businessUnitId: null }]
-        : [{ businessUnitId: null }]
       return this.prisma.portalTabFolder.findMany({
-        where: { OR: orConditions },
+        where: { OR: foldersVisibleToBu(requester.businessUnitId) },
         select: FOLDER_SELECT,
         orderBy: [{ order: 'asc' }, { name: 'asc' }],
         take: 200,
@@ -544,6 +571,13 @@ export class TabsService {
       targetBuId = requester.businessUnitId
     }
 
+    const sharedBuIds = await this.resolveSharedBuIds(
+      requester,
+      targetBuId,
+      dto.sharedBusinessUnitIds,
+      'dossier'
+    )
+
     const max = await this.prisma.portalTabFolder.aggregate({
       where: { businessUnitId: targetBuId },
       _max: { order: true },
@@ -557,6 +591,9 @@ export class TabsService {
         businessUnitId: targetBuId,
         order: (max._max.order ?? -1) + 1,
         createdById: requester.id,
+        shares: sharedBuIds?.length
+          ? { create: sharedBuIds.map((businessUnitId) => ({ businessUnitId })) }
+          : undefined,
       },
       select: FOLDER_SELECT,
     })
@@ -565,7 +602,10 @@ export class TabsService {
       requester.id,
       LogAction.TAB_FOLDER_CREATED,
       folder.id,
-      { name: folder.name },
+      {
+        name: folder.name,
+        ...(sharedBuIds?.length ? { sharedBusinessUnitIds: sharedBuIds } : {}),
+      },
       'PortalTabFolder'
     )
 
@@ -576,10 +616,38 @@ export class TabsService {
     const folder = await this.findFolderOrFail(id)
     this.assertCanManageFolder(requester, folder.businessUnitId)
 
+    const { sharedBusinessUnitIds, ...fields } = dto
+    const sharedBuIds = await this.resolveSharedBuIds(
+      requester,
+      folder.businessUnitId,
+      sharedBusinessUnitIds,
+      'dossier'
+    )
+    if (sharedBuIds?.length) {
+      // Les onglets du dossier deviennent visibles dans les BU destinataires : aucun ne doit y
+      // doubler un onglet de même URL déjà visible.
+      const folderTabs = await this.prisma.portalTab.findMany({
+        where: { folderId: id },
+        select: { id: true, url: true },
+      })
+      const folderTabIds = folderTabs.map((t) => t.id)
+      for (const t of folderTabs) await this.assertUrlFreeForBus(t.url, sharedBuIds, folderTabIds)
+    }
+
     try {
       const updated = await this.prisma.portalTabFolder.update({
         where: { id },
-        data: dto,
+        data: {
+          ...fields,
+          ...(sharedBuIds !== undefined
+            ? {
+                shares: {
+                  deleteMany: {},
+                  create: sharedBuIds.map((businessUnitId) => ({ businessUnitId })),
+                },
+              }
+            : {}),
+        },
         select: FOLDER_SELECT,
       })
       await this.log(
@@ -650,7 +718,7 @@ export class TabsService {
     const ids = dto.items.map((i) => i.id)
     const tabs = await this.prisma.portalTab.findMany({
       where: { id: { in: ids } },
-      select: { id: true, businessUnitId: true },
+      select: { id: true, url: true, businessUnitId: true, folderId: true },
     })
     if (tabs.length !== ids.length) throw new NotFoundException('Onglet introuvable.')
     const tabById = new Map(tabs.map((t) => [t.id, t]))
@@ -667,7 +735,7 @@ export class TabsService {
     const folders = targetFolderIds.length
       ? await this.prisma.portalTabFolder.findMany({
           where: { id: { in: targetFolderIds } },
-          select: { id: true, businessUnitId: true },
+          select: { id: true, businessUnitId: true, shares: { select: { businessUnitId: true } } },
         })
       : []
     const folderById = new Map(folders.map((f) => [f.id, f]))
@@ -681,6 +749,13 @@ export class TabsService {
         if (folder.businessUnitId !== tab.businessUnitId) {
           throw new BadRequestException(
             'Un onglet ne peut être déplacé que dans un dossier de la même portée (global ou même BU).'
+          )
+        }
+        if (item.folderId !== tab.folderId && folder.shares.length) {
+          await this.assertUrlFreeForBus(
+            tab.url,
+            folder.shares.map((s) => s.businessUnitId),
+            [tab.id]
           )
         }
       }
@@ -763,7 +838,9 @@ export class TabsService {
         url: true,
         businessUnitId: true,
         isActive: true,
+        folderId: true,
         shares: { select: { businessUnitId: true } },
+        folder: { select: { shares: { select: { businessUnitId: true } } } },
       },
     })
     if (!tab) throw new NotFoundException('Onglet introuvable.')
@@ -771,27 +848,28 @@ export class TabsService {
   }
 
   /**
-   * Normalise la liste des BU destinataires d'un partage. undefined = champ non fourni (aucun
-   * changement) ; [] = retire tous les partages. Réservé aux gestionnaires globaux, et seulement
-   * pour un onglet de BU (un onglet global est déjà visible par toutes les BU). La BU
-   * propriétaire est ignorée si elle figure dans la liste.
+   * Normalise la liste des BU destinataires du partage d'un onglet ou d'un dossier. undefined =
+   * champ non fourni (aucun changement) ; [] = retire tous les partages. Réservé aux gestionnaires
+   * globaux, et seulement pour un élément de BU (un élément global est déjà visible par toutes
+   * les BU). La BU propriétaire est ignorée si elle figure dans la liste.
    */
   private async resolveSharedBuIds(
     requester: Requester,
     ownerBuId: string | null,
-    ids: string[] | undefined
+    ids: string[] | undefined,
+    kind: 'onglet' | 'dossier'
   ): Promise<string[] | undefined> {
     if (ids === undefined) return undefined
     const unique = [...new Set(ids)].filter((buId) => buId !== ownerBuId)
     if (!CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
       throw new ForbiddenException(
-        "Seuls les administrateurs peuvent partager un onglet avec d'autres BU."
+        `Seuls les administrateurs peuvent partager un ${kind} avec d'autres BU.`
       )
     }
     if (unique.length === 0) return []
     if (ownerBuId === null) {
       throw new BadRequestException(
-        'Un onglet global est déjà visible par toutes les BU : il ne peut pas être partagé.'
+        `Un ${kind} global est déjà visible par toutes les BU : il ne peut pas être partagé.`
       )
     }
     const count = await this.prisma.businessUnit.count({ where: { id: { in: unique } } })
@@ -799,25 +877,42 @@ export class TabsService {
     return unique
   }
 
+  /** BU destinataires d'un dossier ([] si aucun dossier ou dossier non partagé). */
+  private async folderShareBuIds(folderId: string | null): Promise<string[]> {
+    if (!folderId) return []
+    const shares = await this.prisma.portalTabFolderShare.findMany({
+      where: { folderId },
+      select: { businessUnitId: true },
+    })
+    return shares.map((s) => s.businessUnitId)
+  }
+
   /**
-   * Une BU ne doit jamais voir deux onglets de même URL : ni l'un des siens, ni un onglet déjà
-   * partagé avec elle (la contrainte @@unique([businessUnitId, url]) ne couvre que le premier cas).
+   * Une BU ne doit jamais voir deux onglets de même URL : ni l'un des siens, ni un onglet partagé
+   * avec elle directement ou via son dossier (la contrainte @@unique([businessUnitId, url]) ne
+   * couvre que le premier cas).
    */
-  private async assertUrlFreeForBus(url: string, buIds: string[], excludeTabId?: string) {
+  private async assertUrlFreeForBus(url: string, buIds: string[], excludeTabIds: string[] = []) {
     if (buIds.length === 0) return
+    const inBus = { some: { businessUnitId: { in: buIds } } }
     const conflict = await this.prisma.portalTab.findFirst({
       where: {
         url,
-        ...(excludeTabId ? { NOT: { id: excludeTabId } } : {}),
-        OR: [
-          { businessUnitId: { in: buIds } },
-          { shares: { some: { businessUnitId: { in: buIds } } } },
-        ],
+        ...(excludeTabIds.length ? { id: { notIn: excludeTabIds } } : {}),
+        OR: [{ businessUnitId: { in: buIds } }, { shares: inBus }, { folder: { shares: inBus } }],
       },
-      select: { businessUnitId: true, shares: { select: { businessUnitId: true } } },
+      select: {
+        businessUnitId: true,
+        shares: { select: { businessUnitId: true } },
+        folder: { select: { shares: { select: { businessUnitId: true } } } },
+      },
     })
     if (!conflict) return
-    const conflictBuIds = [conflict.businessUnitId, ...conflict.shares.map((s) => s.businessUnitId)]
+    const conflictBuIds = [
+      conflict.businessUnitId,
+      ...conflict.shares.map((s) => s.businessUnitId),
+      ...(conflict.folder?.shares.map((s) => s.businessUnitId) ?? []),
+    ]
     const buId = buIds.find((b) => conflictBuIds.includes(b))
     const bu = buId
       ? await this.prisma.businessUnit.findUnique({ where: { id: buId }, select: { name: true } })
@@ -838,14 +933,19 @@ export class TabsService {
 
   /**
    * Vérifie qu'un onglet est *visible* pour le requester — même règle de portée que findAll()
-   * (global toujours visible, sinon même BU ou BU destinataire d'un partage), avec la même exigence isActive pour les rôles en
-   * lecture seule (CAN_VIEW_TABS_OWN_BU). Contrairement à assertCanManage, un manager BU/global
+   * (global toujours visible, sinon même BU ou BU destinataire d'un partage de l'onglet ou de son
+   * dossier), avec la même exigence isActive pour les rôles en lecture seule (CAN_VIEW_TABS_OWN_BU). Contrairement à assertCanManage, un manager BU/global
    * n'a pas besoin d'être le gestionnaire de CET onglet précis : voir son identifiant partagé est
    * ouvert à tout utilisateur qui verrait l'onglet dans la liste.
    */
   private assertCanViewTab(
     requester: Requester,
-    tab: { businessUnitId: string | null; isActive: boolean; shares: { businessUnitId: string }[] }
+    tab: {
+      businessUnitId: string | null
+      isActive: boolean
+      shares: { businessUnitId: string }[]
+      folder: { shares: { businessUnitId: string }[] } | null
+    }
   ) {
     const isViewerOnlyRole = CAN_VIEW_TABS_OWN_BU.includes(requester.role)
     if (isViewerOnlyRole && !tab.isActive) {
@@ -855,7 +955,9 @@ export class TabsService {
     if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) return
     if (!requester.businessUnitId) throw new ForbiddenException('Accès refusé à cet onglet.')
     if (requester.businessUnitId === tab.businessUnitId) return
-    if (tab.shares.some((s) => s.businessUnitId === requester.businessUnitId)) return
+    const isShared = (s: { businessUnitId: string }) =>
+      s.businessUnitId === requester.businessUnitId
+    if (tab.shares.some(isShared) || tab.folder?.shares.some(isShared)) return
     throw new ForbiddenException('Accès refusé à cet onglet.')
   }
 

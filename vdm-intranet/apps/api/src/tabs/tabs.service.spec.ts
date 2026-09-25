@@ -6,9 +6,10 @@ import type { PrismaService } from '../prisma/prisma.service'
 /**
  * Couvre le partage d'un onglet de BU avec d'autres BU (PortalTabShare) : réservé aux
  * gestionnaires globaux, interdit sur un onglet global, sans doublon d'URL dans une BU
- * destinataire, et visibilité (identifiant partagé compris) étendue aux BU destinataires.
+ * destinataire, et visibilité (identifiant partagé compris) étendue aux BU destinataires — y
+ * compris via un dossier partagé (PortalTabFolderShare).
  */
-describe('TabsService — onglets partagés entre BU', () => {
+describe('TabsService — onglets et dossiers partagés entre BU', () => {
   let service: TabsService
   let prisma: {
     portalTab: {
@@ -16,6 +17,13 @@ describe('TabsService — onglets partagés entre BU', () => {
       update: jest.Mock
       findUnique: jest.Mock
       findFirst: jest.Mock
+      findMany: jest.Mock
+      aggregate: jest.Mock
+    }
+    portalTabFolder: {
+      create: jest.Mock
+      update: jest.Mock
+      findUnique: jest.Mock
       aggregate: jest.Mock
     }
     portalTabCredential: { findUnique: jest.Mock }
@@ -30,6 +38,13 @@ describe('TabsService — onglets partagés entre BU', () => {
         update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 't1', ...data })),
         findUnique: jest.fn(),
         findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn().mockResolvedValue({ _max: { order: null } }),
+      },
+      portalTabFolder: {
+        create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'f1', ...data })),
+        update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'f1', ...data })),
+        findUnique: jest.fn(),
         aggregate: jest.fn().mockResolvedValue({ _max: { order: null } }),
       },
       portalTabCredential: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -99,6 +114,48 @@ describe('TabsService — onglets partagés entre BU', () => {
     })
   })
 
+  describe('dossiers', () => {
+    it('crée un dossier partagé par un admin', async () => {
+      await service.createFolder(admin, {
+        name: 'Commun',
+        businessUnitId: 'buA',
+        sharedBusinessUnitIds: ['buB'],
+      })
+      const { data } = prisma.portalTabFolder.create.mock.calls[0][0]
+      expect(data.shares).toEqual({ create: [{ businessUnitId: 'buB' }] })
+    })
+
+    it('refuse le partage de dossier demandé par un responsable BU', async () => {
+      prisma.portalTabFolder.findUnique.mockResolvedValue({
+        id: 'f1',
+        name: 'Commun',
+        businessUnitId: 'buA',
+      })
+      await expect(
+        service.updateFolder(responsableBuA, 'f1', { sharedBusinessUnitIds: ['buB'] })
+      ).rejects.toBeInstanceOf(ForbiddenException)
+    })
+
+    it('refuse de partager un dossier dont un onglet doublerait une URL de la BU destinataire', async () => {
+      prisma.portalTabFolder.findUnique.mockResolvedValue({
+        id: 'f1',
+        name: 'Commun',
+        businessUnitId: 'buA',
+      })
+      prisma.portalTab.findMany.mockResolvedValue([{ id: 't1', url: baseDto.url }])
+      prisma.portalTab.findFirst.mockResolvedValue({
+        businessUnitId: 'buB',
+        shares: [],
+        folder: null,
+      })
+      await expect(
+        service.updateFolder(admin, 'f1', { sharedBusinessUnitIds: ['buB'] })
+      ).rejects.toThrow('Cet URL existe déjà pour la BU « BU B ».')
+      expect(prisma.portalTab.findFirst.mock.calls[0][0].where.id).toEqual({ notIn: ['t1'] })
+      expect(prisma.portalTabFolder.update).not.toHaveBeenCalled()
+    })
+  })
+
   describe('getCredential (visibilité)', () => {
     beforeEach(() => {
       prisma.portalTab.findUnique.mockResolvedValue({
@@ -107,13 +164,31 @@ describe('TabsService — onglets partagés entre BU', () => {
         url: baseDto.url,
         businessUnitId: 'buA',
         isActive: true,
+        folderId: null,
         shares: [{ businessUnitId: 'buB' }],
+        folder: null,
       })
     })
 
     it("autorise un employé d'une BU destinataire", async () => {
       // Accès accordé : on atteint la recherche de l'identifiant (absent ici).
       await expect(service.getCredential(employeBuB, 't1')).rejects.toBeInstanceOf(
+        NotFoundException
+      )
+    })
+
+    it("autorise un employé d'une BU destinataire du dossier de l'onglet", async () => {
+      prisma.portalTab.findUnique.mockResolvedValue({
+        id: 't1',
+        name: 'Outil',
+        url: baseDto.url,
+        businessUnitId: 'buA',
+        isActive: true,
+        folderId: 'f1',
+        shares: [],
+        folder: { shares: [{ businessUnitId: 'buC' }] },
+      })
+      await expect(service.getCredential(employeBuC, 't1')).rejects.toBeInstanceOf(
         NotFoundException
       )
     })

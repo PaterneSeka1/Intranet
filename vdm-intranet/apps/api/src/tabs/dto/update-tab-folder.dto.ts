@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator'
+import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength } from 'class-validator'
 
 export class UpdateTabFolderDto {
   @IsOptional()
@@ -15,4 +15,12 @@ export class UpdateTabFolderDto {
   @IsString()
   @MaxLength(9)
   color?: string
+
+  // BU supplémentaires qui voient aussi le dossier et ses onglets — réservé aux gestionnaires
+  // globaux, cf. TabsService.resolveSharedBuIds. [] = retire tous les partages.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  sharedBusinessUnitIds?: string[]
 }

@@ -91,6 +91,7 @@ model BusinessUnit {
   tabs           PortalTab[]
   sharedTabs     PortalTabShare[]
   tabFolders     PortalTabFolder[]
+  sharedFolders  PortalTabFolderShare[]
   announcements  Announcement[]
 
   @@map("business_units")
@@ -413,8 +414,26 @@ model PortalTabFolder {
   businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
   createdBy    User          @relation("TabFolderCreator", fields: [createdById], references: [id])
   tabs         PortalTab[]
+  // BU supplémentaires qui voient aussi le dossier et ses onglets — voir PortalTabFolderShare.
+  shares       PortalTabFolderShare[]
 
   @@map("portal_tab_folders")
+}
+
+// Partage d'un dossier de BU avec d'autres BU : même principe que PortalTabShare (BU propriétaire
+// seule gestionnaire, partage réservé aux gestionnaires globaux, jamais sur un dossier global).
+// Partager un dossier rend visibles aux BU destinataires tous les onglets qu'il contient.
+model PortalTabFolderShare {
+  folderId       String
+  businessUnitId String
+  createdAt      DateTime @default(now())
+
+  folder       PortalTabFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  businessUnit BusinessUnit    @relation(fields: [businessUnitId], references: [id], onDelete: Cascade)
+
+  @@id([folderId, businessUnitId])
+  @@index([businessUnitId])
+  @@map("portal_tab_folder_shares")
 }
 
 // ============================================================

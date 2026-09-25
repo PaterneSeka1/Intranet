@@ -109,6 +109,7 @@ type FolderFormData = {
   icon: string
   color: string
   businessUnitId: string // '' = dossier global
+  sharedBusinessUnitIds: string[] // gestionnaires globaux seulement
 }
 
 const EMPTY_FOLDER_FORM: FolderFormData = {
@@ -116,6 +117,67 @@ const EMPTY_FOLDER_FORM: FolderFormData = {
   icon: DEFAULT_FOLDER_ICON,
   color: '#F28C38',
   businessUnitId: '',
+  sharedBusinessUnitIds: [],
+}
+
+/** Choix des BU destinataires d'un partage (onglet ou dossier commun à plusieurs BU). */
+function ShareBuPicker({
+  bus,
+  selected,
+  onChange,
+  hint,
+}: {
+  bus: BuOption[]
+  selected: string[]
+  onChange: (ids: string[]) => void
+  hint: string
+}) {
+  return (
+    <div>
+      <span className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+        Partagé avec <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {bus.map((bu) => {
+          const checked = selected.includes(bu.id)
+          return (
+            <label
+              key={bu.id}
+              className={`cursor-pointer select-none px-2.5 py-1 rounded-full border text-xs transition-colors ${checked ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+            >
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={checked}
+                onChange={() =>
+                  onChange(checked ? selected.filter((id) => id !== bu.id) : [...selected, bu.id])
+                }
+              />
+              {bu.name}
+            </label>
+          )
+        })}
+      </div>
+      <p className="text-[11px] text-gray-400 mt-1.5">{hint}</p>
+    </div>
+  )
+}
+
+/** Badges « + CODE » des BU destinataires d'un partage. */
+function ShareBadges({ shares }: { shares: { businessUnit: BuOption }[] }) {
+  return (
+    <>
+      {shares.map(({ businessUnit }) => (
+        <span
+          key={businessUnit.id}
+          title={`Partagé avec ${businessUnit.name}`}
+          className="text-[10px] text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-full inline-block shrink-0"
+        >
+          + {businessUnit.code}
+        </span>
+      ))}
+    </>
+  )
 }
 
 const GLOBAL_TAB_MANAGERS = ['CTO_ADMIN', 'PDG']
@@ -367,15 +429,7 @@ function TabCardContent({
                   <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block">
                     {tab.businessUnit.code}
                   </span>
-                  {tab.shares.map(({ businessUnit }) => (
-                    <span
-                      key={businessUnit.id}
-                      title={`Partagé avec ${businessUnit.name}`}
-                      className="text-[10px] text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-full inline-block"
-                    >
-                      + {businessUnit.code}
-                    </span>
-                  ))}
+                  <ShareBadges shares={tab.shares} />
                 </>
               ) : (
                 <span className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full inline-block">
@@ -654,9 +708,12 @@ function FolderSection({
               Global
             </span>
           ) : folder.businessUnit ? (
-            <span className="text-[10px] text-gray-400 bg-white px-1.5 py-0.5 rounded-full shrink-0">
-              {folder.businessUnit.code}
-            </span>
+            <>
+              <span className="text-[10px] text-gray-400 bg-white px-1.5 py-0.5 rounded-full shrink-0">
+                {folder.businessUnit.code}
+              </span>
+              <ShareBadges shares={folder.shares} />
+            </>
           ) : null}
         </button>
         {canManageThis && (
@@ -838,15 +895,6 @@ export function TabsManager({
   // Partage possible uniquement pour un onglet de BU (un onglet global est déjà vu par toutes).
   const shareableBus = formScopeBuId ? buList.filter((bu) => bu.id !== formScopeBuId) : []
 
-  function toggleSharedBu(buId: string) {
-    setForm((f) => ({
-      ...f,
-      sharedBusinessUnitIds: f.sharedBusinessUnitIds.includes(buId)
-        ? f.sharedBusinessUnitIds.filter((id) => id !== buId)
-        : [...f.sharedBusinessUnitIds, buId],
-    }))
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const credUsername = form.credentialUsername.trim()
@@ -980,10 +1028,19 @@ export function TabsManager({
       icon: folder.icon ?? DEFAULT_FOLDER_ICON,
       color: folder.color ?? '#F28C38',
       businessUnitId: folder.businessUnitId ?? '',
+      sharedBusinessUnitIds: folder.shares.map((s) => s.businessUnit.id),
     })
     setFolderError('')
     setFolderModal({ mode: 'edit', folder })
   }
+
+  const folderScopeBuId =
+    folderModal?.mode === 'edit'
+      ? (folderModal.folder?.businessUnitId ?? null)
+      : folderForm.businessUnitId || null
+  const shareableBusForFolder = folderScopeBuId
+    ? buList.filter((bu) => bu.id !== folderScopeBuId)
+    : []
 
   async function handleFolderSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -996,6 +1053,10 @@ export function TabsManager({
           icon: folderForm.icon || undefined,
           color: folderForm.color || undefined,
           businessUnitId: canManageAll ? folderForm.businessUnitId || undefined : undefined,
+          sharedBusinessUnitIds:
+            canManageAll && folderForm.businessUnitId && folderForm.sharedBusinessUnitIds.length
+              ? folderForm.sharedBusinessUnitIds
+              : undefined,
         }
         const created = await tabFoldersApi.create(payload)
         setFolders((prev) => [...prev, created])
@@ -1006,6 +1067,9 @@ export function TabsManager({
           name: folderForm.name,
           icon: folderForm.icon || undefined,
           color: folderForm.color || undefined,
+          ...(canManageAll && folderModal.folder.businessUnitId
+            ? { sharedBusinessUnitIds: folderForm.sharedBusinessUnitIds }
+            : {}),
         }
         const updated = await tabFoldersApi.update(folderModal.folder.id, payload)
         setFolders((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))
@@ -1223,6 +1287,13 @@ export function TabsManager({
     const current = containerItemsRef.current
     const fromContainer = findContainerOf(activeData.tabId, current)
     if (!fromContainer || !toContainer || fromContainer === toContainer) return
+    // Un onglet ne rejoint qu'un dossier de sa propre portée (refusé côté API sinon) — ex. un
+    // dossier partagé par une autre BU reste fermé aux onglets du gestionnaire BU destinataire.
+    if (toContainer !== NONE) {
+      const tab = tabsById.get(activeData.tabId)
+      const folder = foldersById.get(toContainer)
+      if (!tab || !folder || folder.businessUnitId !== tab.businessUnitId) return
+    }
 
     const fromItems = current[fromContainer] ?? []
     if (!fromItems.includes(activeData.tabId)) return
@@ -1295,8 +1366,9 @@ export function TabsManager({
     if (filterBu === '__global__') {
       if (t.businessUnitId !== null) return false
     } else if (filterBu) {
-      if (t.businessUnitId !== filterBu && !t.shares.some((s) => s.businessUnit.id === filterBu))
-        return false
+      const isShared = (s: { businessUnit: { id: string } }) => s.businessUnit.id === filterBu
+      const folderShared = t.folderId && foldersById.get(t.folderId)?.shares.some(isShared)
+      if (t.businessUnitId !== filterBu && !t.shares.some(isShared) && !folderShared) return false
     }
     if (
       search &&
@@ -1536,35 +1608,12 @@ export function TabsManager({
           )}
 
           {canManageAll && shareableBus.length > 0 && (
-            <div>
-              <span className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                Partagé avec{' '}
-                <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {shareableBus.map((bu) => {
-                  const checked = form.sharedBusinessUnitIds.includes(bu.id)
-                  return (
-                    <label
-                      key={bu.id}
-                      className={`cursor-pointer select-none px-2.5 py-1 rounded-full border text-xs transition-colors ${checked ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={checked}
-                        onChange={() => toggleSharedBu(bu.id)}
-                      />
-                      {bu.name}
-                    </label>
-                  )
-                })}
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1.5">
-                Ces BU verront aussi l&apos;onglet (hors dossier) ; seule la BU propriétaire le
-                gère.
-              </p>
-            </div>
+            <ShareBuPicker
+              bus={shareableBus}
+              selected={form.sharedBusinessUnitIds}
+              onChange={(ids) => setForm((f) => ({ ...f, sharedBusinessUnitIds: ids }))}
+              hint="Ces BU verront aussi l'onglet ; seule la BU propriétaire le gère."
+            />
           )}
 
           <div>
@@ -1787,7 +1836,15 @@ export function TabsManager({
               <select
                 id="folder-bu"
                 value={folderForm.businessUnitId}
-                onChange={(e) => setFolderForm((f) => ({ ...f, businessUnitId: e.target.value }))}
+                onChange={(e) =>
+                  setFolderForm((f) => ({
+                    ...f,
+                    businessUnitId: e.target.value,
+                    sharedBusinessUnitIds: e.target.value
+                      ? f.sharedBusinessUnitIds.filter((id) => id !== e.target.value)
+                      : [],
+                  }))
+                }
                 className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
               >
                 <option value="">Tous les utilisateurs (Global)</option>
@@ -1804,6 +1861,15 @@ export function TabsManager({
                 </p>
               )}
             </div>
+          )}
+
+          {canManageAll && shareableBusForFolder.length > 0 && (
+            <ShareBuPicker
+              bus={shareableBusForFolder}
+              selected={folderForm.sharedBusinessUnitIds}
+              onChange={(ids) => setFolderForm((f) => ({ ...f, sharedBusinessUnitIds: ids }))}
+              hint="Ces BU verront aussi le dossier et tous ses onglets ; seule la BU propriétaire le gère."
+            />
           )}
 
           <div>

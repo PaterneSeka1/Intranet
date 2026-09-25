@@ -12,6 +12,8 @@ export type TabFolder = {
   updatedAt: string
   businessUnit: { id: string; name: string; code: string } | null
   createdBy: { id: string; username: string; fullName?: string | null }
+  // BU supplémentaires qui voient aussi le dossier et tous ses onglets.
+  shares: { businessUnit: { id: string; name: string; code: string } }[]
 }
 
 export type Tab = {
@@ -80,12 +82,15 @@ export type CreateTabFolderPayload = {
   icon?: string
   color?: string
   businessUnitId?: string
+  sharedBusinessUnitIds?: string[]
 }
 
 export type UpdateTabFolderPayload = Partial<{
   name: string
   icon: string
   color: string
+  // Réservé aux gestionnaires globaux ; [] = retire tous les partages.
+  sharedBusinessUnitIds: string[]
 }>
 
 // { id, order } pour un dossier, ou { id, order, folderId } pour un onglet — folderId omis =
