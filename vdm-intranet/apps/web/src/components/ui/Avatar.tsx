@@ -1,3 +1,5 @@
+import { UserPhoto } from './UserPhoto'
+
 const SIZES = {
   sm: { box: 'w-7 h-7', text: 'text-[10px]', dot: 'w-2 h-2' },
   md: { box: 'w-9 h-9', text: 'text-xs', dot: 'w-2.5 h-2.5' },
@@ -5,6 +7,8 @@ const SIZES = {
 }
 
 interface AvatarProps {
+  /** Affiche la photo de profil RH de cet utilisateur si elle existe (initiales sinon). */
+  userId?: string | null
   firstName?: string | null
   lastName?: string | null
   username: string
@@ -26,9 +30,10 @@ function getInitials(
   return username.slice(0, 2).toUpperCase()
 }
 
-/** Avatar à initiales partagé (le repo n'a pas de photo de profil) — cf. logique dupliquée dans
- * UsersManager.tsx et Sidebar.tsx, factorisée ici pour la messagerie. */
+/** Avatar partagé : photo de profil RH si `userId` est fourni et qu'elle existe, initiales sinon —
+ * cf. logique dupliquée dans UsersManager.tsx et Sidebar.tsx, factorisée ici pour la messagerie. */
 export function Avatar({
+  userId,
   firstName,
   lastName,
   username,
@@ -40,8 +45,11 @@ export function Avatar({
   const initials = getInitials(firstName, lastName, username)
   return (
     <div className={`relative shrink-0 ${className}`}>
-      <div className={`${s.box} rounded-full bg-[#F28C38]/10 flex items-center justify-center`}>
+      <div
+        className={`${s.box} relative overflow-hidden rounded-full bg-[#F28C38]/10 flex items-center justify-center`}
+      >
         <span className={`${s.text} font-bold text-[#F28C38]`}>{initials}</span>
+        <UserPhoto userId={userId} />
       </div>
       {online !== undefined && (
         <span

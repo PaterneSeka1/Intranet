@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Res, UseGuards } from '@nestjs/common'
+import { Response } from 'express'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Role } from '@prisma/client'
 import { UsersService } from './users.service'
+import { UserPhotoService } from './user-photo.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
@@ -26,7 +28,10 @@ type JwtUser = {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly userPhotoService: UserPhotoService
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Mon profil' })
@@ -45,6 +50,25 @@ export class UsersController {
   @ApiOperation({ summary: 'Liste des utilisateurs (selon rôle)' })
   findAll(@CurrentUser() user: JwtUser) {
     return this.usersService.findAll(user)
+  }
+
+  // Ouvert à tout utilisateur connecté (sans @Roles) : les avatars s'affichent partout
+  // (messagerie, annuaire…), pas seulement dans la gestion des utilisateurs.
+  @Get(':id/photo')
+  @ApiOperation({ summary: "Photo de profil d'un utilisateur (issue de l'app RH)" })
+  async photo(@Param('id') id: string, @Res() res: Response) {
+    const photo = await this.userPhotoService.getPhoto(id)
+    // Chargée via <img> depuis le domaine du front (autre origine, même site) : helmet pose
+    // `same-origin` par défaut, ce qui bloquerait l'image.
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site')
+    res.setHeader('Cache-Control', 'private, max-age=600')
+    if (!photo) {
+      res.status(404).end()
+      return
+    }
+    res.setHeader('Content-Type', photo.contentType)
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.send(photo.data)
   }
 
   @Get(':id')

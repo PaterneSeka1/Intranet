@@ -19,6 +19,7 @@ import {
 import type { User, Role } from '@/types/user'
 import { LogoutOverlay } from '@/components/auth/LogoutOverlay'
 import { NotificationsBell } from '@/components/notifications/NotificationsBell'
+import { UserPhoto } from '@/components/ui/UserPhoto'
 
 type MenuItem = { label: string; href: string; icon: LucideIcon }
 
@@ -170,8 +171,9 @@ export function Sidebar({
             pathname === '/mon-profil' ? 'vdm-sb-text' : 'vdm-sb-link'
           }`}
         >
-          <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 relative overflow-hidden rounded-lg bg-white/15 flex items-center justify-center shrink-0">
             <span className="vdm-sb-text text-xs font-bold">{initials}</span>
+            <UserPhoto userId={user.id} />
           </div>
           <div className="min-w-0">
             <div

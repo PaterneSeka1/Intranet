@@ -245,6 +245,7 @@ export function ConversationThread({
           <Avatar username={conversation.name ?? 'Groupe'} size="sm" />
         ) : (
           <Avatar
+            userId={other?.userId}
             firstName={other?.user.firstName}
             lastName={other?.user.lastName}
             username={other?.user.username ?? '?'}

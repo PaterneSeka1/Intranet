@@ -9,6 +9,7 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { presenceApi, type ConnectionLogEntry } from '@/lib/presence'
 import { parseUserAgent } from '@/lib/user-agent'
 import { api } from '@/lib/api'
+import { UserPhoto } from '@/components/ui/UserPhoto'
 
 function patchMe(data: Record<string, string>): Promise<User> {
   return api.users.updateMe(data)
@@ -102,8 +103,9 @@ export function MonProfilClient({ user }: Props) {
       {/* Carte identité */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <div className="flex items-center gap-4 mb-5">
-          <div className="w-16 h-16 rounded-2xl bg-[#F28C38]/12 flex items-center justify-center shrink-0">
+          <div className="w-16 h-16 relative overflow-hidden rounded-2xl bg-[#F28C38]/12 flex items-center justify-center shrink-0">
             <span className="text-[#F28C38] font-bold text-2xl">{initials}</span>
+            <UserPhoto userId={user.id} />
           </div>
           <div>
             <div className="font-bold text-gray-900 text-base">

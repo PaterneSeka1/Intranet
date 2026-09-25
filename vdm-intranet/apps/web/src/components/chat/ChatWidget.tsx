@@ -689,6 +689,7 @@ export function ChatWidget({ currentUserId }: ChatWidgetProps) {
                           <Avatar username={conversation.name ?? 'Groupe'} size="md" />
                         ) : (
                           <Avatar
+                            userId={other?.id}
                             firstName={other?.firstName}
                             lastName={other?.lastName}
                             username={other?.username ?? '?'}

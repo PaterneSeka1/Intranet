@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import type { MatchableCongeIdentity } from './leave-match.util'
 
 export type ActiveLeave = {
   matricule: string | null
@@ -20,6 +21,8 @@ export type CongeEmployee = {
   departmentName: string | null
 }
 
+export type CongeEmployeePhoto = { contentType: string; data: Buffer }
+
 type CongeApiResponse = { employees?: ActiveLeave[] }
 type CongeEmployeesApiResponse = { employees?: CongeEmployee[] }
 
@@ -28,6 +31,9 @@ const CACHE_TTL_MS = 60_000
 // cache plus long pour ne pas solliciter CONGE à chaque ouverture du formulaire de création.
 const EMPLOYEES_CACHE_TTL_MS = 5 * 60_000
 const REQUEST_TIMEOUT_MS = 5_000
+// Photos de profil saisies dans l'app RH : mises en cache (absence comprise) pour ne pas
+// solliciter CONGE à chaque affichage d'un avatar. Une nouvelle photo apparaît sous 10 min.
+const PHOTO_CACHE_TTL_MS = 10 * 60_000
 
 function toDateKey(date: Date): string {
   return date.toISOString().split('T')[0]
@@ -41,6 +47,7 @@ export class LeaveSyncService {
   private readonly logger = new Logger(LeaveSyncService.name)
   private cache = new Map<string, { expiresAt: number; data: ActiveLeave[] }>()
   private employeesCache: { expiresAt: number; data: CongeEmployee[] } | null = null
+  private photoCache = new Map<string, { expiresAt: number; data: CongeEmployeePhoto | null }>()
 
   constructor(private readonly config: ConfigService) {}
 
@@ -99,6 +106,53 @@ export class LeaveSyncService {
         `Impossible de contacter l'API Congé (/api/employees) : ${(err as Error).message}`
       )
       return []
+    }
+  }
+
+  /// Photo de profil RH d'un employé (rapprochement matricule puis email côté CONGE).
+  /// Retourne null si absente, si l'intégration n'est pas configurée ou si CONGE est injoignable.
+  async getEmployeePhoto(identity: MatchableCongeIdentity): Promise<CongeEmployeePhoto | null> {
+    const config = this.getConfig()
+    if (!config) return null
+
+    const matricule = identity.matricule?.trim() ?? ''
+    const email = identity.email?.trim().toLowerCase() ?? ''
+    if (!matricule && !email) return null
+
+    const cacheKey = `${matricule.toLowerCase()}|${email}`
+    const cached = this.photoCache.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) return cached.data
+
+    try {
+      const params = new URLSearchParams()
+      if (matricule) params.set('matricule', matricule)
+      if (email) params.set('email', email)
+
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+      const res = await fetch(`${config.baseUrl}/api/employees/photo?${params}`, {
+        headers: { 'x-intranet-secret': config.secret },
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+
+      let data: CongeEmployeePhoto | null = null
+      const contentType = res.headers.get('content-type') ?? ''
+      if (res.ok && contentType.startsWith('image/')) {
+        data = { contentType, data: Buffer.from(await res.arrayBuffer()) }
+      } else if (res.status !== 404) {
+        // Erreur transitoire : pas de mise en cache, on retentera au prochain affichage.
+        this.logger.warn(`Congé API (/api/employees/photo) a répondu ${res.status}`)
+        return null
+      }
+
+      this.photoCache.set(cacheKey, { expiresAt: Date.now() + PHOTO_CACHE_TTL_MS, data })
+      return data
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Impossible de contacter l'API Congé (/api/employees/photo) : ${(err as Error).message}`
+      )
+      return null
     }
   }
 

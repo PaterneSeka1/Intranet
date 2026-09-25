@@ -188,6 +188,7 @@ export function GroupInfoModal({
                   className="w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-gray-50 text-left"
                 >
                   <Avatar
+                    userId={user.id}
                     firstName={user.firstName}
                     lastName={user.lastName}
                     username={user.username}
@@ -224,6 +225,7 @@ export function GroupInfoModal({
             className="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg"
           >
             <Avatar
+              userId={participant.userId}
               firstName={participant.user.firstName}
               lastName={participant.user.lastName}
               username={participant.user.username}

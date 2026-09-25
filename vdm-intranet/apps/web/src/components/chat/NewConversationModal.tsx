@@ -115,6 +115,7 @@ export function NewConversationModal({
               className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors text-left"
             >
               <Avatar
+                userId={user.id}
                 firstName={user.firstName}
                 lastName={user.lastName}
                 username={user.username}

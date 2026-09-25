@@ -17,6 +17,7 @@ import { Modal } from '@/components/ui/Modal'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { api } from '@/lib/api'
 import { leavesApi, type CongeEmployeeCandidate } from '@/lib/leaves'
+import { UserPhoto } from '@/components/ui/UserPhoto'
 
 type Bu = { id: string; name: string; code: string }
 type Pole = { id: string; name: string; code: string; businessUnitId: string }
@@ -403,8 +404,9 @@ export function UsersManager({
         const ini = getInitials(u.firstName ?? '', u.lastName ?? '', u.username)
         return (
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#F28C38]/10 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 relative overflow-hidden rounded-lg bg-[#F28C38]/10 flex items-center justify-center shrink-0">
               <span className="text-[#F28C38] text-[10px] font-bold">{ini}</span>
+              <UserPhoto userId={u.id} />
             </div>
             <div>
               <div className="font-medium text-gray-800 text-sm">{name ?? '—'}</div>
@@ -534,8 +536,9 @@ export function UsersManager({
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Aperçu identité */}
           <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-            <div className="w-12 h-12 rounded-xl bg-[#F28C38] flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 relative overflow-hidden rounded-xl bg-[#F28C38] flex items-center justify-center shrink-0">
               <span className="text-white text-base font-bold">{initials}</span>
+              <UserPhoto key={editing?.id ?? 'new'} userId={editing?.id} />
             </div>
             <div className="min-w-0">
               <div className="font-semibold text-gray-900 text-sm">

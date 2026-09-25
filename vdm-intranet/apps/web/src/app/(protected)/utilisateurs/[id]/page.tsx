@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser, serverFetch } from '@/lib/auth'
 import { EmployeeReportPanel } from '@/components/users/EmployeeReportPanel'
 import { ROLE_LABELS, type Role, type User } from '@/types/user'
+import { UserPhoto } from '@/components/ui/UserPhoto'
 
 // Même périmètre que la liste (utilisateurs/page.tsx) et que CAN_VIEW_REPORTS côté API
 // (reports.service.ts::buildUserWhere) — qui peut voir la liste peut ouvrir une fiche et
@@ -65,8 +66,9 @@ export default async function EmployeeFichePage({ params }: { params: { id: stri
       {/* Carte d'identité */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#F28C38] flex items-center justify-center shrink-0">
+          <div className="w-14 h-14 relative overflow-hidden rounded-2xl bg-[#F28C38] flex items-center justify-center shrink-0">
             <span className="text-white text-lg font-bold">{initials}</span>
+            <UserPhoto userId={employee.id} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
