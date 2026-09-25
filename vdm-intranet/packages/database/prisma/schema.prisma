@@ -89,6 +89,7 @@ model BusinessUnit {
   poles          Pole[]
   scheduleGroups ScheduleGroup[]
   tabs           PortalTab[]
+  sharedTabs     PortalTabShare[]
   tabFolders     PortalTabFolder[]
   announcements  Announcement[]
 
@@ -350,9 +351,28 @@ model PortalTab {
   createdBy    User                 @relation("TabCreator", fields: [createdById], references: [id])
   // Identifiant partagé optionnel (un seul par onglet) — voir PortalTabCredential.
   credential   PortalTabCredential?
+  // BU supplémentaires qui voient aussi l'onglet — voir PortalTabShare.
+  shares       PortalTabShare[]
 
   @@unique([businessUnitId, url])
   @@map("portal_tabs")
+}
+
+// Partage d'un onglet de BU avec d'autres BU (onglet "commun" à plusieurs BU sans être global).
+// La BU propriétaire (PortalTab.businessUnitId) reste seule à le gérer et fixe son dossier/rang ;
+// les BU destinataires le voient en lecture (hors dossier, les dossiers étant propres à une BU).
+// Partage réservé aux gestionnaires globaux (CAN_MANAGE_TABS_GLOBAL), jamais sur un onglet global.
+model PortalTabShare {
+  tabId          String
+  businessUnitId String
+  createdAt      DateTime @default(now())
+
+  tab          PortalTab    @relation(fields: [tabId], references: [id], onDelete: Cascade)
+  businessUnit BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Cascade)
+
+  @@id([tabId, businessUnitId])
+  @@index([businessUnitId])
+  @@map("portal_tab_shares")
 }
 
 // Identifiant partagé (compte commun à tous les utilisateurs voyant l'onglet) rattaché à un

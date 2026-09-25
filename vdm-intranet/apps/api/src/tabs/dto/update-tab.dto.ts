@@ -1,4 +1,12 @@
-import { IsBoolean, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator'
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator'
 
 export class UpdateTabDto {
   @IsOptional()
@@ -35,4 +43,12 @@ export class UpdateTabDto {
   @IsOptional()
   @IsString()
   folderId?: string | null
+
+  // BU supplémentaires qui voient aussi l'onglet (onglet commun à plusieurs BU) — réservé aux
+  // gestionnaires globaux, cf. TabsService.resolveSharedBuIds. [] = retire tous les partages.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  sharedBusinessUnitIds?: string[]
 }

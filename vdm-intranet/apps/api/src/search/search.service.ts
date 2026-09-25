@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import { tabsVisibleToBu } from '../tabs/tabs.service'
 import {
   CAN_VIEW_USERS,
   CAN_MANAGE_USERS,
@@ -95,9 +96,7 @@ export class SearchService {
     ) {
       scope = {
         isActive: true,
-        OR: requester.businessUnitId
-          ? [{ businessUnitId: requester.businessUnitId }, { businessUnitId: null }]
-          : [{ businessUnitId: null }],
+        OR: tabsVisibleToBu(requester.businessUnitId),
       }
     } else {
       return []

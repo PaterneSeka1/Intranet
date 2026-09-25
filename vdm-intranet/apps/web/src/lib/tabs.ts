@@ -34,6 +34,8 @@ export type Tab = {
   // Présence d'un identifiant partagé (jamais le secret) — cf. tabsApi.getCredential pour le
   // révéler explicitement (consultation journalisée côté serveur).
   credential: { id: string } | null
+  // BU supplémentaires qui voient aussi l'onglet (en plus de businessUnit, qui reste seule à le gérer).
+  shares: { businessUnit: { id: string; name: string; code: string } }[]
 }
 
 export type TabCredential = {
@@ -58,6 +60,7 @@ export type CreateTabPayload = {
   color?: string
   businessUnitId?: string
   folderId?: string
+  sharedBusinessUnitIds?: string[]
 }
 
 export type UpdateTabPayload = Partial<{
@@ -68,6 +71,8 @@ export type UpdateTabPayload = Partial<{
   color: string
   isActive: boolean
   folderId: string | null
+  // Réservé aux gestionnaires globaux ; [] = retire tous les partages.
+  sharedBusinessUnitIds: string[]
 }>
 
 export type CreateTabFolderPayload = {

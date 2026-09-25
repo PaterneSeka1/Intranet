@@ -81,6 +81,8 @@ type TabFormData = {
   color: string
   businessUnitId: string // '' = onglet global
   folderId: string // '' = aucun dossier
+  // BU destinataires d'un partage (onglet commun à plusieurs BU) — gestionnaires globaux seulement.
+  sharedBusinessUnitIds: string[]
   // Identifiant partagé optionnel, saisi uniquement à la création (cf. tabsApi.setCredential) —
   // en édition la gestion passe par le bouton dédié "Identifiants partagés".
   credentialUsername: string
@@ -96,6 +98,7 @@ const EMPTY_TAB_FORM: TabFormData = {
   color: '#F28C38',
   businessUnitId: '',
   folderId: '',
+  sharedBusinessUnitIds: [],
   credentialUsername: '',
   credentialPassword: '',
   credentialNotes: '',
@@ -360,9 +363,20 @@ function TabCardContent({
             <div className="font-semibold text-gray-800 text-sm truncate">{tab.name}</div>
             <div className="flex flex-wrap items-center gap-1 mt-0.5">
               {tab.businessUnit ? (
-                <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block">
-                  {tab.businessUnit.code}
-                </span>
+                <>
+                  <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block">
+                    {tab.businessUnit.code}
+                  </span>
+                  {tab.shares.map(({ businessUnit }) => (
+                    <span
+                      key={businessUnit.id}
+                      title={`Partagé avec ${businessUnit.name}`}
+                      className="text-[10px] text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-full inline-block"
+                    >
+                      + {businessUnit.code}
+                    </span>
+                  ))}
+                </>
               ) : (
                 <span className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full inline-block">
                   Global
@@ -804,6 +818,7 @@ export function TabsManager({
       color: tab.color ?? '#F28C38',
       businessUnitId: tab.businessUnitId ?? '',
       folderId: tab.folderId ?? '',
+      sharedBusinessUnitIds: tab.shares.map((s) => s.businessUnit.id),
       credentialUsername: '',
       credentialPassword: '',
       credentialNotes: '',
@@ -820,6 +835,17 @@ export function TabsManager({
     () => folders.filter((f) => (f.businessUnitId ?? null) === formScopeBuId),
     [folders, formScopeBuId]
   )
+  // Partage possible uniquement pour un onglet de BU (un onglet global est déjà vu par toutes).
+  const shareableBus = formScopeBuId ? buList.filter((bu) => bu.id !== formScopeBuId) : []
+
+  function toggleSharedBu(buId: string) {
+    setForm((f) => ({
+      ...f,
+      sharedBusinessUnitIds: f.sharedBusinessUnitIds.includes(buId)
+        ? f.sharedBusinessUnitIds.filter((id) => id !== buId)
+        : [...f.sharedBusinessUnitIds, buId],
+    }))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -842,6 +868,10 @@ export function TabsManager({
           // '' means global: omit businessUnitId so API treats it as null
           businessUnitId: canManageAll ? form.businessUnitId || undefined : undefined,
           folderId: form.folderId || undefined,
+          sharedBusinessUnitIds:
+            canManageAll && form.businessUnitId && form.sharedBusinessUnitIds.length
+              ? form.sharedBusinessUnitIds
+              : undefined,
         }
         const created = await tabsApi.create(payload)
         let finalTab = created
@@ -872,6 +902,9 @@ export function TabsManager({
           icon: form.icon || undefined,
           color: form.color || undefined,
           folderId: form.folderId || null,
+          ...(canManageAll && modal.tab.businessUnitId
+            ? { sharedBusinessUnitIds: form.sharedBusinessUnitIds }
+            : {}),
         }
         const updated = await tabsApi.update(modal.tab.id, payload)
         setTabs((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
@@ -1132,7 +1165,12 @@ export function TabsManager({
     const items: ReorderItem[] = []
     for (const [key, ids] of Object.entries(next)) {
       const folderId = key === NONE ? null : key
-      ids.forEach((id, index) => items.push({ id, order: index, folderId }))
+      ids.forEach((id, index) => {
+        // Les onglets visibles mais non gérables (globaux, ou partagés par une autre BU pour un
+        // gestionnaire BU) restent à leur place : les envoyer ferait refuser tout le lot (403).
+        const tab = tabsById.get(id)
+        if (tab && canManage(tab)) items.push({ id, order: index, folderId })
+      })
     }
     const byId = new Map(items.map((i) => [i.id, i]))
     setTabs((prev) =>
@@ -1257,7 +1295,8 @@ export function TabsManager({
     if (filterBu === '__global__') {
       if (t.businessUnitId !== null) return false
     } else if (filterBu) {
-      if (t.businessUnitId !== filterBu) return false
+      if (t.businessUnitId !== filterBu && !t.shares.some((s) => s.businessUnit.id === filterBu))
+        return false
     }
     if (
       search &&
@@ -1275,7 +1314,8 @@ export function TabsManager({
     return folderOrder.filter((fid) => {
       const folder = foldersById.get(fid)
       if (filterBu === '__global__' && folder?.businessUnitId !== null) return false
-      if (filterBu && filterBu !== '__global__' && folder?.businessUnitId !== filterBu) return false
+      // Pas de contrôle de portée pour une BU précise : un dossier d'une autre BU reste affiché
+      // s'il contient un onglet partagé avec elle (sinon ids.some ci-dessous le masque).
       const ids = containerItems[fid] ?? []
       return ids.some((id) => filteredIds.has(id))
     })
@@ -1469,7 +1509,14 @@ export function TabsManager({
                 id="tab-bu"
                 value={form.businessUnitId}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, businessUnitId: e.target.value, folderId: '' }))
+                  setForm((f) => ({
+                    ...f,
+                    businessUnitId: e.target.value,
+                    folderId: '',
+                    sharedBusinessUnitIds: e.target.value
+                      ? f.sharedBusinessUnitIds.filter((id) => id !== e.target.value)
+                      : [],
+                  }))
                 }
                 className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
               >
@@ -1485,6 +1532,38 @@ export function TabsManager({
                   Cet onglet sera visible par tous les utilisateurs sans exception.
                 </p>
               )}
+            </div>
+          )}
+
+          {canManageAll && shareableBus.length > 0 && (
+            <div>
+              <span className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                Partagé avec{' '}
+                <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {shareableBus.map((bu) => {
+                  const checked = form.sharedBusinessUnitIds.includes(bu.id)
+                  return (
+                    <label
+                      key={bu.id}
+                      className={`cursor-pointer select-none px-2.5 py-1 rounded-full border text-xs transition-colors ${checked ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={checked}
+                        onChange={() => toggleSharedBu(bu.id)}
+                      />
+                      {bu.name}
+                    </label>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                Ces BU verront aussi l&apos;onglet (hors dossier) ; seule la BU propriétaire le
+                gère.
+              </p>
             </div>
           )}
 

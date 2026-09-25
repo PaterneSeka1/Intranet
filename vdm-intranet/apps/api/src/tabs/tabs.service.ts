@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { LogAction, Role } from '@prisma/client'
+import { LogAction, Prisma, Role } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateTabDto } from './dto/create-tab.dto'
 import { UpdateTabDto } from './dto/update-tab.dto'
@@ -51,7 +51,25 @@ const TAB_SELECT = {
   // existe (tab.credential !== null). Le déchiffrement/la consultation passent uniquement par
   // getCredential(), journalisés.
   credential: { select: { id: true } },
+  shares: {
+    select: { businessUnit: { select: { id: true, name: true, code: true } } },
+    orderBy: { businessUnit: { name: 'asc' } },
+  },
 } as const
+
+/**
+ * Onglets visibles pour une BU : globaux, propres à la BU, ou partagés avec elle (PortalTabShare).
+ * Même règle pour findAll(), assertCanViewTab() et SearchService.searchTabs().
+ */
+export function tabsVisibleToBu(buId: string | null | undefined): Prisma.PortalTabWhereInput[] {
+  return buId
+    ? [
+        { businessUnitId: null },
+        { businessUnitId: buId },
+        { shares: { some: { businessUnitId: buId } } },
+      ]
+    : [{ businessUnitId: null }]
+}
 
 const FOLDER_SELECT = {
   id: true,
@@ -230,8 +248,8 @@ export class TabsService {
 
   async findAll(requester: Requester, buId?: string) {
     if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
-      // Global tabs always included; optionally narrow by BU
-      const where = buId ? { OR: [{ businessUnitId: buId }, { businessUnitId: null }] } : {}
+      // Global tabs always included; optionally narrow by BU (onglets partagés avec elle inclus)
+      const where = buId ? { OR: tabsVisibleToBu(buId) } : {}
       return this.prisma.portalTab.findMany({
         where,
         select: TAB_SELECT,
@@ -244,10 +262,7 @@ export class TabsService {
       CAN_MANAGE_TABS_BU_SCOPE.includes(requester.role) ||
       CAN_VIEW_TABS_OWN_BU.includes(requester.role)
     ) {
-      const orConditions = requester.businessUnitId
-        ? [{ businessUnitId: requester.businessUnitId }, { businessUnitId: null }]
-        : [{ businessUnitId: null }]
-      const where: Record<string, unknown> = { OR: orConditions }
+      const where: Prisma.PortalTabWhereInput = { OR: tabsVisibleToBu(requester.businessUnitId) }
       if (CAN_VIEW_TABS_OWN_BU.includes(requester.role)) where.isActive = true
       return this.prisma.portalTab.findMany({
         where,
@@ -280,11 +295,15 @@ export class TabsService {
         where: { businessUnitId: null, url: dto.url },
       })
       if (existing) throw new BadRequestException('Cet URL existe déjà dans les onglets globaux.')
-    } else {
-      const existing = await this.prisma.portalTab.findUnique({
-        where: { businessUnitId_url: { businessUnitId: targetBuId, url: dto.url } },
-      })
-      if (existing) throw new BadRequestException('Cet URL existe déjà pour cette BU.')
+    }
+
+    const sharedBuIds = await this.resolveSharedBuIds(
+      requester,
+      targetBuId,
+      dto.sharedBusinessUnitIds
+    )
+    if (targetBuId !== null) {
+      await this.assertUrlFreeForBus(dto.url, [targetBuId, ...(sharedBuIds ?? [])])
     }
 
     const folderId = await this.resolveFolderId(dto.folderId ?? null, targetBuId)
@@ -301,11 +320,18 @@ export class TabsService {
         folderId,
         order,
         createdById: requester.id,
+        shares: sharedBuIds?.length
+          ? { create: sharedBuIds.map((businessUnitId) => ({ businessUnitId })) }
+          : undefined,
       },
       select: TAB_SELECT,
     })
 
-    await this.log(requester.id, LogAction.TAB_CREATED, tab.id, { name: tab.name, url: tab.url })
+    await this.log(requester.id, LogAction.TAB_CREATED, tab.id, {
+      name: tab.name,
+      url: tab.url,
+      ...(sharedBuIds?.length ? { sharedBusinessUnitIds: sharedBuIds } : {}),
+    })
 
     return tab
   }
@@ -320,22 +346,30 @@ export class TabsService {
       await this.resolveFolderId(dto.folderId, tab.businessUnitId)
     }
 
-    if (dto.url && dto.url !== tab.url) {
+    const { sharedBusinessUnitIds, ...fields } = dto
+    const sharedBuIds = await this.resolveSharedBuIds(
+      requester,
+      tab.businessUnitId,
+      sharedBusinessUnitIds
+    )
+    const urlChanged = !!dto.url && dto.url !== tab.url
+
+    if (urlChanged && tab.businessUnitId === null) {
       // Même contrôle manuel que create() : @@unique([businessUnitId, url]) ignore les NULL,
       // donc deux onglets globaux ne peuvent pas être départagés par la contrainte DB seule.
-      if (tab.businessUnitId === null) {
-        const existing = await this.prisma.portalTab.findFirst({
-          where: { businessUnitId: null, url: dto.url, NOT: { id } },
-        })
-        if (existing) throw new BadRequestException('Cet URL existe déjà dans les onglets globaux.')
-      } else {
-        const existing = await this.prisma.portalTab.findUnique({
-          where: { businessUnitId_url: { businessUnitId: tab.businessUnitId, url: dto.url } },
-        })
-        if (existing && existing.id !== id) {
-          throw new BadRequestException('Cet URL existe déjà pour cette BU.')
-        }
-      }
+      const existing = await this.prisma.portalTab.findFirst({
+        where: { businessUnitId: null, url: dto.url, NOT: { id } },
+      })
+      if (existing) throw new BadRequestException('Cet URL existe déjà dans les onglets globaux.')
+    } else if (tab.businessUnitId !== null && (urlChanged || sharedBuIds !== undefined)) {
+      // Nouvelle URL : vérifiée pour la BU propriétaire et toutes les BU destinataires.
+      // Partages seuls modifiés : seules les BU destinataires peuvent entrer en conflit.
+      const effectiveShares = sharedBuIds ?? tab.shares.map((s) => s.businessUnitId)
+      await this.assertUrlFreeForBus(
+        dto.url ?? tab.url,
+        urlChanged ? [tab.businessUnitId, ...effectiveShares] : effectiveShares,
+        id
+      )
     }
 
     const action =
@@ -348,7 +382,17 @@ export class TabsService {
     try {
       const updated = await this.prisma.portalTab.update({
         where: { id },
-        data: dto,
+        data: {
+          ...fields,
+          ...(sharedBuIds !== undefined
+            ? {
+                shares: {
+                  deleteMany: {},
+                  create: sharedBuIds.map((businessUnitId) => ({ businessUnitId })),
+                },
+              }
+            : {}),
+        },
         select: TAB_SELECT,
       })
       await this.log(requester.id, action, id, dto as object)
@@ -382,7 +426,7 @@ export class TabsService {
 
   async getCredential(requester: Requester, tabId: string) {
     const tab = await this.findTabOrFail(tabId)
-    this.assertCanViewTab(requester, tab.businessUnitId, tab.isActive)
+    this.assertCanViewTab(requester, tab)
 
     const credential = await this.prisma.portalTabCredential.findUnique({
       where: { tabId },
@@ -713,10 +757,74 @@ export class TabsService {
   private async findTabOrFail(id: string) {
     const tab = await this.prisma.portalTab.findUnique({
       where: { id },
-      select: { id: true, name: true, url: true, businessUnitId: true, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        url: true,
+        businessUnitId: true,
+        isActive: true,
+        shares: { select: { businessUnitId: true } },
+      },
     })
     if (!tab) throw new NotFoundException('Onglet introuvable.')
     return tab
+  }
+
+  /**
+   * Normalise la liste des BU destinataires d'un partage. undefined = champ non fourni (aucun
+   * changement) ; [] = retire tous les partages. Réservé aux gestionnaires globaux, et seulement
+   * pour un onglet de BU (un onglet global est déjà visible par toutes les BU). La BU
+   * propriétaire est ignorée si elle figure dans la liste.
+   */
+  private async resolveSharedBuIds(
+    requester: Requester,
+    ownerBuId: string | null,
+    ids: string[] | undefined
+  ): Promise<string[] | undefined> {
+    if (ids === undefined) return undefined
+    const unique = [...new Set(ids)].filter((buId) => buId !== ownerBuId)
+    if (!CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
+      throw new ForbiddenException(
+        "Seuls les administrateurs peuvent partager un onglet avec d'autres BU."
+      )
+    }
+    if (unique.length === 0) return []
+    if (ownerBuId === null) {
+      throw new BadRequestException(
+        'Un onglet global est déjà visible par toutes les BU : il ne peut pas être partagé.'
+      )
+    }
+    const count = await this.prisma.businessUnit.count({ where: { id: { in: unique } } })
+    if (count !== unique.length) throw new BadRequestException('Business Unit introuvable.')
+    return unique
+  }
+
+  /**
+   * Une BU ne doit jamais voir deux onglets de même URL : ni l'un des siens, ni un onglet déjà
+   * partagé avec elle (la contrainte @@unique([businessUnitId, url]) ne couvre que le premier cas).
+   */
+  private async assertUrlFreeForBus(url: string, buIds: string[], excludeTabId?: string) {
+    if (buIds.length === 0) return
+    const conflict = await this.prisma.portalTab.findFirst({
+      where: {
+        url,
+        ...(excludeTabId ? { NOT: { id: excludeTabId } } : {}),
+        OR: [
+          { businessUnitId: { in: buIds } },
+          { shares: { some: { businessUnitId: { in: buIds } } } },
+        ],
+      },
+      select: { businessUnitId: true, shares: { select: { businessUnitId: true } } },
+    })
+    if (!conflict) return
+    const conflictBuIds = [conflict.businessUnitId, ...conflict.shares.map((s) => s.businessUnitId)]
+    const buId = buIds.find((b) => conflictBuIds.includes(b))
+    const bu = buId
+      ? await this.prisma.businessUnit.findUnique({ where: { id: buId }, select: { name: true } })
+      : null
+    throw new BadRequestException(
+      bu ? `Cet URL existe déjà pour la BU « ${bu.name} ».` : 'Cet URL existe déjà pour cette BU.'
+    )
   }
 
   private assertCanManage(requester: Requester, tabBuId: string | null) {
@@ -730,19 +838,24 @@ export class TabsService {
 
   /**
    * Vérifie qu'un onglet est *visible* pour le requester — même règle de portée que findAll()
-   * (global toujours visible, sinon même BU), avec la même exigence isActive pour les rôles en
+   * (global toujours visible, sinon même BU ou BU destinataire d'un partage), avec la même exigence isActive pour les rôles en
    * lecture seule (CAN_VIEW_TABS_OWN_BU). Contrairement à assertCanManage, un manager BU/global
    * n'a pas besoin d'être le gestionnaire de CET onglet précis : voir son identifiant partagé est
    * ouvert à tout utilisateur qui verrait l'onglet dans la liste.
    */
-  private assertCanViewTab(requester: Requester, tabBuId: string | null, tabIsActive: boolean) {
+  private assertCanViewTab(
+    requester: Requester,
+    tab: { businessUnitId: string | null; isActive: boolean; shares: { businessUnitId: string }[] }
+  ) {
     const isViewerOnlyRole = CAN_VIEW_TABS_OWN_BU.includes(requester.role)
-    if (isViewerOnlyRole && !tabIsActive) {
+    if (isViewerOnlyRole && !tab.isActive) {
       throw new ForbiddenException('Onglet désactivé.')
     }
-    if (tabBuId === null) return // Onglet global : visible par tous.
+    if (tab.businessUnitId === null) return // Onglet global : visible par tous.
     if (CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) return
-    if (requester.businessUnitId === tabBuId) return
+    if (!requester.businessUnitId) throw new ForbiddenException('Accès refusé à cet onglet.')
+    if (requester.businessUnitId === tab.businessUnitId) return
+    if (tab.shares.some((s) => s.businessUnitId === requester.businessUnitId)) return
     throw new ForbiddenException('Accès refusé à cet onglet.')
   }
 
