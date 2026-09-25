@@ -18,7 +18,7 @@ export class PdfBrowserService implements OnModuleInit, OnModuleDestroy {
       await this.ensureBrowser()
     } catch (err) {
       this.logger.error(
-        `Chromium indisponible au démarrage, les exports PDF échoueront tant qu'il ne l'est pas : ${(err as Error).message}`,
+        `Chromium indisponible au démarrage, les exports PDF échoueront tant qu'il ne l'est pas : ${(err as Error).message}`
       )
     }
   }
