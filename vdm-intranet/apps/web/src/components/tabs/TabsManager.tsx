@@ -307,6 +307,28 @@ function findContainerOf(tabId: string, items: Record<string, string[]>): string
 /** Préfixé pour ne jamais entrer en collision avec un id de dossier/onglet (cuid) ou "none". */
 const containerDndId = (key: string) => `container:${key}`
 
+/**
+ * Nombre de colonnes de la grille des dossiers, calé sur les points de rupture Tailwind
+ * (1 / sm:2 / lg:3). Les dossiers sont répartis en colonnes indépendantes (masonry) pour
+ * qu'un dossier replié ne laisse pas un grand vide sous lui.
+ */
+function useFolderColumnCount(): number {
+  const [count, setCount] = useState(1)
+  useEffect(() => {
+    const lg = window.matchMedia('(min-width: 1024px)')
+    const sm = window.matchMedia('(min-width: 640px)')
+    const update = () => setCount(lg.matches ? 3 : sm.matches ? 2 : 1)
+    update()
+    lg.addEventListener('change', update)
+    sm.addEventListener('change', update)
+    return () => {
+      lg.removeEventListener('change', update)
+      sm.removeEventListener('change', update)
+    }
+  }, [])
+  return count
+}
+
 type TabDragData = { type: 'tab'; tabId: string; container: string }
 type FolderDragData = { type: 'folder'; folderId: string }
 type ContainerDropData = { type: 'container'; container: string }
@@ -722,7 +744,7 @@ function FolderSection({
     data: { type: 'folder', folderId: folder.id } as FolderDragData,
   })
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
   }
@@ -846,6 +868,7 @@ export function TabsManager({
   }, [folders])
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const folderColumns = useFolderColumnCount()
   const [activeDrag, setActiveDrag] = useState<
     { type: 'tab'; tab: Tab } | { type: 'folder'; folder: TabFolder } | null
   >(null)
@@ -1533,34 +1556,44 @@ export function TabsManager({
           <div className="space-y-4">
             {visibleFolderOrder.length > 0 && (
               <SortableContext items={visibleFolderOrder} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
-                  {visibleFolderOrder.map((fid) => {
-                    const folder = foldersById.get(fid)
-                    if (!folder) return null
-                    const ids = (containerItems[fid] ?? []).filter(
-                      (id) => !hasActiveFilters || filteredIds.has(id)
-                    )
-                    return (
-                      <FolderSection
-                        key={fid}
-                        folder={folder}
-                        ids={ids}
-                        tabsById={tabsById}
-                        dndEnabled={dndEnabled}
-                        canManageThis={canManageFolder(folder)}
-                        collapsed={!!collapsed[fid]}
-                        onToggleCollapsed={() => setCollapsed((p) => ({ ...p, [fid]: !p[fid] }))}
-                        onEditFolder={() => openEditFolder(folder)}
-                        onDeleteFolder={() => handleDeleteFolder(folder)}
-                        onCreateTabHere={() => openCreate(folder)}
-                        canManage={canManage}
-                        onToggleActive={toggleActive}
-                        onEditTab={openEdit}
-                        onDeleteTab={handleDelete}
-                        onManageCredential={openCredential}
-                      />
-                    )
-                  })}
+                {/* Répartition « ligne par ligne » (dossier i → colonne i % n) : l'ordre de
+                    lecture reste celui de la grille, mais chaque colonne s'empile sans vide. */}
+                <div className="flex gap-3 items-start">
+                  {Array.from({ length: folderColumns }, (_, col) => (
+                    <div key={col} className="flex-1 min-w-0 flex flex-col gap-3">
+                      {visibleFolderOrder
+                        .filter((_, i) => i % folderColumns === col)
+                        .map((fid) => {
+                          const folder = foldersById.get(fid)
+                          if (!folder) return null
+                          const ids = (containerItems[fid] ?? []).filter(
+                            (id) => !hasActiveFilters || filteredIds.has(id)
+                          )
+                          return (
+                            <FolderSection
+                              key={fid}
+                              folder={folder}
+                              ids={ids}
+                              tabsById={tabsById}
+                              dndEnabled={dndEnabled}
+                              canManageThis={canManageFolder(folder)}
+                              collapsed={!!collapsed[fid]}
+                              onToggleCollapsed={() =>
+                                setCollapsed((p) => ({ ...p, [fid]: !p[fid] }))
+                              }
+                              onEditFolder={() => openEditFolder(folder)}
+                              onDeleteFolder={() => handleDeleteFolder(folder)}
+                              onCreateTabHere={() => openCreate(folder)}
+                              canManage={canManage}
+                              onToggleActive={toggleActive}
+                              onEditTab={openEdit}
+                              onDeleteTab={handleDelete}
+                              onManageCredential={openCredential}
+                            />
+                          )
+                        })}
+                    </div>
+                  ))}
                 </div>
               </SortableContext>
             )}
