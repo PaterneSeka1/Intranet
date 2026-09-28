@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength } from 'class-validator'
+import { ArrayMaxSize, IsArray, IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator'
 
 export class UpdateTabFolderDto {
   @IsOptional()
@@ -16,17 +16,16 @@ export class UpdateTabFolderDto {
   @MaxLength(9)
   color?: string
 
-  // Nouvelle audience (BU propriétaire) ; null = dossier global. Réservé aux gestionnaires
-  // globaux. Les onglets du dossier suivent la nouvelle audience — cf. TabsService.updateFolder.
+  // Audience : global (visible par tous) ou liste des BU concernées, toutes au même niveau ;
+  // les onglets du dossier en héritent.
+  // Modifiable par les seuls gestionnaires globaux (cf. TabsService.resolveAudienceChange).
   @IsOptional()
-  @IsString()
-  businessUnitId?: string | null
+  @IsBoolean()
+  isGlobal?: boolean
 
-  // BU supplémentaires qui voient aussi le dossier et ses onglets — réservé aux gestionnaires
-  // globaux, cf. TabsService.resolveSharedBuIds. [] = retire tous les partages.
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(50)
   @IsString({ each: true })
-  sharedBusinessUnitIds?: string[]
+  businessUnitIds?: string[]
 }

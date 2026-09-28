@@ -599,26 +599,29 @@ async function main() {
     const buId = bus[buCode]
     const createdById = buCode === 'DAF' ? daf.id : cto.id
     for (const tab of tabs) {
-      await prisma.portalTab.upsert({
-        where: { businessUnitId_url: { businessUnitId: buId, url: tab.url } },
-        update: {
-          name: tab.name,
-          icon: tab.icon,
-          color: tab.color,
-          description: tab.description,
-          createdById,
-        },
-        create: {
-          name: tab.name,
-          url: tab.url,
-          icon: tab.icon,
-          color: tab.color,
-          description: tab.description,
-          businessUnitId: buId,
-          createdById,
-          isActive: true,
-        },
+      const fields = {
+        name: tab.name,
+        icon: tab.icon,
+        color: tab.color,
+        description: tab.description,
+        createdById,
+      }
+      const existing = await prisma.portalTab.findFirst({
+        where: { url: tab.url, businessUnits: { some: { businessUnitId: buId } } },
+        select: { id: true },
       })
+      if (existing) {
+        await prisma.portalTab.update({ where: { id: existing.id }, data: fields })
+      } else {
+        await prisma.portalTab.create({
+          data: {
+            ...fields,
+            url: tab.url,
+            isActive: true,
+            businessUnits: { create: { businessUnitId: buId } },
+          },
+        })
+      }
       tabCount++
       console.log(`  Onglet [${buCode}] : ${tab.name}`)
     }

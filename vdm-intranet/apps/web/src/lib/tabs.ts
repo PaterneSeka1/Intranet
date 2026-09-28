@@ -1,22 +1,30 @@
 import { apiFetch } from './http'
 
-export type TabFolder = {
+export type BusinessUnitRef = { id: string; name: string; code: string }
+
+/**
+ * Audience d'un onglet ou d'un dossier : global (visible par tous), ou liste des BU concernées,
+ * toutes au même niveau. Un onglet rangé dans un dossier a l'audience du dossier (la sienne
+ * reste vide) — cf. tabAudience().
+ */
+export type AudienceFields = {
+  isGlobal: boolean
+  businessUnits: { businessUnit: BusinessUnitRef }[]
+}
+
+export type TabFolder = AudienceFields & {
   id: string
   name: string
   icon?: string | null
   color?: string | null
   order: number
-  businessUnitId: string | null
   createdById: string
   createdAt: string
   updatedAt: string
-  businessUnit: { id: string; name: string; code: string } | null
   createdBy: { id: string; username: string; fullName?: string | null }
-  // BU supplémentaires qui voient aussi le dossier et tous ses onglets.
-  shares: { businessUnit: { id: string; name: string; code: string } }[]
 }
 
-export type Tab = {
+export type Tab = AudienceFields & {
   id: string
   name: string
   url: string
@@ -24,20 +32,38 @@ export type Tab = {
   icon?: string | null
   color?: string | null
   isActive: boolean
-  businessUnitId: string | null
   folderId: string | null
   order: number
   createdById: string
   createdAt: string
   updatedAt: string
-  businessUnit: { id: string; name: string; code: string } | null
   folder: { id: string; name: string; icon?: string | null; color?: string | null } | null
   createdBy: { id: string; username: string; fullName?: string | null }
   // Présence d'un identifiant partagé (jamais le secret) — cf. tabsApi.getCredential pour le
   // révéler explicitement (consultation journalisée côté serveur).
   credential: { id: string } | null
-  // BU supplémentaires qui voient aussi l'onglet (en plus de businessUnit, qui reste seule à le gérer).
-  shares: { businessUnit: { id: string; name: string; code: string } }[]
+}
+
+/** Audience effective : celle du dossier pour un onglet rangé, sinon celle de l'élément. */
+export function tabAudience(
+  item: AudienceFields & { folderId?: string | null },
+  foldersById?: Map<string, TabFolder>
+): { isGlobal: boolean; businessUnits: BusinessUnitRef[] } {
+  const source = (item.folderId && foldersById?.get(item.folderId)) || item
+  return {
+    isGlobal: source.isGlobal,
+    businessUnits: source.isGlobal ? [] : source.businessUnits.map((b) => b.businessUnit),
+  }
+}
+
+/** Même audience (mêmes BU, dans n'importe quel ordre, ou toutes deux globales). */
+export function sameAudience(
+  a: { isGlobal: boolean; businessUnits: BusinessUnitRef[] },
+  b: { isGlobal: boolean; businessUnits: BusinessUnitRef[] }
+) {
+  if (a.isGlobal || b.isGlobal) return a.isGlobal === b.isGlobal
+  const ids = new Set(a.businessUnits.map((bu) => bu.id))
+  return ids.size === b.businessUnits.length && b.businessUnits.every((bu) => ids.has(bu.id))
 }
 
 export type TabCredential = {
@@ -54,48 +80,43 @@ export type SetTabCredentialPayload = {
   notes?: string
 }
 
-export type CreateTabPayload = {
+// Audience : réservée aux gestionnaires globaux (un responsable BU crée pour sa seule BU).
+export type AudiencePayload = { isGlobal?: boolean; businessUnitIds?: string[] }
+
+export type CreateTabPayload = AudiencePayload & {
   name: string
   url: string
   description?: string
   icon?: string
   color?: string
-  businessUnitId?: string
+  // Rangé dans un dossier, l'onglet hérite de son audience (champs d'audience ignorés).
   folderId?: string
-  sharedBusinessUnitIds?: string[]
 }
 
-export type UpdateTabPayload = Partial<{
-  name: string
-  url: string
-  description: string
-  icon: string
-  color: string
-  isActive: boolean
-  // Réservé aux gestionnaires globaux ; null = onglet global. Sort l'onglet de son dossier.
-  businessUnitId: string | null
-  folderId: string | null
-  // Réservé aux gestionnaires globaux ; [] = retire tous les partages.
-  sharedBusinessUnitIds: string[]
-}>
+export type UpdateTabPayload = AudiencePayload &
+  Partial<{
+    name: string
+    url: string
+    description: string
+    icon: string
+    color: string
+    isActive: boolean
+    // null = retire l'onglet de son dossier (il garde l'audience du dossier quitté).
+    folderId: string | null
+  }>
 
-export type CreateTabFolderPayload = {
+export type CreateTabFolderPayload = AudiencePayload & {
   name: string
   icon?: string
   color?: string
-  businessUnitId?: string
-  sharedBusinessUnitIds?: string[]
 }
 
-export type UpdateTabFolderPayload = Partial<{
-  name: string
-  icon: string
-  color: string
-  // Réservé aux gestionnaires globaux ; null = dossier global. Les onglets du dossier suivent.
-  businessUnitId: string | null
-  // Réservé aux gestionnaires globaux ; [] = retire tous les partages.
-  sharedBusinessUnitIds: string[]
-}>
+export type UpdateTabFolderPayload = AudiencePayload &
+  Partial<{
+    name: string
+    icon: string
+    color: string
+  }>
 
 // { id, order } pour un dossier, ou { id, order, folderId } pour un onglet — folderId omis =
 // onglet non déplacé entre dossiers, folderId: null = retiré de tout dossier.

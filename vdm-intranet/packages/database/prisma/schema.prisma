@@ -88,10 +88,8 @@ model BusinessUnit {
   users          User[]
   poles          Pole[]
   scheduleGroups ScheduleGroup[]
-  tabs           PortalTab[]
-  sharedTabs     PortalTabShare[]
-  tabFolders     PortalTabFolder[]
-  sharedFolders  PortalTabFolderShare[]
+  tabs           PortalTabBusinessUnit[]
+  tabFolders     PortalTabFolderBusinessUnit[]
   announcements  Announcement[]
 
   @@map("business_units")
@@ -329,41 +327,46 @@ model DailyMandate {
 // ONGLETS PAR BU
 // ============================================================
 
+// Audience d'un onglet ou d'un dossier : soit global (isGlobal, visible par tous), soit la liste
+// des BU concernées, toutes au même niveau (aucune BU "propriétaire"). La liste évolue librement
+// (ajout d'une BU qui en a besoin, retrait d'une BU qui n'en a plus besoin) ; seuls les
+// gestionnaires globaux la modifient, un responsable BU ne gérant que le contenu des éléments
+// concernant sa BU (cf. TabsService). Un non-global sans aucune BU n'est visible que des admins
+// (jamais "global par défaut", ex. après suppression d'une BU).
+//
+// Un onglet rangé dans un dossier hérite de l'audience du dossier : ses propres isGlobal /
+// businessUnits restent vides tant qu'il y est rangé.
 model PortalTab {
-  id             String   @id @default(cuid())
-  name           String
-  url            String
-  description    String?
-  icon           String?
-  color          String?
-  businessUnitId String?
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  description String?
+  icon        String?
+  color       String?
+  isGlobal    Boolean  @default(false)
   // Dossier optionnel de regroupement. Rang manuel (drag & drop) : `order` n'est significatif
   // qu'au sein d'un même groupe (mêmes folderId) — pas d'unicité ni de suite globale exigée.
-  folderId       String?
-  order          Int      @default(0)
-  createdById    String
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  folderId    String?
+  order       Int      @default(0)
+  createdById String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  businessUnit BusinessUnit?        @relation(fields: [businessUnitId], references: [id])
-  // Suppression d'un dossier = les onglets redeviennent "sans dossier" (jamais supprimés).
-  folder       PortalTabFolder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  createdBy    User                 @relation("TabCreator", fields: [createdById], references: [id])
+  // Suppression d'un dossier = les onglets redeviennent "sans dossier" (jamais supprimés) ; ils
+  // n'ont alors plus d'audience propre (visibles des seuls admins jusqu'à réattribution).
+  folder        PortalTabFolder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  createdBy     User                    @relation("TabCreator", fields: [createdById], references: [id])
   // Identifiant partagé optionnel (un seul par onglet) — voir PortalTabCredential.
-  credential   PortalTabCredential?
-  // BU supplémentaires qui voient aussi l'onglet — voir PortalTabShare.
-  shares       PortalTabShare[]
+  credential    PortalTabCredential?
+  // BU concernées (hors dossier) — voir PortalTabBusinessUnit.
+  businessUnits PortalTabBusinessUnit[]
 
-  @@unique([businessUnitId, url])
+  @@index([folderId])
   @@map("portal_tabs")
 }
 
-// Partage d'un onglet de BU avec d'autres BU (onglet "commun" à plusieurs BU sans être global).
-// La BU propriétaire (PortalTab.businessUnitId) reste seule à le gérer et fixe son dossier/rang ;
-// les BU destinataires le voient en lecture (hors dossier, les dossiers étant propres à une BU).
-// Partage réservé aux gestionnaires globaux (CAN_MANAGE_TABS_GLOBAL), jamais sur un onglet global.
-model PortalTabShare {
+model PortalTabBusinessUnit {
   tabId          String
   businessUnitId String
   createdAt      DateTime @default(now())
@@ -373,14 +376,14 @@ model PortalTabShare {
 
   @@id([tabId, businessUnitId])
   @@index([businessUnitId])
-  @@map("portal_tab_shares")
+  @@map("portal_tab_business_units")
 }
 
 // Identifiant partagé (compte commun à tous les utilisateurs voyant l'onglet) rattaché à un
 // PortalTab, ex. abonnement/outil externe où toute l'agence ou toute une BU se connecte avec le
-// même identifiant. Optionnel : la plupart des onglets n'en ont pas. Visibilité = même portée que
-// l'onglet lui-même (BU/global) ; gestion (créer/modifier/supprimer) réservée aux mêmes rôles que
-// la gestion de l'onglet (cf. TabsService.assertCanManage / assertCanViewTab).
+// même identifiant. Optionnel : la plupart des onglets n'en ont pas. Visibilité = même audience que
+// l'onglet lui-même ; gestion (créer/modifier/supprimer) réservée aux mêmes rôles que la gestion
+// de l'onglet (cf. TabsService.assertCanManageTab / assertCanViewTab).
 model PortalTabCredential {
   id          String   @id @default(cuid())
   tabId       String   @unique
@@ -400,30 +403,26 @@ model PortalTabCredential {
 }
 
 model PortalTabFolder {
-  id             String   @id @default(cuid())
-  name           String
-  icon           String?
-  color          String?
-  businessUnitId String?
-  // Rang manuel (drag & drop) parmi les dossiers du même périmètre (même businessUnitId).
-  order          Int      @default(0)
-  createdById    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  icon        String?
+  color       String?
+  // Audience du dossier et de tous ses onglets (cf. commentaire de PortalTab).
+  isGlobal    Boolean  @default(false)
+  // Rang manuel (drag & drop) parmi l'ensemble des dossiers.
+  order       Int      @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  businessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id])
-  createdBy    User          @relation("TabFolderCreator", fields: [createdById], references: [id])
-  tabs         PortalTab[]
-  // BU supplémentaires qui voient aussi le dossier et ses onglets — voir PortalTabFolderShare.
-  shares       PortalTabFolderShare[]
+  createdBy     User                          @relation("TabFolderCreator", fields: [createdById], references: [id])
+  tabs          PortalTab[]
+  businessUnits PortalTabFolderBusinessUnit[]
 
   @@map("portal_tab_folders")
 }
 
-// Partage d'un dossier de BU avec d'autres BU : même principe que PortalTabShare (BU propriétaire
-// seule gestionnaire, partage réservé aux gestionnaires globaux, jamais sur un dossier global).
-// Partager un dossier rend visibles aux BU destinataires tous les onglets qu'il contient.
-model PortalTabFolderShare {
+model PortalTabFolderBusinessUnit {
   folderId       String
   businessUnitId String
   createdAt      DateTime @default(now())
@@ -433,7 +432,7 @@ model PortalTabFolderShare {
 
   @@id([folderId, businessUnitId])
   @@index([businessUnitId])
-  @@map("portal_tab_folder_shares")
+  @@map("portal_tab_folder_business_units")
 }
 
 // ============================================================

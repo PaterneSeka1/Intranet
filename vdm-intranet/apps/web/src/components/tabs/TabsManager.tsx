@@ -38,6 +38,8 @@ import {
   type ReorderItem,
   tabsApi,
   tabFoldersApi,
+  tabAudience,
+  sameAudience,
 } from '@/lib/tabs'
 import { toast } from '@/lib/toast'
 import { confirm } from '@/lib/confirm'
@@ -79,10 +81,10 @@ type TabFormData = {
   description: string
   icon: string
   color: string
-  businessUnitId: string // '' = onglet global
   folderId: string // '' = aucun dossier
-  // BU destinataires d'un partage (onglet commun à plusieurs BU) — gestionnaires globaux seulement.
-  sharedBusinessUnitIds: string[]
+  // Audience (onglet hors dossier ; gestionnaires globaux seulement) : global, ou BU concernées.
+  isGlobal: boolean
+  businessUnitIds: string[]
   // Identifiant partagé optionnel, saisi uniquement à la création (cf. tabsApi.setCredential) —
   // en édition la gestion passe par le bouton dédié "Identifiants partagés".
   credentialUsername: string
@@ -96,9 +98,9 @@ const EMPTY_TAB_FORM: TabFormData = {
   description: '',
   icon: DEFAULT_TAB_ICON,
   color: '#F28C38',
-  businessUnitId: '',
   folderId: '',
-  sharedBusinessUnitIds: [],
+  isGlobal: false,
+  businessUnitIds: [],
   credentialUsername: '',
   credentialPassword: '',
   credentialNotes: '',
@@ -108,72 +110,139 @@ type FolderFormData = {
   name: string
   icon: string
   color: string
-  businessUnitId: string // '' = dossier global
-  sharedBusinessUnitIds: string[] // gestionnaires globaux seulement
+  // Audience du dossier et de ses onglets (gestionnaires globaux seulement).
+  isGlobal: boolean
+  businessUnitIds: string[]
 }
 
 const EMPTY_FOLDER_FORM: FolderFormData = {
   name: '',
   icon: DEFAULT_FOLDER_ICON,
   color: '#F28C38',
-  businessUnitId: '',
-  sharedBusinessUnitIds: [],
+  isGlobal: false,
+  businessUnitIds: [],
 }
 
-/** Choix des BU destinataires d'un partage (onglet ou dossier commun à plusieurs BU). */
-function ShareBuPicker({
+/** Valeurs de formulaire reprenant l'audience d'un onglet ou d'un dossier existant. */
+function audienceForm(
+  item: Parameters<typeof tabAudience>[0],
+  foldersById?: Map<string, TabFolder>
+) {
+  const audience = tabAudience(item, foldersById)
+  return {
+    isGlobal: audience.isGlobal,
+    businessUnitIds: audience.businessUnits.map((bu) => bu.id),
+  }
+}
+
+/**
+ * Audience d'un onglet ou d'un dossier : tous les utilisateurs, ou une liste de BU concernées,
+ * toutes au même niveau et modifiable à tout moment (gestionnaires globaux seulement).
+ */
+function AudiencePicker({
   bus,
+  isGlobal,
   selected,
   onChange,
-  hint,
+  globalHint,
 }: {
   bus: BuOption[]
+  isGlobal: boolean
   selected: string[]
-  onChange: (ids: string[]) => void
-  hint: string
+  onChange: (next: { isGlobal: boolean; businessUnitIds: string[] }) => void
+  globalHint: string
 }) {
+  const modeClass = (active: boolean) =>
+    `px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${active ? 'bg-[#F28C38] text-white' : 'text-gray-500 hover:text-gray-700'}`
   return (
     <div>
       <span className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-        Partagé avec <span className="text-gray-400 normal-case font-normal">(optionnel)</span>
+        Audience
       </span>
-      <div className="flex flex-wrap gap-1.5">
-        {bus.map((bu) => {
-          const checked = selected.includes(bu.id)
-          return (
-            <label
-              key={bu.id}
-              className={`cursor-pointer select-none px-2.5 py-1 rounded-full border text-xs transition-colors ${checked ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
-            >
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={checked}
-                onChange={() =>
-                  onChange(checked ? selected.filter((id) => id !== bu.id) : [...selected, bu.id])
-                }
-              />
-              {bu.name}
-            </label>
-          )
-        })}
+      <div className="inline-flex gap-1 p-1 bg-gray-50 rounded-xl mb-2">
+        <button
+          type="button"
+          className={modeClass(!isGlobal)}
+          onClick={() => onChange({ isGlobal: false, businessUnitIds: selected })}
+        >
+          BU concernées
+        </button>
+        <button
+          type="button"
+          className={modeClass(isGlobal)}
+          onClick={() => onChange({ isGlobal: true, businessUnitIds: selected })}
+        >
+          Tous les utilisateurs
+        </button>
       </div>
-      <p className="text-[11px] text-gray-400 mt-1.5">{hint}</p>
+      {isGlobal ? (
+        <p className="text-[11px] text-[#F28C38]">{globalHint}</p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-1.5">
+            {bus.map((bu) => {
+              const checked = selected.includes(bu.id)
+              return (
+                <label
+                  key={bu.id}
+                  className={`cursor-pointer select-none px-2.5 py-1 rounded-full border text-xs transition-colors ${checked ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={checked}
+                    onChange={() =>
+                      onChange({
+                        isGlobal: false,
+                        businessUnitIds: checked
+                          ? selected.filter((id) => id !== bu.id)
+                          : [...selected, bu.id],
+                      })
+                    }
+                  />
+                  {bu.name}
+                </label>
+              )
+            })}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1.5">
+            {selected.length === 0
+              ? 'Sélectionnez au moins une BU.'
+              : 'Seules ces BU le verront. Vous pourrez en ajouter ou en retirer à tout moment.'}
+          </p>
+        </>
+      )}
     </div>
   )
 }
 
-/** Badges « + CODE » des BU destinataires d'un partage. */
-function ShareBadges({ shares }: { shares: { businessUnit: BuOption }[] }) {
+/** Badges d'audience : « Global », ou le code de chaque BU concernée. */
+function AudienceBadges({
+  item,
+  foldersById,
+  chipClassName = 'bg-gray-50',
+}: {
+  item: Parameters<typeof tabAudience>[0]
+  foldersById?: Map<string, TabFolder>
+  chipClassName?: string
+}) {
+  const audience = tabAudience(item, foldersById)
+  if (audience.isGlobal) {
+    return (
+      <span className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full inline-block shrink-0">
+        Global
+      </span>
+    )
+  }
   return (
     <>
-      {shares.map(({ businessUnit }) => (
+      {audience.businessUnits.map((bu) => (
         <span
-          key={businessUnit.id}
-          title={`Partagé avec ${businessUnit.name}`}
-          className="text-[10px] text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-full inline-block shrink-0"
+          key={bu.id}
+          title={bu.name}
+          className={`text-[10px] text-gray-500 ${chipClassName} px-1.5 py-0.5 rounded-full inline-block shrink-0`}
         >
-          + {businessUnit.code}
+          {bu.code}
         </span>
       ))}
     </>
@@ -424,18 +493,7 @@ function TabCardContent({
           <div className="min-w-0">
             <div className="font-semibold text-gray-800 text-sm truncate">{tab.name}</div>
             <div className="flex flex-wrap items-center gap-1 mt-0.5">
-              {tab.businessUnit ? (
-                <>
-                  <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block">
-                    {tab.businessUnit.code}
-                  </span>
-                  <ShareBadges shares={tab.shares} />
-                </>
-              ) : (
-                <span className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full inline-block">
-                  Global
-                </span>
-              )}
+              {!tab.folderId && <AudienceBadges item={tab} />}
               {showFolderBadge && tab.folder && (
                 <span className="text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 max-w-[110px]">
                   <FolderGlyph className="w-2.5 h-2.5 shrink-0" strokeWidth={2} />
@@ -703,18 +761,7 @@ function FolderSection({
           <span className="text-[10px] text-gray-400 bg-white px-1.5 py-0.5 rounded-full shrink-0">
             {ids.length}
           </span>
-          {folder.businessUnitId === null ? (
-            <span className="text-[10px] text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full shrink-0">
-              Global
-            </span>
-          ) : folder.businessUnit ? (
-            <>
-              <span className="text-[10px] text-gray-400 bg-white px-1.5 py-0.5 rounded-full shrink-0">
-                {folder.businessUnit.code}
-              </span>
-              <ShareBadges shares={folder.shares} />
-            </>
-          ) : null}
+          <AudienceBadges item={folder} chipClassName="bg-white" />
         </button>
         {canManageThis && (
           <div className="flex gap-1 flex-shrink-0">
@@ -830,36 +877,35 @@ export function TabsManager({
 
   // La recherche peut ne montrer qu'une partie des onglets d'un dossier : désactiver le
   // glisser-déposer dans ce cas évite d'envoyer un ordre incohérent au serveur. Le filtre BU,
-  // lui, ne fait jamais que masquer des dossiers/onglets entiers (un dossier appartient toujours
-  // à une seule BU), donc il reste compatible avec la réorganisation.
+  // lui, ne fait jamais que masquer des dossiers/onglets entiers (les onglets d'un dossier ont
+  // tous l'audience du dossier), donc il reste compatible avec la réorganisation.
   const dndEnabled = search.trim() === ''
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  const canManage = (tab: Tab) => {
-    if (GLOBAL_TAB_MANAGERS.includes(userRole)) return true
-    if (tab.businessUnitId === null) return false
-    return BU_TAB_MANAGERS.includes(userRole) && tab.businessUnitId === userBuId
-  }
+  const tabsById = useMemo(() => new Map(tabs.map((t) => [t.id, t])), [tabs])
+  const foldersById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders])
 
-  const canManageFolder = (folder: TabFolder) => {
+  // Miroir de TabsService.assertCanManageAudience : gestionnaire global, ou responsable d'une des
+  // BU concernées (jamais sur un élément global). Un onglet rangé suit l'audience de son dossier.
+  const canManageAudience = (audience: ReturnType<typeof tabAudience>) => {
     if (GLOBAL_TAB_MANAGERS.includes(userRole)) return true
-    if (folder.businessUnitId === null) return false
-    return BU_TAB_MANAGERS.includes(userRole) && folder.businessUnitId === userBuId
+    if (audience.isGlobal || !userBuId) return false
+    return (
+      BU_TAB_MANAGERS.includes(userRole) && audience.businessUnits.some((bu) => bu.id === userBuId)
+    )
   }
+  const canManage = (tab: Tab) => canManageAudience(tabAudience(tab, foldersById))
+  const canManageFolder = (folder: TabFolder) => canManageAudience(tabAudience(folder))
 
   const canCreateTabs = canManageAll || (BU_TAB_MANAGERS.includes(userRole) && !!userBuId)
   const canCreateFolders = canCreateTabs
-
-  const tabsById = useMemo(() => new Map(tabs.map((t) => [t.id, t])), [tabs])
-  const foldersById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders])
 
   // ---- Formulaire onglet ----
 
   function openCreate(folder?: TabFolder) {
     setForm({
       ...EMPTY_TAB_FORM,
-      businessUnitId: folder ? (folder.businessUnitId ?? '') : canManageAll ? '' : (userBuId ?? ''),
       folderId: folder ? folder.id : '',
     })
     setError('')
@@ -873,9 +919,8 @@ export function TabsManager({
       description: tab.description ?? '',
       icon: tab.icon ?? DEFAULT_TAB_ICON,
       color: tab.color ?? '#F28C38',
-      businessUnitId: tab.businessUnitId ?? '',
       folderId: tab.folderId ?? '',
-      sharedBusinessUnitIds: tab.shares.map((s) => s.businessUnit.id),
+      ...audienceForm(tab, foldersById),
       credentialUsername: '',
       credentialPassword: '',
       credentialNotes: '',
@@ -884,15 +929,16 @@ export function TabsManager({
     setModal({ mode: 'edit', tab })
   }
 
-  // Portée BU à respecter pour la liste des dossiers proposés dans le formulaire : l'audience
-  // choisie dans le formulaire (modifiable en création comme en édition par un admin).
-  const formScopeBuId = form.businessUnitId || null
-  const availableFoldersForForm = useMemo(
-    () => folders.filter((f) => (f.businessUnitId ?? null) === formScopeBuId),
-    [folders, formScopeBuId]
-  )
-  // Partage possible uniquement pour un onglet de BU (un onglet global est déjà vu par toutes).
-  const shareableBus = formScopeBuId ? buList.filter((bu) => bu.id !== formScopeBuId) : []
+  // Dossiers proposés dans le formulaire : tous pour un admin ; pour un responsable BU, ceux
+  // qu'il gère — et, pour déplacer un onglet existant, seulement ceux de même audience (ranger un
+  // onglet lui donne l'audience du dossier, cf. TabsService.assertCanMoveTab).
+  const editedTab = modal?.mode === 'edit' ? modal.tab : undefined
+  const availableFoldersForForm = folders.filter((f) => {
+    if (canManageAll || f.id === editedTab?.folderId) return true
+    if (!canManageFolder(f)) return false
+    return !editedTab || sameAudience(tabAudience(f), tabAudience(editedTab, foldersById))
+  })
+  const formFolder = form.folderId ? foldersById.get(form.folderId) : undefined
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -902,6 +948,19 @@ export function TabsManager({
       setError("Identifiant partagé : renseignez à la fois l'identifiant et le mot de passe.")
       return
     }
+    // Audience propre seulement hors dossier (sinon celle du dossier) et pour un admin (un
+    // responsable BU crée pour sa BU et ne modifie pas la liste).
+    const sendAudience = canManageAll && !form.folderId
+    if (sendAudience && !form.isGlobal && form.businessUnitIds.length === 0) {
+      setError('Audience : sélectionnez au moins une BU, ou « Tous les utilisateurs ».')
+      return
+    }
+    const audience = sendAudience
+      ? {
+          isGlobal: form.isGlobal,
+          businessUnitIds: form.isGlobal ? [] : form.businessUnitIds,
+        }
+      : {}
     setSubmitting(true)
     setError('')
     try {
@@ -912,13 +971,8 @@ export function TabsManager({
           description: form.description || undefined,
           icon: form.icon || undefined,
           color: form.color || undefined,
-          // '' means global: omit businessUnitId so API treats it as null
-          businessUnitId: canManageAll ? form.businessUnitId || undefined : undefined,
           folderId: form.folderId || undefined,
-          sharedBusinessUnitIds:
-            canManageAll && form.businessUnitId && form.sharedBusinessUnitIds.length
-              ? form.sharedBusinessUnitIds
-              : undefined,
+          ...audience,
         }
         const created = await tabsApi.create(payload)
         let finalTab = created
@@ -949,12 +1003,7 @@ export function TabsManager({
           icon: form.icon || undefined,
           color: form.color || undefined,
           folderId: form.folderId || null,
-          ...(canManageAll && formScopeBuId !== modal.tab.businessUnitId
-            ? { businessUnitId: formScopeBuId }
-            : {}),
-          ...(canManageAll && formScopeBuId
-            ? { sharedBusinessUnitIds: form.sharedBusinessUnitIds }
-            : {}),
+          ...audience,
         }
         const updated = await tabsApi.update(modal.tab.id, payload)
         setTabs((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
@@ -1016,10 +1065,7 @@ export function TabsManager({
   // ---- Formulaire dossier ----
 
   function openCreateFolder() {
-    setFolderForm({
-      ...EMPTY_FOLDER_FORM,
-      businessUnitId: canManageAll ? '' : (userBuId ?? ''),
-    })
+    setFolderForm(EMPTY_FOLDER_FORM)
     setFolderError('')
     setFolderModal({ mode: 'create' })
   }
@@ -1029,29 +1075,29 @@ export function TabsManager({
       name: folder.name,
       icon: folder.icon ?? DEFAULT_FOLDER_ICON,
       color: folder.color ?? '#F28C38',
-      businessUnitId: folder.businessUnitId ?? '',
-      sharedBusinessUnitIds: folder.shares.map((s) => s.businessUnit.id),
+      ...audienceForm(folder),
     })
     setFolderError('')
     setFolderModal({ mode: 'edit', folder })
   }
 
-  const folderScopeBuId = folderForm.businessUnitId || null
-  // Changement d'audience d'un dossier existant : ses onglets suivront (cf. handleFolderSubmit).
-  const folderScopeChanged =
-    folderModal?.mode === 'edit' &&
-    !!folderModal.folder &&
-    folderScopeBuId !== folderModal.folder.businessUnitId
   const editedFolderTabCount =
     folderModal?.mode === 'edit' && folderModal.folder
       ? tabs.filter((t) => t.folderId === folderModal.folder?.id).length
       : 0
-  const shareableBusForFolder = folderScopeBuId
-    ? buList.filter((bu) => bu.id !== folderScopeBuId)
-    : []
 
   async function handleFolderSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (canManageAll && !folderForm.isGlobal && folderForm.businessUnitIds.length === 0) {
+      setFolderError('Audience : sélectionnez au moins une BU, ou « Tous les utilisateurs ».')
+      return
+    }
+    const audience = canManageAll
+      ? {
+          isGlobal: folderForm.isGlobal,
+          businessUnitIds: folderForm.isGlobal ? [] : folderForm.businessUnitIds,
+        }
+      : {}
     setFolderSubmitting(true)
     setFolderError('')
     try {
@@ -1060,11 +1106,7 @@ export function TabsManager({
           name: folderForm.name,
           icon: folderForm.icon || undefined,
           color: folderForm.color || undefined,
-          businessUnitId: canManageAll ? folderForm.businessUnitId || undefined : undefined,
-          sharedBusinessUnitIds:
-            canManageAll && folderForm.businessUnitId && folderForm.sharedBusinessUnitIds.length
-              ? folderForm.sharedBusinessUnitIds
-              : undefined,
+          ...audience,
         }
         const created = await tabFoldersApi.create(payload)
         setFolders((prev) => [...prev, created])
@@ -1075,29 +1117,15 @@ export function TabsManager({
           name: folderForm.name,
           icon: folderForm.icon || undefined,
           color: folderForm.color || undefined,
-          ...(canManageAll && folderScopeChanged ? { businessUnitId: folderScopeBuId } : {}),
-          ...(canManageAll && folderScopeBuId
-            ? { sharedBusinessUnitIds: folderForm.sharedBusinessUnitIds }
-            : {}),
+          ...audience,
         }
         const updated = await tabFoldersApi.update(folderModal.folder.id, payload)
         setFolders((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))
-        // Miroir local de TabsService.updateFolder : les onglets du dossier prennent son audience
-        // et perdent les partages devenus sans objet.
         setTabs((prev) =>
           prev.map((t) =>
             t.folderId === updated.id
               ? {
                   ...t,
-                  ...(folderScopeChanged
-                    ? {
-                        businessUnitId: updated.businessUnitId,
-                        businessUnit: updated.businessUnit,
-                        shares: updated.businessUnitId
-                          ? t.shares.filter((s) => s.businessUnit.id !== updated.businessUnitId)
-                          : [],
-                      }
-                    : {}),
                   folder: {
                     id: updated.id,
                     name: updated.name,
@@ -1146,7 +1174,17 @@ export function TabsManager({
       await tabFoldersApi.remove(folder.id)
       setFolders((prev) => prev.filter((f) => f.id !== folder.id))
       setTabs((prev) =>
-        prev.map((t) => (t.folderId === folder.id ? { ...t, folderId: null, folder: null } : t))
+        prev.map((t) =>
+          t.folderId === folder.id
+            ? {
+                ...t,
+                folderId: null,
+                folder: null,
+                isGlobal: folder.isGlobal,
+                businessUnits: folder.isGlobal ? [] : folder.businessUnits,
+              }
+            : t
+        )
       )
       toast.success(`Dossier « ${folder.name} » supprimé.`)
     } catch (err) {
@@ -1262,8 +1300,21 @@ export function TabsManager({
         const entry = byId.get(t.id)
         if (!entry) return t
         const folder = entry.folderId ? (foldersById.get(entry.folderId) ?? null) : null
+        // Miroir de TabsService.reorderTabs : en entrant dans un dossier l'onglet perd son
+        // audience propre ; en sortant il garde celle du dossier quitté.
+        const leftFolder = t.folderId && !entry.folderId ? foldersById.get(t.folderId) : undefined
+        const ownAudience =
+          entry.folderId && entry.folderId !== t.folderId
+            ? { isGlobal: false, businessUnits: [] }
+            : leftFolder
+              ? {
+                  isGlobal: leftFolder.isGlobal,
+                  businessUnits: leftFolder.isGlobal ? [] : leftFolder.businessUnits,
+                }
+              : {}
         return {
           ...t,
+          ...ownAudience,
           order: entry.order,
           folderId: entry.folderId ?? null,
           folder: folder
@@ -1307,12 +1358,13 @@ export function TabsManager({
     const current = containerItemsRef.current
     const fromContainer = findContainerOf(activeData.tabId, current)
     if (!fromContainer || !toContainer || fromContainer === toContainer) return
-    // Un onglet ne rejoint qu'un dossier de sa propre portée (refusé côté API sinon) — ex. un
-    // dossier partagé par une autre BU reste fermé aux onglets du gestionnaire BU destinataire.
-    if (toContainer !== NONE) {
+    // Ranger un onglet lui donne l'audience du dossier : hors admin, seulement vers un dossier
+    // géré et de même audience (refusé côté API sinon, cf. TabsService.assertCanMoveTab).
+    if (toContainer !== NONE && !canManageAll) {
       const tab = tabsById.get(activeData.tabId)
       const folder = foldersById.get(toContainer)
-      if (!tab || !folder || folder.businessUnitId !== tab.businessUnitId) return
+      if (!tab || !folder || !canManageFolder(folder)) return
+      if (!sameAudience(tabAudience(tab, foldersById), tabAudience(folder))) return
     }
 
     const fromItems = current[fromContainer] ?? []
@@ -1383,12 +1435,11 @@ export function TabsManager({
   // ---- Filtrage ----
 
   const filtered = tabs.filter((t) => {
+    const audience = tabAudience(t, foldersById)
     if (filterBu === '__global__') {
-      if (t.businessUnitId !== null) return false
+      if (!audience.isGlobal) return false
     } else if (filterBu) {
-      const isShared = (s: { businessUnit: { id: string } }) => s.businessUnit.id === filterBu
-      const folderShared = t.folderId && foldersById.get(t.folderId)?.shares.some(isShared)
-      if (t.businessUnitId !== filterBu && !t.shares.some(isShared) && !folderShared) return false
+      if (!audience.businessUnits.some((bu) => bu.id === filterBu)) return false
     }
     if (
       search &&
@@ -1405,9 +1456,8 @@ export function TabsManager({
     if (!hasActiveFilters) return folderOrder
     return folderOrder.filter((fid) => {
       const folder = foldersById.get(fid)
-      if (filterBu === '__global__' && folder?.businessUnitId !== null) return false
-      // Pas de contrôle de portée pour une BU précise : un dossier d'une autre BU reste affiché
-      // s'il contient un onglet partagé avec elle (sinon ids.some ci-dessous le masque).
+      if (filterBu === '__global__' && !folder?.isGlobal) return false
+      // Pour une BU précise, ses onglets filtrés suffisent (ils ont l'audience du dossier).
       const ids = containerItems[fid] ?? []
       return ids.some((id) => filteredIds.has(id))
     })
@@ -1589,61 +1639,6 @@ export function TabsManager({
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {canManageAll && (
-            <div>
-              <label
-                htmlFor="tab-bu"
-                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
-              >
-                Audience
-              </label>
-              <select
-                id="tab-bu"
-                value={form.businessUnitId}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    businessUnitId: e.target.value,
-                    folderId: '',
-                    sharedBusinessUnitIds: e.target.value
-                      ? f.sharedBusinessUnitIds.filter((id) => id !== e.target.value)
-                      : [],
-                  }))
-                }
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-              >
-                <option value="">Tous les utilisateurs (Global)</option>
-                {buList.map((bu) => (
-                  <option key={bu.id} value={bu.id}>
-                    {bu.name}
-                  </option>
-                ))}
-              </select>
-              {form.businessUnitId === '' && (
-                <p className="text-[11px] text-[#F28C38] mt-1.5">
-                  Cet onglet sera visible par tous les utilisateurs sans exception.
-                </p>
-              )}
-              {modal?.mode === 'edit' &&
-                !!modal.tab?.folderId &&
-                formScopeBuId !== modal.tab.businessUnitId && (
-                  <p className="text-[11px] text-gray-500 mt-1.5">
-                    Changer l’audience retire l’onglet de son dossier actuel ; choisissez un dossier
-                    de la nouvelle audience ci-dessous si besoin.
-                  </p>
-                )}
-            </div>
-          )}
-
-          {canManageAll && shareableBus.length > 0 && (
-            <ShareBuPicker
-              bus={shareableBus}
-              selected={form.sharedBusinessUnitIds}
-              onChange={(ids) => setForm((f) => ({ ...f, sharedBusinessUnitIds: ids }))}
-              hint="Ces BU verront aussi l'onglet ; seule la BU propriétaire le gère."
-            />
-          )}
-
           <div>
             <label
               htmlFor="tab-folder"
@@ -1654,7 +1649,14 @@ export function TabsManager({
             <select
               id="tab-folder"
               value={form.folderId}
-              onChange={(e) => setForm((f) => ({ ...f, folderId: e.target.value }))}
+              onChange={(e) => {
+                const folderId = e.target.value
+                setForm((f) => {
+                  // Sortie d'un dossier : on part de l'audience du dossier quitté (comme l'API).
+                  const left = !folderId && f.folderId ? foldersById.get(f.folderId) : undefined
+                  return { ...f, folderId, ...(left ? audienceForm(left) : {}) }
+                })
+              }}
               className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
             >
               <option value="">Aucun dossier</option>
@@ -1665,6 +1667,21 @@ export function TabsManager({
               ))}
             </select>
           </div>
+
+          {formFolder ? (
+            <p className="text-[11px] text-gray-500 -mt-2 flex flex-wrap items-center gap-1">
+              Visible par l’audience du dossier :
+              <AudienceBadges item={formFolder} />
+            </p>
+          ) : canManageAll ? (
+            <AudiencePicker
+              bus={buList}
+              isGlobal={form.isGlobal}
+              selected={form.businessUnitIds}
+              onChange={(next) => setForm((f) => ({ ...f, ...next }))}
+              globalHint="Cet onglet sera visible par tous les utilisateurs sans exception."
+            />
+          ) : null}
 
           <div>
             <label
@@ -1855,56 +1872,21 @@ export function TabsManager({
         <form onSubmit={handleFolderSubmit} className="space-y-4">
           {canManageAll && (
             <div>
-              <label
-                htmlFor="folder-bu"
-                className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
-              >
-                Audience
-              </label>
-              <select
-                id="folder-bu"
-                value={folderForm.businessUnitId}
-                onChange={(e) =>
-                  setFolderForm((f) => ({
-                    ...f,
-                    businessUnitId: e.target.value,
-                    sharedBusinessUnitIds: e.target.value
-                      ? f.sharedBusinessUnitIds.filter((id) => id !== e.target.value)
-                      : [],
-                  }))
-                }
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38]"
-              >
-                <option value="">Tous les utilisateurs (Global)</option>
-                {buList.map((bu) => (
-                  <option key={bu.id} value={bu.id}>
-                    {bu.name}
-                  </option>
-                ))}
-              </select>
-              {folderForm.businessUnitId === '' && (
-                <p className="text-[11px] text-[#F28C38] mt-1.5">
-                  Ce dossier — et les onglets qui y seront rangés — sera visible par tous les
-                  utilisateurs sans exception.
-                </p>
-              )}
-              {folderScopeChanged && editedFolderTabCount > 0 && (
+              <AudiencePicker
+                bus={buList}
+                isGlobal={folderForm.isGlobal}
+                selected={folderForm.businessUnitIds}
+                onChange={(next) => setFolderForm((f) => ({ ...f, ...next }))}
+                globalHint="Ce dossier — et les onglets qui y sont rangés — sera visible par tous les utilisateurs sans exception."
+              />
+              {editedFolderTabCount > 0 && (
                 <p className="text-[11px] text-gray-500 mt-1.5">
                   {editedFolderTabCount === 1
-                    ? 'L’onglet de ce dossier suivra la nouvelle audience.'
-                    : `Les ${editedFolderTabCount} onglets de ce dossier suivront la nouvelle audience.`}
+                    ? 'L’onglet de ce dossier suit son audience.'
+                    : `Les ${editedFolderTabCount} onglets de ce dossier suivent son audience.`}
                 </p>
               )}
             </div>
-          )}
-
-          {canManageAll && shareableBusForFolder.length > 0 && (
-            <ShareBuPicker
-              bus={shareableBusForFolder}
-              selected={folderForm.sharedBusinessUnitIds}
-              onChange={(ids) => setFolderForm((f) => ({ ...f, sharedBusinessUnitIds: ids }))}
-              hint="Ces BU verront aussi le dossier et tous ses onglets ; seule la BU propriétaire le gère."
-            />
           )}
 
           <div>

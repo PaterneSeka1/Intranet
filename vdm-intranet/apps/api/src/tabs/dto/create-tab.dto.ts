@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -35,20 +36,21 @@ export class CreateTabDto {
   @MaxLength(9)
   color?: string
 
-  @IsOptional()
-  @IsString()
-  businessUnitId?: string
-
-  // Dossier de regroupement, doit être de la même portée (globale ou même BU) que l'onglet.
+  // Dossier de regroupement : l'onglet hérite alors de l'audience du dossier (isGlobal /
+  // businessUnitIds ignorés).
   @IsOptional()
   @IsString()
   folderId?: string
 
-  // BU supplémentaires qui voient aussi l'onglet (onglet commun à plusieurs BU) — réservé aux
-  // gestionnaires globaux, cf. TabsService.resolveSharedBuIds.
+  // Audience : global (visible par tous) ou liste des BU concernées, toutes au même niveau.
+  // Modifiable par les seuls gestionnaires globaux (cf. TabsService.resolveAudienceChange).
+  @IsOptional()
+  @IsBoolean()
+  isGlobal?: boolean
+
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(50)
   @IsString({ each: true })
-  sharedBusinessUnitIds?: string[]
+  businessUnitIds?: string[]
 }

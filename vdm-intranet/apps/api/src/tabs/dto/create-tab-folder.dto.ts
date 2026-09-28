@@ -1,4 +1,12 @@
-import { ArrayMaxSize, IsArray, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator'
 
 export class CreateTabFolderDto {
   @IsString()
@@ -17,15 +25,16 @@ export class CreateTabFolderDto {
   @MaxLength(9)
   color?: string
 
+  // Audience : global (visible par tous) ou liste des BU concernées, toutes au même niveau ;
+  // les onglets du dossier en héritent.
+  // Modifiable par les seuls gestionnaires globaux (cf. TabsService.resolveAudienceChange).
   @IsOptional()
-  @IsString()
-  businessUnitId?: string
+  @IsBoolean()
+  isGlobal?: boolean
 
-  // BU supplémentaires qui voient aussi le dossier et ses onglets — réservé aux gestionnaires
-  // globaux, cf. TabsService.resolveSharedBuIds.
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(50)
   @IsString({ each: true })
-  sharedBusinessUnitIds?: string[]
+  businessUnitIds?: string[]
 }
