@@ -3,6 +3,33 @@ import * as bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 
+// Le seed commence par vider les tables : sur une base qui contient déjà des données, il
+// faut un accord explicite (SEED_RESET=true), et c'est toujours refusé en production.
+// NODE_ENV ne suffit pas à lui seul : sur le VPS il n'est défini que dans ecosystem.config.js
+// (PM2), pas forcément dans le .env lu par ce script — d'où le contrôle sur les données.
+async function assertSeedAllowed() {
+  const [users, businessUnits] = await Promise.all([
+    prisma.user.count(),
+    prisma.businessUnit.count(),
+  ])
+  if (users === 0 && businessUnits === 0) return
+
+  const summary = `${users} utilisateur(s), ${businessUnits} BU`
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `Seed refusé : NODE_ENV=production et la base contient déjà des données (${summary}).\n` +
+        'Le seed efface toutes les données (utilisateurs, présences, journaux) : il ne doit jamais tourner sur la production.'
+    )
+  }
+  if (process.env.SEED_RESET !== 'true') {
+    throw new Error(
+      `Seed refusé : la base contient déjà des données (${summary}) qui seraient toutes effacées.\n` +
+        'Pour réinitialiser volontairement une base de développement : SEED_RESET=true npm run db:seed (ou npm run db:reset).'
+    )
+  }
+  console.log(`  SEED_RESET=true — les données existantes vont être effacées (${summary}).`)
+}
+
 async function main() {
   console.log('Seed Module 4 — VdM Intranet')
 
@@ -13,6 +40,8 @@ async function main() {
         'Exemple : SEED_PASSWORD="MotDePasse-Fort-2024!"'
     )
   }
+  await assertSeedAllowed()
+
   const pwd = await bcrypt.hash(seedPassword, 12)
 
   console.log('  Nettoyage de la base de données...')

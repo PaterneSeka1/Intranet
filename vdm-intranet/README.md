@@ -86,7 +86,7 @@ npm run db:generate   # Regénérer le client Prisma après modification du sche
 npm run db:migrate    # Créer et appliquer une migration
 npm run db:push       # Push schema sans migration (dev rapide)
 npm run db:studio     # Ouvrir Prisma Studio (GUI)
-npm run db:seed       # Charger les données de test
+npm run db:seed       # Charger les données de test (base vide uniquement, sinon SEED_RESET=true)
 npm run db:reset      # Réinitialiser la base et re-seeder
 ```
 
@@ -168,7 +168,7 @@ cp .env.example .env
 docker compose up -d
 npm run db:generate
 npm run db:migrate      # prisma migrate deploy — historique de migrations validé sur base neuve
-npm run db:seed         # à sauter si vous ne voulez pas des comptes de démo
+npm run db:seed         # à sauter si vous ne voulez pas des comptes de démo (refusé si la base contient déjà des données)
 
 # 4. Builds (npm run build:web copie automatiquement les NEXT_PUBLIC_*/COOKIE_NAME du .env
 # racine vers apps/web/.env.production.local — voir scripts/copy-web-env.js — avant d'appeler
