@@ -10,6 +10,58 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const STORAGE_KEY = 'vdm_pwa_dismissed'
+const INSTALLED_KEY = 'vdm_pwa_installed'
+
+// Support limité (Chrome/Edge desktop) — absent sur Firefox/Safari.
+interface NavigatorWithPwa extends Navigator {
+  standalone?: boolean
+  getInstalledRelatedApps?: () => Promise<unknown[]>
+}
+
+/**
+ * Vrai si la page tourne dans une fenêtre d'application plutôt qu'un onglet.
+ * `standalone` seul ne suffit pas : le démarrage automatique Windows lance
+ * Chrome en `--app --start-fullscreen` (display-mode: fullscreen), et Edge /
+ * Chrome peuvent exposer `window-controls-overlay` ou `minimal-ui`.
+ */
+function isRunningAsApp(): boolean {
+  const modes = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay']
+  if (modes.some((m) => window.matchMedia(`(display-mode: ${m})`).matches)) return true
+  if ((navigator as NavigatorWithPwa).standalone) return true // iOS Safari
+  return document.referrer.startsWith('android-app://')
+}
+
+/**
+ * Vérifie via le manifeste auto-référencé (manifest.ts) si la PWA est
+ * installée. `null` si l'API n'est pas supportée : on ne peut pas savoir.
+ */
+async function isAppInstalled(): Promise<boolean | null> {
+  const nav = navigator as NavigatorWithPwa
+  if (!nav.getInstalledRelatedApps) return null
+  try {
+    const related = await nav.getInstalledRelatedApps()
+    return related.length > 0
+  } catch {
+    return null
+  }
+}
+
+function readStorage(storage: Storage, key: string): string | null {
+  try {
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeStorage(storage: Storage, key: string, value: string | null) {
+  try {
+    if (value === null) storage.removeItem(key)
+    else storage.setItem(key, value)
+  } catch {
+    // Stockage indisponible (navigation privée) — sans conséquence
+  }
+}
 
 export function PwaInstallGate() {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -20,20 +72,65 @@ export function PwaInstallGate() {
   useEffect(() => {
     setMounted(true)
 
-    // Déjà installée en mode standalone → rien à faire
-    if (window.matchMedia('(display-mode: standalone)').matches) return
+    // Dans la fenêtre de l'app → mémoriser l'installation et ne rien afficher
+    if (isRunningAsApp()) {
+      writeStorage(localStorage, INSTALLED_KEY, '1')
+      return
+    }
 
     // L'utilisateur a déjà refusé → rien à faire
-    if (sessionStorage.getItem(STORAGE_KEY)) return
+    if (readStorage(sessionStorage, STORAGE_KEY)) return
 
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setPrompt(e as BeforeInstallPromptEvent)
+    let active = true
+    let pendingEvent: BeforeInstallPromptEvent | null = null
+    // Tant que la vérification d'installation n'est pas terminée, on met
+    // l'événement de côté au lieu d'afficher le modal.
+    let checked = false
+    let installed = false
+
+    function show() {
+      if (!active || !pendingEvent || installed || isRunningAsApp()) return
+      setPrompt(pendingEvent)
       setVisible(true)
     }
 
-    window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault()
+      pendingEvent = e as BeforeInstallPromptEvent
+      if (checked) show()
+    }
+
+    const onInstalled = () => {
+      installed = true
+      writeStorage(localStorage, INSTALLED_KEY, '1')
+      setVisible(false)
+      setPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstall)
+    window.addEventListener('appinstalled', onInstalled)
+
+    isAppInstalled().then((result) => {
+      if (!active) return
+      if (result === true) {
+        writeStorage(localStorage, INSTALLED_KEY, '1')
+        installed = true
+      } else if (result === false) {
+        // Désinstallée depuis → on pourra reproposer l'installation
+        writeStorage(localStorage, INSTALLED_KEY, null)
+      } else {
+        // API indisponible : on se fie au drapeau mémorisé
+        installed = readStorage(localStorage, INSTALLED_KEY) === '1'
+      }
+      checked = true
+      show()
+    })
+
+    return () => {
+      active = false
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
+      window.removeEventListener('appinstalled', onInstalled)
+    }
   }, [])
 
   async function handleInstall() {
@@ -43,9 +140,10 @@ export function PwaInstallGate() {
       await prompt.prompt()
       const { outcome } = await prompt.userChoice
       if (outcome === 'accepted') {
+        writeStorage(localStorage, INSTALLED_KEY, '1')
         setVisible(false)
       } else {
-        sessionStorage.setItem(STORAGE_KEY, '1')
+        writeStorage(sessionStorage, STORAGE_KEY, '1')
         setVisible(false)
       }
     } finally {
@@ -54,7 +152,7 @@ export function PwaInstallGate() {
   }
 
   function handleDismiss() {
-    sessionStorage.setItem(STORAGE_KEY, '1')
+    writeStorage(sessionStorage, STORAGE_KEY, '1')
     setVisible(false)
   }
 
