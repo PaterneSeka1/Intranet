@@ -3,32 +3,10 @@ import * as bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 
-// Le seed commence par vider les tables : sur une base qui contient déjà des données, il
-// faut un accord explicite (SEED_RESET=true), et c'est toujours refusé en production.
-// NODE_ENV ne suffit pas à lui seul : sur le VPS il n'est défini que dans ecosystem.config.js
-// (PM2), pas forcément dans le .env lu par ce script — d'où le contrôle sur les données.
-async function assertSeedAllowed() {
-  const [users, businessUnits] = await Promise.all([
-    prisma.user.count(),
-    prisma.businessUnit.count(),
-  ])
-  if (users === 0 && businessUnits === 0) return
-
-  const summary = `${users} utilisateur(s), ${businessUnits} BU`
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      `Seed refusé : NODE_ENV=production et la base contient déjà des données (${summary}).\n` +
-        'Le seed efface toutes les données (utilisateurs, présences, journaux) : il ne doit jamais tourner sur la production.'
-    )
-  }
-  if (process.env.SEED_RESET !== 'true') {
-    throw new Error(
-      `Seed refusé : la base contient déjà des données (${summary}) qui seraient toutes effacées.\n` +
-        'Pour réinitialiser volontairement une base de développement : SEED_RESET=true npm run db:seed (ou npm run db:reset).'
-    )
-  }
-  console.log(`  SEED_RESET=true — les données existantes vont être effacées (${summary}).`)
-}
+// Seed additif : il complète la base sans jamais supprimer ni modifier l'existant. Chaque
+// élément est recherché par ses clés uniques et créé seulement s'il manque — un enregistrement
+// déjà présent (même modifié depuis dans l'app) est laissé tel quel. Rejouable sans risque.
+const created = { bus: 0, poles: 0, groups: 0, users: 0, tabs: 0, holidays: 0 }
 
 async function main() {
   console.log('Seed Module 4 — VdM Intranet')
@@ -40,22 +18,7 @@ async function main() {
         'Exemple : SEED_PASSWORD="MotDePasse-Fort-2024!"'
     )
   }
-  await assertSeedAllowed()
-
   const pwd = await bcrypt.hash(seedPassword, 12)
-
-  console.log('  Nettoyage de la base de données...')
-  await prisma.activityLog.deleteMany()
-  await prisma.connectionLog.deleteMany()
-  await prisma.passwordResetToken.deleteMany()
-  await prisma.presence.deleteMany()
-  await prisma.dailyMandate.deleteMany()
-  await prisma.portalTab.deleteMany()
-  await prisma.announcement.deleteMany()
-  await prisma.user.deleteMany()
-  await prisma.scheduleGroup.deleteMany()
-  await prisma.pole.deleteMany()
-  await prisma.businessUnit.deleteMany()
 
   // ---- Business Units ----
   const buDefs = [
@@ -70,13 +33,19 @@ async function main() {
 
   const bus: Record<string, string> = {}
   for (const bu of buDefs) {
-    const r = await prisma.businessUnit.upsert({
-      where: { code: bu.code },
-      update: { name: bu.name },
-      create: bu,
+    // `name` est aussi unique : une BU renommée ou recodée dans l'app est reconnue par l'un ou l'autre.
+    const existing = await prisma.businessUnit.findFirst({
+      where: { OR: [{ code: bu.code }, { name: bu.name }] },
+      select: { id: true },
     })
+    if (existing) {
+      bus[bu.code] = existing.id
+      continue
+    }
+    const r = await prisma.businessUnit.create({ data: bu })
     bus[bu.code] = r.id
-    console.log(`  BU : ${bu.name}`)
+    created.bus++
+    console.log(`  + BU : ${bu.name}`)
   }
 
   // ---- Pôles ----
@@ -90,13 +59,17 @@ async function main() {
 
   const poles: Record<string, string> = {}
   for (const p of poleDefs) {
-    const r = await prisma.pole.upsert({
-      where: { code: p.code },
-      update: { name: p.name },
-      create: { name: p.name, code: p.code, businessUnitId: bus[p.buCode] },
+    const existing = await prisma.pole.findUnique({ where: { code: p.code }, select: { id: true } })
+    if (existing) {
+      poles[p.code] = existing.id
+      continue
+    }
+    const r = await prisma.pole.create({
+      data: { name: p.name, code: p.code, businessUnitId: bus[p.buCode] },
     })
     poles[p.code] = r.id
-    console.log(`  Pôle : ${p.name}`)
+    created.poles++
+    console.log(`  + Pôle : ${p.name}`)
   }
 
   // ---- Groupes horaires ----
@@ -133,17 +106,18 @@ async function main() {
 
   const groups: Record<string, string> = {}
   for (const g of groupDefs) {
-    const r = await prisma.scheduleGroup.upsert({
+    const existing = await prisma.scheduleGroup.findUnique({
       where: { code: g.code },
-      update: {
-        name: g.name,
-        expectedArrivalTime: g.expectedArrivalTime,
-        expectedDepartureTime: g.expectedDepartureTime,
-      },
-      create: g,
+      select: { id: true },
     })
+    if (existing) {
+      groups[g.code] = existing.id
+      continue
+    }
+    const r = await prisma.scheduleGroup.create({ data: g })
     groups[g.code] = r.id
-    console.log(`  Groupe : ${g.name}`)
+    created.groups++
+    console.log(`  + Groupe : ${g.name}`)
   }
 
   // ---- Utilisateurs ----
@@ -387,27 +361,31 @@ async function main() {
     },
   ]
 
+  const userIds: Record<string, string> = {}
+  const createdUsernames = new Set<string>()
   for (const u of userDefs) {
     const fullName = `${u.firstName} ${u.lastName}`
     // Email obligatoire pour tout le monde sans exception — dérivé de `username` si non précisé.
     const email = u.email ?? `${u.username.toLowerCase()}@vdm.local`
-    await prisma.user.upsert({
-      where: { username: u.username },
-      update: {
-        fullName,
-        role: u.role,
-        // Stagiaire : pas de matricule, l'email est son seul identifiant de connexion.
-        matricule: u.role === 'STAGIAIRE' ? null : u.username,
-        email,
-        scheduleGroupId: u.groupCode ? groups[u.groupCode] : null,
-        individualExpectedArrivalTime: u.individualExpectedArrivalTime ?? null,
-      },
-      create: {
+    // Stagiaire : pas de matricule, l'email est son seul identifiant de connexion.
+    const matricule = u.role === 'STAGIAIRE' ? undefined : u.username
+    // username, matricule et email sont tous uniques : un compte existant qui en partage un
+    // seul est considéré comme déjà présent (et jamais modifié), sinon la création échouerait.
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ username: u.username }, { email }, ...(matricule ? [{ matricule }] : [])] },
+      select: { id: true },
+    })
+    if (existing) {
+      userIds[u.username] = existing.id
+      continue
+    }
+    const r = await prisma.user.create({
+      data: {
         username: u.username,
         // Connexion locale/dev : matricule aligné sur username pour que les identifiants de seed
         // (ex: "CTO") continuent de fonctionner tels quels — cf. AuthService.login (matricule ou
         // email, jamais username). Absent pour un stagiaire, qui se connecte avec son email.
-        matricule: u.role === 'STAGIAIRE' ? undefined : u.username,
+        matricule,
         email,
         passwordHash: pwd,
         firstName: u.firstName,
@@ -421,17 +399,15 @@ async function main() {
         mustChangePassword: true,
       },
     })
-    console.log(`  ${u.username} — ${u.role}`)
+    userIds[u.username] = r.id
+    createdUsernames.add(u.username)
+    created.users++
+    console.log(`  + ${u.username} — ${u.role}`)
   }
 
-  const seededUsers = await prisma.user.findMany({
-    where: { username: { in: userDefs.map((u) => u.username) } },
-    select: { id: true, username: true },
-  })
-  const userIds = Object.fromEntries(seededUsers.map((u) => [u.username, u.id]))
-
+  // Manager direct : uniquement pour les comptes créés par ce run (jamais pour un existant).
   for (const u of userDefs) {
-    if (!u.managerUsername) continue
+    if (!u.managerUsername || !createdUsernames.has(u.username)) continue
     const userId = userIds[u.username]
     const managerId = userIds[u.managerUsername]
     if (!userId || !managerId) {
@@ -445,12 +421,10 @@ async function main() {
   }
 
   // ---- Onglets par BU (créés par le responsable applicatif du périmètre) ----
-  const [cto, daf] = await Promise.all([
-    prisma.user.findUnique({ where: { username: 'CTO' }, select: { id: true } }),
-    prisma.user.findUnique({ where: { username: 'DAF' }, select: { id: true } }),
-  ])
-  if (!cto) throw new Error('CTO user not found')
-  if (!daf) throw new Error('DAF user not found')
+  const cto = { id: userIds['CTO'] }
+  const daf = { id: userIds['DAF'] }
+  if (!cto.id) throw new Error('CTO user not found')
+  if (!daf.id) throw new Error('DAF user not found')
 
   type TabDef = { name: string; url: string; icon: string; color?: string; description?: string }
 
@@ -623,36 +597,29 @@ async function main() {
     ],
   }
 
-  let tabCount = 0
   for (const [buCode, tabs] of Object.entries(tabsByBu)) {
     const buId = bus[buCode]
     const createdById = buCode === 'DAF' ? daf.id : cto.id
     for (const tab of tabs) {
-      const fields = {
-        name: tab.name,
-        icon: tab.icon,
-        color: tab.color,
-        description: tab.description,
-        createdById,
-      }
       const existing = await prisma.portalTab.findFirst({
         where: { url: tab.url, businessUnits: { some: { businessUnitId: buId } } },
         select: { id: true },
       })
-      if (existing) {
-        await prisma.portalTab.update({ where: { id: existing.id }, data: fields })
-      } else {
-        await prisma.portalTab.create({
-          data: {
-            ...fields,
-            url: tab.url,
-            isActive: true,
-            businessUnits: { create: { businessUnitId: buId } },
-          },
-        })
-      }
-      tabCount++
-      console.log(`  Onglet [${buCode}] : ${tab.name}`)
+      if (existing) continue
+      await prisma.portalTab.create({
+        data: {
+          name: tab.name,
+          icon: tab.icon,
+          color: tab.color,
+          description: tab.description,
+          createdById,
+          url: tab.url,
+          isActive: true,
+          businessUnits: { create: { businessUnitId: buId } },
+        },
+      })
+      created.tabs++
+      console.log(`  + Onglet [${buCode}] : ${tab.name}`)
     }
   }
 
@@ -667,25 +634,21 @@ async function main() {
     { date: '2026-12-25', label: 'Noël' },
   ]
   for (const h of holidayDefs) {
-    await prisma.publicHoliday.upsert({
-      where: { date_label: { date: new Date(`${h.date}T00:00:00.000Z`), label: h.label } },
-      update: {},
-      create: { date: new Date(`${h.date}T00:00:00.000Z`), label: h.label, isRecurring: true },
+    const date = new Date(`${h.date}T00:00:00.000Z`)
+    const existing = await prisma.publicHoliday.findUnique({
+      where: { date_label: { date, label: h.label } },
+      select: { id: true },
     })
+    if (existing) continue
+    await prisma.publicHoliday.create({ data: { date, label: h.label, isRecurring: true } })
+    created.holidays++
   }
-  console.log(
-    `  ${holidayDefs.length} jours fériés fixes seedés (fêtes religieuses mobiles à saisir manuellement).`
-  )
+  console.log('  Jours fériés fixes vérifiés (fêtes religieuses mobiles à saisir manuellement).')
 
-  const stats = {
-    users: userDefs.length,
-    bus: buDefs.length,
-    poles: poleDefs.length,
-    groups: groupDefs.length,
-    tabs: tabCount,
-  }
   console.log(
-    `\nSeed terminé : ${stats.users} utilisateurs, ${stats.bus} BU, ${stats.poles} pôles, ${stats.groups} groupes, ${stats.tabs} onglets.`
+    `\nSeed terminé — ajoutés : ${created.users} utilisateurs, ${created.bus} BU, ${created.poles} pôles, ` +
+      `${created.groups} groupes, ${created.tabs} onglets, ${created.holidays} jours fériés. ` +
+      'Rien de l’existant n’a été supprimé ni modifié.'
   )
 }
 

@@ -1080,12 +1080,16 @@ Demande : corriger tous les points relevés par un audit complet du dépôt (bui
   - `npx tsc --noEmit` (api + web) : OK. `npx jest` (`apps/api`) : 102/102 OK. `npm run build:api` : OK (`dist/main.js` confirmé présent). `npm run build:web` : OK (19 routes, `.env.production.local` bien chargé). `npx prettier --check` sur tous les fichiers créés/modifiés de cette session : OK.
 - `[ ]` Non fait (hors périmètre technique, dépend de décisions/accès externes à cet environnement) : confirmer que le pipeline `.github/workflows/ci.yml` s'exécute réellement sans erreur sur GitHub (pas d'accès `gh`/API Actions dans cet environnement) ; renseigner les vraies variables d'environnement de production sur le VPS ; vérifier les libs système Chromium sur la machine cible réelle ; une passe de test manuel réel en navigateur (jamais faite sur les fonctionnalités livrées ces dernières semaines, cf. sessions précédentes).
 
-## Correctif — Seed destructif protégé — 2026-09-28
+## Correctif — Seed additif (compléter, jamais remplacer) — 2026-09-28
 
-Constat d'audit : `packages/database/prisma/seed.ts` vide les tables (`deleteMany` sur utilisateurs, présences, journaux…) sans aucun garde-fou ; un `npm run db:seed` lancé par erreur sur le VPS effaçait toutes les données. `NODE_ENV` seul ne suffisait pas : en prod il n'est défini que dans `ecosystem.config.js` (PM2), pas forcément dans le `.env` lu par le seed.
+Constat d'audit : `packages/database/prisma/seed.ts` commençait par vider les tables (`deleteMany` sur utilisateurs, présences, journaux, onglets, annonces…) puis écrasait BU, pôles, groupes, utilisateurs et onglets par `upsert` ; un `npm run db:seed` lancé par erreur sur le VPS effaçait toutes les données. Décision utilisateur : le seed ne doit jamais remplacer, seulement compléter.
 
-- `[x]` `seed.ts::assertSeedAllowed()` — exécuté avant tout nettoyage : base vide (0 utilisateur, 0 BU) → seed normal (premier déploiement, dev neuf) ; base non vide → refus sauf `SEED_RESET=true` ; base non vide avec `NODE_ENV=production` → toujours refusé, même avec `SEED_RESET=true`.
-- `[x]` `npm run db:reset` inchangé : `prisma migrate reset` vide la base avant le seed, le garde-fou laisse donc passer.
-- `[x]` README : sections dev et déploiement mises à jour.
-- `[x]` `npx tsc --noEmit` (`packages/database`) : OK.
-- `[ ]` Non exécuté contre une vraie base dans cette session : vérifier `npm run db:seed` (refus attendu sur la base locale peuplée) puis `SEED_RESET=true npm run db:seed`.
+- `[x]` Suppression de tout le bloc `deleteMany`.
+- `[x]` Chaque élément est recherché par ses clés uniques et créé seulement s'il manque, jamais mis à jour : BU (`code` ou `name`), pôle et groupe horaire (`code`), utilisateur (`username`, `email` ou `matricule`), onglet (URL + BU), jour férié (`date` + `label`).
+- `[x]` Manager direct : renseigné uniquement pour les comptes créés par le run en cours, jamais sur un compte existant.
+- `[x]` Onglets : créateur résolu via les comptes trouvés ou créés (plus de `findUnique` par `username`, qui échouait si le compte CTO/DAF existant n'était reconnu que par son email).
+- `[x]` Récapitulatif final : nombre d'éléments réellement ajoutés.
+- `[x]` `npm run db:reset` inchangé : `prisma migrate reset` vide la base, le seed recrée tout.
+- `[x]` README mis à jour. `npx tsc --noEmit` (`packages/database`) : OK.
+- `[ ]` Point d'attention : sur une base de production, le seed ajoute les comptes de démo manquants (consultants, stagiaires… avec `SEED_PASSWORD` et `mustChangePassword`) — ne le lancer en prod que si c'est voulu.
+- `[ ]` Vérifier sur la base locale : deux `npm run db:seed` successifs → le second doit annoncer 0 ajout.
