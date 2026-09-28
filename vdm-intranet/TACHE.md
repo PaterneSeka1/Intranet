@@ -1093,3 +1093,20 @@ Constat d'audit : `packages/database/prisma/seed.ts` commençait par vider les t
 - `[x]` README mis à jour. `npx tsc --noEmit` (`packages/database`) : OK.
 - `[ ]` Point d'attention : sur une base de production, le seed ajoute les comptes de démo manquants (consultants, stagiaires… avec `SEED_PASSWORD` et `mustChangePassword`) — ne le lancer en prod que si c'est voulu.
 - `[ ]` Vérifier sur la base locale : deux `npm run db:seed` successifs → le second doit annoncer 0 ajout.
+
+## Ajout — Dossier « Réseaux sociaux » dans le seed — 2026-09-28
+
+- `[x]` Seed : dossier global `Réseaux sociaux` (visible de tous, icône `users`), créé seulement s'il n'existe pas (reconnu par son nom), rangé après les dossiers existants.
+- `[x]` 6 onglets des comptes officiels VdM : Facebook, LinkedIn, Instagram, TikTok, X, YouTube — ajoutés seulement s'ils manquent dans ce dossier (même forme que `TabsService.create` : audience portée par le dossier, aucune audience propre sur les onglets).
+- `[x]` Registre d'icônes web : ajout de `instagram` et `youtube` (glyphes au trait style lucide, comme `facebook`/`linkedin`/`tiktok`).
+- `[x]` `npx tsc --noEmit` (`packages/database`, `apps/web`) et `prettier --check` : OK.
+- `[ ]` Vérifier sur la base locale : `npm run db:seed`, puis contrôle visuel du dossier sur `/accueil` et `/onglets`.
+
+## Ajout — Dossiers E-Réputation dans le seed — 2026-09-28
+
+- `[x]` Seed : factorisation dans `ensureFolder()` (dossier reconnu par nom + audience, créé s'il manque, onglets ajoutés seulement s'ils manquent), utilisée aussi pour `Réseaux sociaux`.
+- `[x]` Dossier `Veille e-réputation` (BU EREP uniquement) : Mention, Talkwalker, Smart VdM.
+- `[x]` Dossier `Recherche & IA` (BU EREP uniquement) : Google, Claude.
+- `[x]` Registre d'icônes web : ajout de `search` et `sparkles` (lucide-react).
+- `[x]` `npx tsc --noEmit` (`packages/database`, `apps/web`) et `prettier --check` : OK.
+- `[ ]` Vérifier sur la base locale : `npm run db:seed`, puis connexion avec un compte EREP (ex. `RBU_EREP`) et un compte d'une autre BU pour contrôler la visibilité.

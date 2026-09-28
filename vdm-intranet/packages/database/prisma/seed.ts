@@ -6,7 +6,61 @@ const prisma = new PrismaClient()
 // Seed additif : il complète la base sans jamais supprimer ni modifier l'existant. Chaque
 // élément est recherché par ses clés uniques et créé seulement s'il manque — un enregistrement
 // déjà présent (même modifié depuis dans l'app) est laissé tel quel. Rejouable sans risque.
-const created = { bus: 0, poles: 0, groups: 0, users: 0, tabs: 0, holidays: 0 }
+const created = { bus: 0, poles: 0, groups: 0, users: 0, folders: 0, tabs: 0, holidays: 0 }
+
+type TabDef = { name: string; url: string; icon: string; color?: string; description?: string }
+
+type FolderDef = {
+  name: string
+  icon: string
+  color: string
+  /** Code de BU pour une audience restreinte ; absent = dossier global (visible de tous). */
+  buCode?: string
+  tabs: TabDef[]
+}
+
+// Même forme que TabsService.create/createFolder : l'audience est portée par le dossier, ses
+// onglets n'en ont pas de propre (isGlobal false, aucune BU). Le dossier est reconnu par son nom
+// et son audience ; il est créé s'il manque, puis seuls les onglets absents (par URL) sont ajoutés.
+async function ensureFolder(def: FolderDef, buId: string | undefined, createdById: string) {
+  const audience = buId
+    ? { isGlobal: false, businessUnits: { some: { businessUnitId: buId } } }
+    : { isGlobal: true }
+  let folder = await prisma.portalTabFolder.findFirst({
+    where: { name: def.name, ...audience },
+    select: { id: true },
+  })
+  if (!folder) {
+    const max = await prisma.portalTabFolder.aggregate({ _max: { order: true } })
+    folder = await prisma.portalTabFolder.create({
+      data: {
+        name: def.name,
+        icon: def.icon,
+        color: def.color,
+        isGlobal: !buId,
+        order: (max._max.order ?? -1) + 1,
+        createdById,
+        businessUnits: buId ? { create: { businessUnitId: buId } } : undefined,
+      },
+      select: { id: true },
+    })
+    created.folders++
+    console.log(`  + Dossier : ${def.name}`)
+  }
+
+  for (const [index, tab] of def.tabs.entries()) {
+    const existing = await prisma.portalTab.findFirst({
+      where: { url: tab.url, folderId: folder.id },
+      select: { id: true },
+    })
+    if (existing) continue
+    await prisma.portalTab.create({
+      data: { ...tab, folderId: folder.id, order: index, createdById, isActive: true },
+    })
+    created.tabs++
+    console.log(`  + Onglet [${def.name}] : ${tab.name}`)
+  }
+}
 
 async function main() {
   console.log('Seed Module 4 — VdM Intranet')
@@ -426,8 +480,6 @@ async function main() {
   if (!cto.id) throw new Error('CTO user not found')
   if (!daf.id) throw new Error('DAF user not found')
 
-  type TabDef = { name: string; url: string; icon: string; color?: string; description?: string }
-
   const tabsByBu: Record<string, TabDef[]> = {
     INFO: [
       {
@@ -623,6 +675,116 @@ async function main() {
     }
   }
 
+  // ---- Dossiers d'onglets ----
+  const folderDefs: FolderDef[] = [
+    {
+      // Comptes officiels VdM, visibles de tous.
+      name: 'Réseaux sociaux',
+      icon: 'users',
+      color: '#F28C38',
+      tabs: [
+        {
+          name: 'Facebook',
+          url: 'https://www.facebook.com/veilleurdesmedias',
+          icon: 'facebook',
+          color: '#1877F2',
+          description: 'Page Facebook officielle',
+        },
+        {
+          name: 'LinkedIn',
+          url: 'https://www.linkedin.com/company/veilleur-des-m%C3%A9dias/posts/?feedView=all',
+          icon: 'linkedin',
+          color: '#0A66C2',
+          description: 'Page LinkedIn officielle',
+        },
+        {
+          name: 'Instagram',
+          url: 'https://www.instagram.com/veilleur_des_medias/',
+          icon: 'instagram',
+          color: '#E4405F',
+          description: 'Compte Instagram officiel',
+        },
+        {
+          name: 'TikTok',
+          url: 'https://www.tiktok.com/@veilleurdesmedias?_r=1&_t=ZS-9A1zYzJ71mO',
+          icon: 'tiktok',
+          color: '#000000',
+          description: 'Compte TikTok officiel',
+        },
+        {
+          name: 'X',
+          url: 'https://x.com/veilleurmedias',
+          icon: 'x',
+          color: '#000000',
+          description: 'Compte X officiel',
+        },
+        {
+          name: 'YouTube',
+          url: 'https://www.youtube.com/@VeilleurdesMedias',
+          icon: 'youtube',
+          color: '#FF0000',
+          description: 'Chaîne YouTube officielle',
+        },
+      ],
+    },
+    {
+      // Plateformes métier de la BU E-Réputation.
+      name: 'Veille e-réputation',
+      icon: 'bar-chart',
+      color: '#F28C38',
+      buCode: 'EREP',
+      tabs: [
+        {
+          name: 'Mention',
+          url: 'https://web.mention.com/',
+          icon: 'bell',
+          color: '#1F8FFF',
+          description: 'Veille des mentions en ligne',
+        },
+        {
+          name: 'Talkwalker',
+          url: 'https://www.talkwalker.com/fr',
+          icon: 'bar-chart',
+          color: '#00A3E0',
+          description: 'Écoute sociale et analyse',
+        },
+        {
+          name: 'Smart VdM',
+          url: 'https://smart.veilleurdesmedias.com/dashboard',
+          icon: 'newspaper',
+          color: '#F28C38',
+          description: 'Tableau de bord Smart VdM',
+        },
+      ],
+    },
+    {
+      // Outils généraux utilisés par la BU E-Réputation.
+      name: 'Recherche & IA',
+      icon: 'search',
+      color: '#F28C38',
+      buCode: 'EREP',
+      tabs: [
+        {
+          name: 'Google',
+          url: 'https://www.google.com/',
+          icon: 'search',
+          color: '#4285F4',
+          description: 'Moteur de recherche',
+        },
+        {
+          name: 'Claude',
+          url: 'https://claude.ai/',
+          icon: 'sparkles',
+          color: '#D97757',
+          description: 'Assistant IA',
+        },
+      ],
+    },
+  ]
+  for (const def of folderDefs) {
+    await ensureFolder(def, def.buCode ? bus[def.buCode] : undefined, cto.id)
+  }
+
   // ---- Jours fériés (Côte d'Ivoire — dates fixes récurrentes) ----
   const holidayDefs = [
     { date: '2026-01-01', label: 'Jour de l’An' },
@@ -647,7 +809,7 @@ async function main() {
 
   console.log(
     `\nSeed terminé — ajoutés : ${created.users} utilisateurs, ${created.bus} BU, ${created.poles} pôles, ` +
-      `${created.groups} groupes, ${created.tabs} onglets, ${created.holidays} jours fériés. ` +
+      `${created.groups} groupes, ${created.folders} dossiers, ${created.tabs} onglets, ${created.holidays} jours fériés. ` +
       'Rien de l’existant n’a été supprimé ni modifié.'
   )
 }

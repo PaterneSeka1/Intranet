@@ -16,6 +16,8 @@ import {
   Sheet,
   Link2,
   Ticket,
+  Search,
+  Sparkles,
   createLucideIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -38,6 +40,21 @@ const Linkedin = createLucideIcon('linkedin', [
 ])
 const Tiktok = createLucideIcon('tiktok', [
   ['path', { d: 'M9 12a4 4 0 1 0 4 4V2a5 5 0 0 0 5 5', key: 'tt' }],
+])
+const Instagram = createLucideIcon('instagram', [
+  ['rect', { width: '20', height: '20', x: '2', y: '2', rx: '5', ry: '5', key: 'ig1' }],
+  ['path', { d: 'M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z', key: 'ig2' }],
+  ['line', { x1: '17.5', x2: '17.51', y1: '6.5', y2: '6.5', key: 'ig3' }],
+])
+const Youtube = createLucideIcon('youtube', [
+  [
+    'path',
+    {
+      d: 'M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17',
+      key: 'yt1',
+    },
+  ],
+  ['path', { d: 'm10 15 5-3-5-3z', key: 'yt2' }],
 ])
 
 /**
@@ -62,9 +79,13 @@ export const TAB_ICON_REGISTRY: Record<string, LucideIcon> = {
   sheet: Sheet,
   link: Link2,
   ticket: Ticket,
+  search: Search,
+  sparkles: Sparkles,
   facebook: Facebook,
   linkedin: Linkedin,
   tiktok: Tiktok,
+  instagram: Instagram,
+  youtube: Youtube,
 }
 
 export const TAB_ICON_PRESETS = Object.keys(TAB_ICON_REGISTRY)
