@@ -38,6 +38,13 @@ export class UpdateTabDto {
   @IsBoolean()
   isActive?: boolean
 
+  // Nouvelle audience (BU propriétaire) ; null = onglet global. Réservé aux gestionnaires
+  // globaux. Changer d'audience retire l'onglet de son dossier, sauf si un folderId de la
+  // nouvelle portée est fourni — cf. TabsService.update.
+  @IsOptional()
+  @IsString()
+  businessUnitId?: string | null
+
   // Dossier de regroupement ; null = retire l'onglet de son dossier (doit rester dans la même
   // portée BU/globale, cf. TabsService.resolveFolderId).
   @IsOptional()

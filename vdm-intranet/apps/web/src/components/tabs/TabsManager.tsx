@@ -884,10 +884,9 @@ export function TabsManager({
     setModal({ mode: 'edit', tab })
   }
 
-  // Portée BU à respecter pour la liste des dossiers proposés dans le formulaire : celle du
-  // formulaire en création (modifiable), celle — figée — de l'onglet en édition.
-  const formScopeBuId =
-    modal?.mode === 'edit' ? (modal.tab?.businessUnitId ?? null) : form.businessUnitId || null
+  // Portée BU à respecter pour la liste des dossiers proposés dans le formulaire : l'audience
+  // choisie dans le formulaire (modifiable en création comme en édition par un admin).
+  const formScopeBuId = form.businessUnitId || null
   const availableFoldersForForm = useMemo(
     () => folders.filter((f) => (f.businessUnitId ?? null) === formScopeBuId),
     [folders, formScopeBuId]
@@ -950,7 +949,10 @@ export function TabsManager({
           icon: form.icon || undefined,
           color: form.color || undefined,
           folderId: form.folderId || null,
-          ...(canManageAll && modal.tab.businessUnitId
+          ...(canManageAll && formScopeBuId !== modal.tab.businessUnitId
+            ? { businessUnitId: formScopeBuId }
+            : {}),
+          ...(canManageAll && formScopeBuId
             ? { sharedBusinessUnitIds: form.sharedBusinessUnitIds }
             : {}),
         }
@@ -1034,10 +1036,16 @@ export function TabsManager({
     setFolderModal({ mode: 'edit', folder })
   }
 
-  const folderScopeBuId =
-    folderModal?.mode === 'edit'
-      ? (folderModal.folder?.businessUnitId ?? null)
-      : folderForm.businessUnitId || null
+  const folderScopeBuId = folderForm.businessUnitId || null
+  // Changement d'audience d'un dossier existant : ses onglets suivront (cf. handleFolderSubmit).
+  const folderScopeChanged =
+    folderModal?.mode === 'edit' &&
+    !!folderModal.folder &&
+    folderScopeBuId !== folderModal.folder.businessUnitId
+  const editedFolderTabCount =
+    folderModal?.mode === 'edit' && folderModal.folder
+      ? tabs.filter((t) => t.folderId === folderModal.folder?.id).length
+      : 0
   const shareableBusForFolder = folderScopeBuId
     ? buList.filter((bu) => bu.id !== folderScopeBuId)
     : []
@@ -1067,17 +1075,29 @@ export function TabsManager({
           name: folderForm.name,
           icon: folderForm.icon || undefined,
           color: folderForm.color || undefined,
-          ...(canManageAll && folderModal.folder.businessUnitId
+          ...(canManageAll && folderScopeChanged ? { businessUnitId: folderScopeBuId } : {}),
+          ...(canManageAll && folderScopeBuId
             ? { sharedBusinessUnitIds: folderForm.sharedBusinessUnitIds }
             : {}),
         }
         const updated = await tabFoldersApi.update(folderModal.folder.id, payload)
         setFolders((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))
+        // Miroir local de TabsService.updateFolder : les onglets du dossier prennent son audience
+        // et perdent les partages devenus sans objet.
         setTabs((prev) =>
           prev.map((t) =>
             t.folderId === updated.id
               ? {
                   ...t,
+                  ...(folderScopeChanged
+                    ? {
+                        businessUnitId: updated.businessUnitId,
+                        businessUnit: updated.businessUnit,
+                        shares: updated.businessUnitId
+                          ? t.shares.filter((s) => s.businessUnit.id !== updated.businessUnitId)
+                          : [],
+                      }
+                    : {}),
                   folder: {
                     id: updated.id,
                     name: updated.name,
@@ -1569,7 +1589,7 @@ export function TabsManager({
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {canManageAll && modal?.mode === 'create' && (
+          {canManageAll && (
             <div>
               <label
                 htmlFor="tab-bu"
@@ -1604,6 +1624,14 @@ export function TabsManager({
                   Cet onglet sera visible par tous les utilisateurs sans exception.
                 </p>
               )}
+              {modal?.mode === 'edit' &&
+                !!modal.tab?.folderId &&
+                formScopeBuId !== modal.tab.businessUnitId && (
+                  <p className="text-[11px] text-gray-500 mt-1.5">
+                    Changer l’audience retire l’onglet de son dossier actuel ; choisissez un dossier
+                    de la nouvelle audience ci-dessous si besoin.
+                  </p>
+                )}
             </div>
           )}
 
@@ -1825,7 +1853,7 @@ export function TabsManager({
         size="lg"
       >
         <form onSubmit={handleFolderSubmit} className="space-y-4">
-          {canManageAll && folderModal?.mode === 'create' && (
+          {canManageAll && (
             <div>
               <label
                 htmlFor="folder-bu"
@@ -1858,6 +1886,13 @@ export function TabsManager({
                 <p className="text-[11px] text-[#F28C38] mt-1.5">
                   Ce dossier — et les onglets qui y seront rangés — sera visible par tous les
                   utilisateurs sans exception.
+                </p>
+              )}
+              {folderScopeChanged && editedFolderTabCount > 0 && (
+                <p className="text-[11px] text-gray-500 mt-1.5">
+                  {editedFolderTabCount === 1
+                    ? 'L’onglet de ce dossier suivra la nouvelle audience.'
+                    : `Les ${editedFolderTabCount} onglets de ce dossier suivront la nouvelle audience.`}
                 </p>
               )}
             </div>

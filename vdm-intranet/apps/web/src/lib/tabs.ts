@@ -72,6 +72,8 @@ export type UpdateTabPayload = Partial<{
   icon: string
   color: string
   isActive: boolean
+  // Réservé aux gestionnaires globaux ; null = onglet global. Sort l'onglet de son dossier.
+  businessUnitId: string | null
   folderId: string | null
   // Réservé aux gestionnaires globaux ; [] = retire tous les partages.
   sharedBusinessUnitIds: string[]
@@ -89,6 +91,8 @@ export type UpdateTabFolderPayload = Partial<{
   name: string
   icon: string
   color: string
+  // Réservé aux gestionnaires globaux ; null = dossier global. Les onglets du dossier suivent.
+  businessUnitId: string | null
   // Réservé aux gestionnaires globaux ; [] = retire tous les partages.
   sharedBusinessUnitIds: string[]
 }>

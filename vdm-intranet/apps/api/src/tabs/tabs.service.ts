@@ -362,41 +362,61 @@ export class TabsService {
     const tab = await this.findTabOrFail(id)
     this.assertCanManage(requester, tab.businessUnitId)
 
-    if (dto.folderId !== undefined) {
-      // Valide la portée (folder de même BU/global que l'onglet) ; la valeur elle-même est
-      // déjà celle de dto.folderId, réutilisée telle quelle dans `data: dto` ci-dessous.
-      await this.resolveFolderId(dto.folderId, tab.businessUnitId)
-    }
+    const { sharedBusinessUnitIds, businessUnitId, folderId, ...fields } = dto
+    const scopeChanged =
+      businessUnitId !== undefined && (businessUnitId || null) !== tab.businessUnitId
+    const targetBuId = scopeChanged
+      ? await this.resolveNewOwnerBuId(requester, businessUnitId ?? null, 'onglet')
+      : tab.businessUnitId
 
-    const { sharedBusinessUnitIds, ...fields } = dto
+    // Valide la portée du dossier cible (même BU/global que l'onglet, après changement éventuel
+    // d'audience). Sans dossier fourni, un changement d'audience sort l'onglet de son dossier,
+    // celui-ci appartenant forcément à l'ancienne portée.
+    const nextFolderId =
+      folderId !== undefined
+        ? ((await this.resolveFolderId(folderId, targetBuId)) ?? null)
+        : scopeChanged
+          ? null
+          : tab.folderId
+
+    // Changement d'audience sans liste de partages explicite : on conserve les partages
+    // existants (hors nouvelle BU propriétaire), ou on les retire tous si l'onglet devient global.
+    const requestedShares =
+      sharedBusinessUnitIds !== undefined
+        ? sharedBusinessUnitIds
+        : scopeChanged
+          ? targetBuId === null
+            ? []
+            : tab.shares.map((s) => s.businessUnitId)
+          : undefined
     const sharedBuIds = await this.resolveSharedBuIds(
       requester,
-      tab.businessUnitId,
-      sharedBusinessUnitIds,
+      targetBuId,
+      requestedShares,
       'onglet'
     )
     const urlChanged = !!dto.url && dto.url !== tab.url
-    const folderChanged = dto.folderId !== undefined && dto.folderId !== tab.folderId
+    const folderChanged = nextFolderId !== tab.folderId
 
-    if (urlChanged && tab.businessUnitId === null) {
+    if (targetBuId === null && (urlChanged || scopeChanged)) {
       // Même contrôle manuel que create() : @@unique([businessUnitId, url]) ignore les NULL,
       // donc deux onglets globaux ne peuvent pas être départagés par la contrainte DB seule.
       const existing = await this.prisma.portalTab.findFirst({
-        where: { businessUnitId: null, url: dto.url, NOT: { id } },
+        where: { businessUnitId: null, url: dto.url ?? tab.url, NOT: { id } },
       })
       if (existing) throw new BadRequestException('Cet URL existe déjà dans les onglets globaux.')
     } else if (
-      tab.businessUnitId !== null &&
-      (urlChanged || folderChanged || sharedBuIds !== undefined)
+      targetBuId !== null &&
+      (urlChanged || folderChanged || scopeChanged || sharedBuIds !== undefined)
     ) {
       // Toutes les BU qui verront l'onglet après la modification : propriétaire, partages
       // directs, et BU destinataires de son dossier (futur ou actuel).
       await this.assertUrlFreeForBus(
         dto.url ?? tab.url,
         [
-          tab.businessUnitId,
+          targetBuId,
           ...(sharedBuIds ?? tab.shares.map((s) => s.businessUnitId)),
-          ...(await this.folderShareBuIds(folderChanged ? (dto.folderId ?? null) : tab.folderId)),
+          ...(await this.folderShareBuIds(nextFolderId)),
         ],
         [id]
       )
@@ -414,6 +434,14 @@ export class TabsService {
         where: { id },
         data: {
           ...fields,
+          ...(folderChanged ? { folderId: nextFolderId } : {}),
+          ...(scopeChanged
+            ? {
+                businessUnitId: targetBuId,
+                // Rang en fin de liste dans la nouvelle portée.
+                order: await this.nextTabOrder(nextFolderId, targetBuId),
+              }
+            : {}),
           ...(sharedBuIds !== undefined
             ? {
                 shares: {
@@ -425,7 +453,10 @@ export class TabsService {
         },
         select: TAB_SELECT,
       })
-      await this.log(requester.id, action, id, dto as object)
+      await this.log(requester.id, action, id, {
+        ...dto,
+        ...(scopeChanged ? { previousBusinessUnitId: tab.businessUnitId } : {}),
+      })
       return updated
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'P2025')
@@ -616,14 +647,59 @@ export class TabsService {
     const folder = await this.findFolderOrFail(id)
     this.assertCanManageFolder(requester, folder.businessUnitId)
 
-    const { sharedBusinessUnitIds, ...fields } = dto
+    const { sharedBusinessUnitIds, businessUnitId, ...fields } = dto
+    const scopeChanged =
+      businessUnitId !== undefined && (businessUnitId || null) !== folder.businessUnitId
+    const targetBuId = scopeChanged
+      ? await this.resolveNewOwnerBuId(requester, businessUnitId ?? null, 'dossier')
+      : folder.businessUnitId
+
+    // Même règle que update() pour les partages lors d'un changement d'audience.
+    const requestedShares =
+      sharedBusinessUnitIds !== undefined
+        ? sharedBusinessUnitIds
+        : scopeChanged
+          ? targetBuId === null
+            ? []
+            : folder.shares.map((s) => s.businessUnitId)
+          : undefined
     const sharedBuIds = await this.resolveSharedBuIds(
       requester,
-      folder.businessUnitId,
-      sharedBusinessUnitIds,
+      targetBuId,
+      requestedShares,
       'dossier'
     )
-    if (sharedBuIds?.length) {
+
+    if (scopeChanged) {
+      // Les onglets du dossier suivent son audience (un onglet ne vit que dans un dossier de sa
+      // propre portée) : chacun doit rester sans doublon d'URL dans toutes les BU qui le verront.
+      const folderTabs = await this.prisma.portalTab.findMany({
+        where: { folderId: id },
+        select: { id: true, url: true, shares: { select: { businessUnitId: true } } },
+      })
+      const folderTabIds = folderTabs.map((t) => t.id)
+      for (const t of folderTabs) {
+        if (targetBuId === null) {
+          const existing = await this.prisma.portalTab.findFirst({
+            where: { businessUnitId: null, url: t.url, id: { notIn: folderTabIds } },
+          })
+          if (existing)
+            throw new BadRequestException(
+              `L'URL de l'onglet « ${t.url} » existe déjà dans les onglets globaux.`
+            )
+        } else {
+          await this.assertUrlFreeForBus(
+            t.url,
+            [
+              targetBuId,
+              ...t.shares.map((s) => s.businessUnitId).filter((b) => b !== targetBuId),
+              ...(sharedBuIds ?? []),
+            ],
+            folderTabIds
+          )
+        }
+      }
+    } else if (sharedBuIds?.length) {
       // Les onglets du dossier deviennent visibles dans les BU destinataires : aucun ne doit y
       // doubler un onglet de même URL déjà visible.
       const folderTabs = await this.prisma.portalTab.findMany({
@@ -634,33 +710,64 @@ export class TabsService {
       for (const t of folderTabs) await this.assertUrlFreeForBus(t.url, sharedBuIds, folderTabIds)
     }
 
+    const order = scopeChanged
+      ? ((
+          await this.prisma.portalTabFolder.aggregate({
+            where: { businessUnitId: targetBuId },
+            _max: { order: true },
+          })
+        )._max.order ?? -1) + 1
+      : undefined
+
     try {
-      const updated = await this.prisma.portalTabFolder.update({
-        where: { id },
-        data: {
-          ...fields,
-          ...(sharedBuIds !== undefined
-            ? {
-                shares: {
-                  deleteMany: {},
-                  create: sharedBuIds.map((businessUnitId) => ({ businessUnitId })),
-                },
-              }
-            : {}),
-        },
-        select: FOLDER_SELECT,
+      const updated = await this.prisma.$transaction(async (tx) => {
+        if (scopeChanged) {
+          // Partages devenus sans objet : tous si les onglets deviennent globaux, sinon celui
+          // vers la nouvelle BU propriétaire.
+          await tx.portalTabShare.deleteMany({
+            where: {
+              tab: { folderId: id },
+              ...(targetBuId !== null ? { businessUnitId: targetBuId } : {}),
+            },
+          })
+          await tx.portalTab.updateMany({
+            where: { folderId: id },
+            data: { businessUnitId: targetBuId },
+          })
+        }
+        return tx.portalTabFolder.update({
+          where: { id },
+          data: {
+            ...fields,
+            ...(scopeChanged ? { businessUnitId: targetBuId, order } : {}),
+            ...(sharedBuIds !== undefined
+              ? {
+                  shares: {
+                    deleteMany: {},
+                    create: sharedBuIds.map((businessUnitId) => ({ businessUnitId })),
+                  },
+                }
+              : {}),
+          },
+          select: FOLDER_SELECT,
+        })
       })
       await this.log(
         requester.id,
         LogAction.TAB_FOLDER_UPDATED,
         id,
-        dto as object,
+        {
+          ...dto,
+          ...(scopeChanged ? { previousBusinessUnitId: folder.businessUnitId } : {}),
+        },
         'PortalTabFolder'
       )
       return updated
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'P2025')
         throw new NotFoundException('Dossier introuvable.')
+      if ((err as { code?: string }).code === 'P2002')
+        throw new BadRequestException('Un onglet de ce dossier existe déjà pour cette BU.')
       throw err
     }
   }
@@ -780,10 +887,39 @@ export class TabsService {
   private async findFolderOrFail(id: string) {
     const folder = await this.prisma.portalTabFolder.findUnique({
       where: { id },
-      select: { id: true, name: true, businessUnitId: true },
+      select: {
+        id: true,
+        name: true,
+        businessUnitId: true,
+        shares: { select: { businessUnitId: true } },
+      },
     })
     if (!folder) throw new NotFoundException('Dossier introuvable.')
     return folder
+  }
+
+  /**
+   * Valide la nouvelle audience (BU propriétaire, null = globale) d'un onglet ou d'un dossier
+   * existant. Réservé aux gestionnaires globaux : un responsable BU ne peut ni sortir un élément
+   * de sa BU ni le rendre global.
+   */
+  private async resolveNewOwnerBuId(
+    requester: Requester,
+    buId: string | null,
+    kind: 'onglet' | 'dossier'
+  ): Promise<string | null> {
+    if (!CAN_MANAGE_TABS_GLOBAL.includes(requester.role)) {
+      throw new ForbiddenException(
+        `Seuls les administrateurs peuvent changer l'audience d'un ${kind}.`
+      )
+    }
+    if (!buId) return null
+    const bu = await this.prisma.businessUnit.findUnique({
+      where: { id: buId },
+      select: { id: true },
+    })
+    if (!bu) throw new BadRequestException('Business Unit introuvable.')
+    return buId
   }
 
   private assertCanManageFolder(requester: Requester, folderBuId: string | null) {

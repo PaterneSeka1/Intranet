@@ -18,6 +18,7 @@ describe('TabsService — onglets et dossiers partagés entre BU', () => {
       findUnique: jest.Mock
       findFirst: jest.Mock
       findMany: jest.Mock
+      updateMany: jest.Mock
       aggregate: jest.Mock
     }
     portalTabFolder: {
@@ -27,6 +28,8 @@ describe('TabsService — onglets et dossiers partagés entre BU', () => {
       aggregate: jest.Mock
     }
     portalTabCredential: { findUnique: jest.Mock }
+    portalTabShare: { deleteMany: jest.Mock }
+    $transaction: jest.Mock
     businessUnit: { count: jest.Mock; findUnique: jest.Mock }
     activityLog: { create: jest.Mock }
   }
@@ -39,6 +42,7 @@ describe('TabsService — onglets et dossiers partagés entre BU', () => {
         findUnique: jest.fn(),
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         aggregate: jest.fn().mockResolvedValue({ _max: { order: null } }),
       },
       portalTabFolder: {
@@ -48,12 +52,16 @@ describe('TabsService — onglets et dossiers partagés entre BU', () => {
         aggregate: jest.fn().mockResolvedValue({ _max: { order: null } }),
       },
       portalTabCredential: { findUnique: jest.fn().mockResolvedValue(null) },
+      portalTabShare: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      $transaction: jest.fn(),
       businessUnit: {
         count: jest.fn().mockImplementation(({ where }) => Promise.resolve(where.id.in.length)),
         findUnique: jest.fn().mockResolvedValue({ name: 'BU B' }),
       },
       activityLog: { create: jest.fn().mockResolvedValue({}) },
     }
+    // Transaction interactive : le callback reçoit le client mocké lui-même.
+    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma))
     service = new TabsService(prisma as unknown as PrismaService)
   })
 
@@ -114,6 +122,53 @@ describe('TabsService — onglets et dossiers partagés entre BU', () => {
     })
   })
 
+  describe("update — changement d'audience", () => {
+    const tabInBuA = {
+      id: 't1',
+      name: 'Outil',
+      url: baseDto.url,
+      businessUnitId: 'buA',
+      isActive: true,
+      folderId: 'fA',
+      shares: [{ businessUnitId: 'buB' }, { businessUnitId: 'buC' }],
+      folder: null,
+    }
+
+    it("déplace l'onglet vers une autre BU, le sort de son dossier et garde les autres partages", async () => {
+      prisma.portalTab.findUnique.mockResolvedValue(tabInBuA)
+      await service.update(admin, 't1', { businessUnitId: 'buB' })
+      const { data } = prisma.portalTab.update.mock.calls[0][0]
+      expect(data.businessUnitId).toBe('buB')
+      expect(data.folderId).toBeNull()
+      expect(data.shares).toEqual({ deleteMany: {}, create: [{ businessUnitId: 'buC' }] })
+      expect(data).not.toHaveProperty('sharedBusinessUnitIds')
+    })
+
+    it("rend l'onglet global en retirant tous ses partages", async () => {
+      prisma.portalTab.findUnique.mockResolvedValue(tabInBuA)
+      await service.update(admin, 't1', { businessUnitId: null })
+      const { data } = prisma.portalTab.update.mock.calls[0][0]
+      expect(data.businessUnitId).toBeNull()
+      expect(data.shares).toEqual({ deleteMany: {}, create: [] })
+    })
+
+    it('refuse le changement demandé par un responsable BU', async () => {
+      prisma.portalTab.findUnique.mockResolvedValue(tabInBuA)
+      await expect(
+        service.update(responsableBuA, 't1', { businessUnitId: 'buB' })
+      ).rejects.toBeInstanceOf(ForbiddenException)
+      expect(prisma.portalTab.update).not.toHaveBeenCalled()
+    })
+
+    it('refuse de rendre global un onglet dont l’URL existe déjà en global', async () => {
+      prisma.portalTab.findUnique.mockResolvedValue(tabInBuA)
+      prisma.portalTab.findFirst.mockResolvedValue({ id: 't2' })
+      await expect(service.update(admin, 't1', { businessUnitId: null })).rejects.toThrow(
+        'Cet URL existe déjà dans les onglets globaux.'
+      )
+    })
+  })
+
   describe('dossiers', () => {
     it('crée un dossier partagé par un admin', async () => {
       await service.createFolder(admin, {
@@ -153,6 +208,55 @@ describe('TabsService — onglets et dossiers partagés entre BU', () => {
       ).rejects.toThrow('Cet URL existe déjà pour la BU « BU B ».')
       expect(prisma.portalTab.findFirst.mock.calls[0][0].where.id).toEqual({ notIn: ['t1'] })
       expect(prisma.portalTabFolder.update).not.toHaveBeenCalled()
+    })
+
+    it("change l'audience d'un dossier : ses onglets suivent, le partage vers la nouvelle BU tombe", async () => {
+      prisma.portalTabFolder.findUnique.mockResolvedValue({
+        id: 'f1',
+        name: 'Commun',
+        businessUnitId: 'buA',
+        shares: [{ businessUnitId: 'buB' }, { businessUnitId: 'buC' }],
+      })
+      await service.updateFolder(admin, 'f1', { businessUnitId: 'buB' })
+      expect(prisma.portalTabShare.deleteMany).toHaveBeenCalledWith({
+        where: { tab: { folderId: 'f1' }, businessUnitId: 'buB' },
+      })
+      expect(prisma.portalTab.updateMany).toHaveBeenCalledWith({
+        where: { folderId: 'f1' },
+        data: { businessUnitId: 'buB' },
+      })
+      const { data } = prisma.portalTabFolder.update.mock.calls[0][0]
+      expect(data.businessUnitId).toBe('buB')
+      expect(data.shares).toEqual({ deleteMany: {}, create: [{ businessUnitId: 'buC' }] })
+    })
+
+    it('rend un dossier global en retirant tous les partages du dossier et de ses onglets', async () => {
+      prisma.portalTabFolder.findUnique.mockResolvedValue({
+        id: 'f1',
+        name: 'Commun',
+        businessUnitId: 'buA',
+        shares: [{ businessUnitId: 'buB' }],
+      })
+      await service.updateFolder(admin, 'f1', { businessUnitId: null })
+      expect(prisma.portalTabShare.deleteMany).toHaveBeenCalledWith({
+        where: { tab: { folderId: 'f1' } },
+      })
+      const { data } = prisma.portalTabFolder.update.mock.calls[0][0]
+      expect(data.businessUnitId).toBeNull()
+      expect(data.shares).toEqual({ deleteMany: {}, create: [] })
+    })
+
+    it("refuse le changement d'audience d'un dossier par un responsable BU", async () => {
+      prisma.portalTabFolder.findUnique.mockResolvedValue({
+        id: 'f1',
+        name: 'Commun',
+        businessUnitId: 'buA',
+        shares: [],
+      })
+      await expect(
+        service.updateFolder(responsableBuA, 'f1', { businessUnitId: null })
+      ).rejects.toBeInstanceOf(ForbiddenException)
+      expect(prisma.$transaction).not.toHaveBeenCalled()
     })
   })
 
