@@ -15,8 +15,30 @@ import {
   Cloud,
   Sheet,
   Link2,
+  Ticket,
+  createLucideIcon,
   type LucideIcon,
 } from 'lucide-react'
+
+// Logos de réseaux sociaux : lucide-react 1.x a retiré les icônes de marques. Glyphes au trait
+// dans le style lucide (24x24, currentColor) pour rester homogènes avec le reste du registre.
+const Facebook = createLucideIcon('facebook', [
+  ['path', { d: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z', key: 'fb' }],
+])
+const Linkedin = createLucideIcon('linkedin', [
+  [
+    'path',
+    {
+      d: 'M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z',
+      key: 'li1',
+    },
+  ],
+  ['rect', { width: '4', height: '12', x: '2', y: '9', key: 'li2' }],
+  ['circle', { cx: '4', cy: '4', r: '2', key: 'li3' }],
+])
+const Tiktok = createLucideIcon('tiktok', [
+  ['path', { d: 'M9 12a4 4 0 1 0 4 4V2a5 5 0 0 0 5 5', key: 'tt' }],
+])
 
 /**
  * Registre des icônes disponibles pour les onglets/raccourcis (remplace l'ancienne
@@ -39,6 +61,10 @@ export const TAB_ICON_REGISTRY: Record<string, LucideIcon> = {
   cloud: Cloud,
   sheet: Sheet,
   link: Link2,
+  ticket: Ticket,
+  facebook: Facebook,
+  linkedin: Linkedin,
+  tiktok: Tiktok,
 }
 
 export const TAB_ICON_PRESETS = Object.keys(TAB_ICON_REGISTRY)
