@@ -14,17 +14,21 @@ type FolderDef = {
   name: string
   icon: string
   color: string
-  /** Code de BU pour une audience restreinte ; absent = dossier global (visible de tous). */
-  buCode?: string
+  /**
+   * Codes des BU de l'audience restreinte ; absent = dossier global (visible de tous). Un outil
+   * commun à plusieurs BU est déclaré une seule fois, dans un dossier partagé par ces BU.
+   */
+  buCodes?: string[]
   tabs: TabDef[]
 }
 
 // Même forme que TabsService.create/createFolder : l'audience est portée par le dossier, ses
 // onglets n'en ont pas de propre (isGlobal false, aucune BU). Le dossier est reconnu par son nom
-// et son audience ; il est créé s'il manque, puis seuls les onglets absents (par URL) sont ajoutés.
-async function ensureFolder(def: FolderDef, buId: string | undefined, createdById: string) {
-  const audience = buId
-    ? { isGlobal: false, businessUnits: { some: { businessUnitId: buId } } }
+// et son audience (une BU en commun suffit) ; il est créé s'il manque, puis seuls les onglets
+// absents (par URL) sont ajoutés. L'audience d'un dossier existant n'est jamais modifiée.
+async function ensureFolder(def: FolderDef, buIds: string[], createdById: string) {
+  const audience = buIds.length
+    ? { isGlobal: false, businessUnits: { some: { businessUnitId: { in: buIds } } } }
     : { isGlobal: true }
   let folder = await prisma.portalTabFolder.findFirst({
     where: { name: def.name, ...audience },
@@ -37,10 +41,12 @@ async function ensureFolder(def: FolderDef, buId: string | undefined, createdByI
         name: def.name,
         icon: def.icon,
         color: def.color,
-        isGlobal: !buId,
+        isGlobal: !buIds.length,
         order: (max._max.order ?? -1) + 1,
         createdById,
-        businessUnits: buId ? { create: { businessUnitId: buId } } : undefined,
+        businessUnits: buIds.length
+          ? { create: buIds.map((businessUnitId) => ({ businessUnitId })) }
+          : undefined,
       },
       select: { id: true },
     })
@@ -480,205 +486,131 @@ async function main() {
   if (!cto.id) throw new Error('CTO user not found')
   if (!daf.id) throw new Error('DAF user not found')
 
-  const tabsByBu: Record<string, TabDef[]> = {
-    INFO: [
-      {
-        name: 'Google News',
-        url: 'https://news.google.com',
-        icon: 'newspaper',
-        color: '#4285F4',
-        description: 'Flux actualités Google',
-      },
-      {
-        name: 'Google Alertes',
-        url: 'https://www.google.fr/alerts',
-        icon: 'bell',
-        color: '#34A853',
-        description: 'Alertes médias configurées',
-      },
-      {
-        name: 'YouTube',
-        url: 'https://www.youtube.com',
-        icon: 'play-circle',
-        color: '#FF0000',
-        description: 'Veille vidéo',
-      },
-      {
-        name: 'X / Twitter',
-        url: 'https://x.com',
-        icon: 'x',
-        color: '#000000',
-        description: 'Réseau social X',
-      },
-    ],
-    EREP: [
-      {
-        name: 'X / Twitter',
-        url: 'https://x.com',
-        icon: 'x',
-        color: '#000000',
-        description: 'Suivi mentions X',
-      },
-      {
-        name: 'Facebook',
-        url: 'https://www.facebook.com',
-        icon: 'users',
-        color: '#1877F2',
-        description: 'Suivi Facebook',
-      },
-      {
-        name: 'LinkedIn',
-        url: 'https://www.linkedin.com',
-        icon: 'briefcase',
-        color: '#0A66C2',
-        description: 'Veille LinkedIn',
-      },
-      {
-        name: 'Google Alertes',
-        url: 'https://www.google.fr/alerts',
-        icon: 'bell',
-        color: '#34A853',
-        description: 'Alertes e-réputation',
-      },
-    ],
-    SCI: [
-      {
-        name: 'Google Drive',
-        url: 'https://drive.google.com',
-        icon: 'folder',
-        color: '#4285F4',
-        description: 'Documents partagés',
-      },
-      {
-        name: 'Gmail',
-        url: 'https://mail.google.com',
-        icon: 'mail',
-        color: '#EA4335',
-        description: 'Messagerie',
-      },
-      {
-        name: 'Trello',
-        url: 'https://trello.com',
-        icon: 'clipboard-list',
-        color: '#0079BF',
-        description: 'Gestion de projets',
-      },
-      {
-        name: 'Notion',
-        url: 'https://notion.so',
-        icon: 'notebook-pen',
-        color: '#000000',
-        description: 'Base de connaissances',
-      },
-    ],
-    ANALYSES: [
-      {
-        name: 'Google Drive',
-        url: 'https://drive.google.com',
-        icon: 'folder',
-        color: '#4285F4',
-        description: 'Rapports et analyses',
-      },
-      {
-        name: 'Looker Studio',
-        url: 'https://lookerstudio.google.com',
-        icon: 'bar-chart',
-        color: '#4285F4',
-        description: 'Tableaux de bord',
-      },
-      {
-        name: 'Google News',
-        url: 'https://news.google.com',
-        icon: 'newspaper',
-        color: '#4285F4',
-        description: 'Sources média',
-      },
-      {
-        name: 'YouTube',
-        url: 'https://www.youtube.com',
-        icon: 'play-circle',
-        color: '#FF0000',
-        description: 'Veille audiovisuelle',
-      },
-    ],
-    DT: [
-      {
-        name: 'GitHub',
-        url: 'https://github.com',
-        icon: 'git-branch',
-        color: '#24292E',
-        description: 'Dépôts de code',
-      },
-      {
-        name: 'Vercel',
-        url: 'https://vercel.com',
-        icon: 'triangle',
-        color: '#000000',
-        description: 'Déploiements frontend',
-      },
-      {
-        name: 'OVH',
-        url: 'https://www.ovhcloud.com',
-        icon: 'cloud',
-        color: '#123F6D',
-        description: 'Infrastructure serveurs',
-      },
-    ],
-    DAF: [
-      {
-        name: 'Google Drive',
-        url: 'https://drive.google.com',
-        icon: 'folder',
-        color: '#4285F4',
-        description: 'Documents financiers',
-      },
-      {
-        name: 'Gmail',
-        url: 'https://mail.google.com',
-        icon: 'mail',
-        color: '#EA4335',
-        description: 'Messagerie DAF',
-      },
-      {
-        name: 'Excel Online',
-        url: 'https://www.office.com/launch/excel',
-        icon: 'sheet',
-        color: '#217346',
-        description: 'Tableaux comptables',
-      },
-    ],
-  }
+  // Onglets sans dossier : chaque outil n'est déclaré qu'une fois, avec la liste des BU qui s'en
+  // servent (un seul onglet partagé plutôt qu'une copie par BU). Reconnu par son URL parmi les
+  // onglets sans dossier d'une de ces BU ; l'audience d'un onglet existant n'est jamais modifiée.
+  const looseTabDefs: (TabDef & { buCodes: string[] })[] = [
+    {
+      name: 'Google News',
+      url: 'https://news.google.com',
+      icon: 'newspaper',
+      color: '#4285F4',
+      description: 'Flux d’actualités Google',
+      buCodes: ['INFO', 'ANALYSES'],
+    },
+    {
+      name: 'Google Alertes',
+      url: 'https://www.google.fr/alerts',
+      icon: 'bell',
+      color: '#34A853',
+      description: 'Alertes médias et e-réputation',
+      buCodes: ['INFO', 'EREP'],
+    },
+    {
+      // Mention, commun à l'E-Réputation et aux Analyses Médiatiques : URL d'accueil générique
+      // (chacun arrive sur son espace de travail) plutôt qu'un lien profond propre à une BU.
+      name: 'Mention',
+      url: 'https://web.mention.com/',
+      icon: 'bell',
+      color: '#1F8FFF',
+      description: 'Veille des mentions en ligne',
+      buCodes: ['EREP', 'ANALYSES'],
+    },
+    {
+      name: 'Gmail',
+      url: 'https://mail.google.com',
+      icon: 'mail',
+      color: '#EA4335',
+      description: 'Messagerie',
+      buCodes: ['SCI', 'DAF'],
+    },
+    {
+      name: 'Trello',
+      url: 'https://trello.com',
+      icon: 'clipboard-list',
+      color: '#0079BF',
+      description: 'Gestion de projets',
+      buCodes: ['SCI'],
+    },
+    {
+      name: 'Notion',
+      url: 'https://notion.so',
+      icon: 'notebook-pen',
+      color: '#000000',
+      description: 'Base de connaissances',
+      buCodes: ['SCI'],
+    },
+    {
+      name: 'Looker Studio',
+      url: 'https://lookerstudio.google.com',
+      icon: 'bar-chart',
+      color: '#4285F4',
+      description: 'Tableaux de bord',
+      buCodes: ['ANALYSES'],
+    },
+    {
+      name: 'GitHub',
+      url: 'https://github.com',
+      icon: 'git-branch',
+      color: '#24292E',
+      description: 'Dépôts de code',
+      buCodes: ['DT'],
+    },
+    {
+      name: 'Vercel',
+      url: 'https://vercel.com',
+      icon: 'triangle',
+      color: '#000000',
+      description: 'Déploiements frontend',
+      buCodes: ['DT'],
+    },
+    {
+      name: 'OVH',
+      url: 'https://www.ovhcloud.com',
+      icon: 'cloud',
+      color: '#123F6D',
+      description: 'Infrastructure serveurs',
+      buCodes: ['DT'],
+    },
+    {
+      name: 'Excel Online',
+      url: 'https://www.office.com/launch/excel',
+      icon: 'sheet',
+      color: '#217346',
+      description: 'Tableurs Excel',
+      buCodes: ['DAF', 'ANALYSES'],
+    },
+  ]
 
-  for (const [buCode, tabs] of Object.entries(tabsByBu)) {
-    const buId = bus[buCode]
-    const createdById = buCode === 'DAF' ? daf.id : cto.id
-    for (const tab of tabs) {
-      const existing = await prisma.portalTab.findFirst({
-        where: { url: tab.url, businessUnits: { some: { businessUnitId: buId } } },
-        select: { id: true },
-      })
-      if (existing) continue
-      await prisma.portalTab.create({
-        data: {
-          name: tab.name,
-          icon: tab.icon,
-          color: tab.color,
-          description: tab.description,
-          createdById,
-          url: tab.url,
-          isActive: true,
-          businessUnits: { create: { businessUnitId: buId } },
-        },
-      })
-      created.tabs++
-      console.log(`  + Onglet [${buCode}] : ${tab.name}`)
-    }
+  for (const { buCodes, ...tab } of looseTabDefs) {
+    const buIds = buCodes.map((code) => bus[code])
+    const createdById = buCodes.every((code) => code === 'DAF') ? daf.id : cto.id
+    const existing = await prisma.portalTab.findFirst({
+      where: {
+        url: tab.url,
+        folderId: null,
+        businessUnits: { some: { businessUnitId: { in: buIds } } },
+      },
+      select: { id: true },
+    })
+    if (existing) continue
+    await prisma.portalTab.create({
+      data: {
+        ...tab,
+        createdById,
+        isActive: true,
+        businessUnits: { create: buIds.map((businessUnitId) => ({ businessUnitId })) },
+      },
+    })
+    created.tabs++
+    console.log(`  + Onglet [${buCodes.join(', ')}] : ${tab.name}`)
   }
 
   // ---- Dossiers d'onglets ----
   const folderDefs: FolderDef[] = [
     {
-      // Comptes officiels VdM, visibles de tous.
+      // Réseaux sociaux (comptes officiels VdM), utilisés par toutes les BU et visibles de tous —
+      // pas d'onglet réseau en double ailleurs.
       name: 'Réseaux sociaux',
       icon: 'users',
       color: '#F28C38',
@@ -728,26 +660,11 @@ async function main() {
       ],
     },
     {
-      // Plateformes métier de la BU E-Réputation.
-      name: 'Veille e-réputation',
-      icon: 'bar-chart',
+      // Plateforme de travail utilisée par toutes les BU, visible de tous.
+      name: 'Plateforme de travail',
+      icon: 'newspaper',
       color: '#F28C38',
-      buCode: 'EREP',
       tabs: [
-        {
-          name: 'Mention',
-          url: 'https://web.mention.com/',
-          icon: 'bell',
-          color: '#1F8FFF',
-          description: 'Veille des mentions en ligne',
-        },
-        {
-          name: 'Talkwalker',
-          url: 'https://www.talkwalker.com/fr',
-          icon: 'bar-chart',
-          color: '#00A3E0',
-          description: 'Écoute sociale et analyse',
-        },
         {
           name: 'Smart VdM',
           url: 'https://smart.veilleurdesmedias.com/dashboard',
@@ -758,11 +675,27 @@ async function main() {
       ],
     },
     {
-      // Outils généraux utilisés par la BU E-Réputation.
+      // Plateformes métier de la BU E-Réputation.
+      name: 'Veille e-réputation',
+      icon: 'bar-chart',
+      color: '#F28C38',
+      buCodes: ['EREP'],
+      tabs: [
+        {
+          name: 'Talkwalker',
+          url: 'https://www.talkwalker.com/fr',
+          icon: 'bar-chart',
+          color: '#00A3E0',
+          description: 'Écoute sociale et analyse',
+        },
+      ],
+    },
+    {
+      // Outils généraux utilisés par les BU E-Réputation et Analyses Médiatiques.
       name: 'Recherche & IA',
       icon: 'search',
       color: '#F28C38',
-      buCode: 'EREP',
+      buCodes: ['EREP', 'ANALYSES'],
       tabs: [
         {
           name: 'Google',
@@ -780,9 +713,185 @@ async function main() {
         },
       ],
     },
+    {
+      // BU Analyses Médiatiques — outils propres à la BU (les outils communs sont partagés ailleurs).
+      name: 'Analyses médiatiques',
+      icon: 'bar-chart',
+      color: '#F28C38',
+      buCodes: ['ANALYSES'],
+      tabs: [
+        {
+          name: 'PowerPoint',
+          url: 'https://www.office.com/launch/powerpoint',
+          icon: 'presentation',
+          color: '#D24726',
+          description: 'Présentations des analyses',
+        },
+        {
+          name: 'Prompt Cowboy',
+          url: 'https://www.promptcowboy.ai/',
+          icon: 'sparkles',
+          color: '#B45309',
+          description: 'Rédaction et optimisation de prompts IA',
+        },
+      ],
+    },
+    {
+      // BU Information — applications de téléchargement et de conversion.
+      name: 'Téléchargement & conversion',
+      icon: 'download',
+      color: '#F28C38',
+      buCodes: ['INFO'],
+      tabs: [
+        {
+          name: 'TurboScribe',
+          url: 'https://turboscribe.ai/fr/',
+          icon: 'file-text',
+          color: '#6D28D9',
+          description: 'Transcription audio et vidéo',
+        },
+        {
+          name: 'FreeConvert',
+          url: 'https://www.freeconvert.com/fr',
+          icon: 'download',
+          color: '#2563EB',
+          description: 'Conversion de fichiers',
+        },
+        {
+          name: 'SaveFrom',
+          url: 'https://fr.savefrom.net/351Dr/',
+          icon: 'download',
+          color: '#16A34A',
+          description: 'Téléchargement de vidéos en ligne',
+        },
+        {
+          name: 'FBDownLoader',
+          url: 'https://fbdownloader.to/fr',
+          icon: 'facebook',
+          color: '#1877F2',
+          description: 'Téléchargement de vidéos Facebook',
+        },
+        {
+          name: 'SSYouTube',
+          url: 'https://fr.ssyoutube.com/',
+          icon: 'youtube',
+          color: '#FF0000',
+          description: 'Téléchargement de vidéos YouTube',
+        },
+        {
+          name: 'Convertio',
+          url: 'https://convertio.co/fr/',
+          icon: 'download',
+          color: '#E11D48',
+          description: 'Conversion de fichiers',
+        },
+        {
+          name: 'WeTransfer',
+          url: 'https://wetransfer.com/',
+          icon: 'cloud',
+          color: '#409FFF',
+          description: 'Transfert de fichiers volumineux',
+        },
+      ],
+    },
+    {
+      // Stockage et gestion des fichiers, commun à la BU Information et aux BU déjà équipées
+      // de Google Drive (un seul Drive partagé au lieu d'un onglet par BU).
+      name: 'Stockage & données',
+      icon: 'folder',
+      color: '#F28C38',
+      buCodes: ['INFO', 'SCI', 'ANALYSES', 'DAF'],
+      tabs: [
+        {
+          name: 'Google Drive',
+          url: 'https://drive.google.com/drive/home',
+          icon: 'folder',
+          color: '#4285F4',
+          description: 'Fichiers et dossiers partagés',
+        },
+        {
+          name: 'Google Sheets',
+          url: 'https://docs.google.com/spreadsheets/u/0/',
+          icon: 'sheet',
+          color: '#0F9D58',
+          description: 'Feuilles de calcul',
+        },
+        {
+          name: 'Google Docs',
+          url: 'https://docs.google.com/document/u/0/',
+          icon: 'file-text',
+          color: '#4285F4',
+          description: 'Documents texte',
+        },
+      ],
+    },
+    {
+      // BU Information — enregistrement et acquisition des points d'information.
+      name: 'Points d’information',
+      icon: 'tv',
+      color: '#F28C38',
+      buCodes: ['INFO'],
+      tabs: [
+        {
+          name: 'VLC Media Player',
+          url: 'https://vlc-media-player.fr.softonic.com/telecharger',
+          icon: 'play-circle',
+          color: '#FF8800',
+          description: 'Enregistrement des points d’information',
+        },
+        {
+          name: 'My Canal',
+          url: 'https://www.canalplus.com/ci/',
+          icon: 'tv',
+          color: '#000000',
+          description: 'Acquisition des programmes TV',
+        },
+        {
+          name: 'Flux médiatiques',
+          url: 'https://docs.google.com/spreadsheets/d/1Kmnqed-VpqpBlg77vO6HQ5W5v5HmwvG0Tk-GfLWfrYc/edit?gid=0#gid=0',
+          icon: 'sheet',
+          color: '#0F9D58',
+          description: 'Liste des flux médiatiques suivis',
+        },
+      ],
+    },
+    {
+      // BU Information — intelligence artificielle et correction.
+      name: 'Intelligence artificielle',
+      icon: 'sparkles',
+      color: '#F28C38',
+      buCodes: ['INFO'],
+      tabs: [
+        {
+          name: 'Gemini',
+          url: 'https://gemini.google.com/app?hl=fr',
+          icon: 'sparkles',
+          color: '#1A73E8',
+          description: 'Assistant IA Google',
+        },
+        {
+          name: 'ChatGPT',
+          url: 'https://chatgpt.com/',
+          icon: 'sparkles',
+          color: '#10A37F',
+          description: 'Assistant IA OpenAI',
+        },
+        {
+          name: 'SpellBoy',
+          url: 'https://www.spellboy.com/verification_orthographique/',
+          icon: 'spell-check',
+          color: '#DC2626',
+          description: 'Vérification orthographique',
+        },
+      ],
+    },
   ]
   for (const def of folderDefs) {
-    await ensureFolder(def, def.buCode ? bus[def.buCode] : undefined, cto.id)
+    await ensureFolder(
+      def,
+      (def.buCodes ?? []).map((code) => bus[code]),
+      cto.id
+    )
   }
 
   // ---- Jours fériés (Côte d'Ivoire — dates fixes récurrentes) ----
