@@ -517,14 +517,6 @@ async function main() {
       buCodes: ['EREP', 'ANALYSES'],
     },
     {
-      name: 'Gmail',
-      url: 'https://mail.google.com',
-      icon: 'mail',
-      color: '#EA4335',
-      description: 'Messagerie',
-      buCodes: ['SCI', 'DAF'],
-    },
-    {
       name: 'Trello',
       url: 'https://trello.com',
       icon: 'clipboard-list',
@@ -671,6 +663,28 @@ async function main() {
           icon: 'newspaper',
           color: '#F28C38',
           description: 'Tableau de bord Smart VdM',
+        },
+      ],
+    },
+    {
+      // Messageries utilisées par toutes les BU, visibles de tous.
+      name: 'Boîtes mail',
+      icon: 'mail',
+      color: '#F28C38',
+      tabs: [
+        {
+          name: 'Gmail',
+          url: 'https://mail.google.com/',
+          icon: 'mail',
+          color: '#EA4335',
+          description: 'Messagerie Google',
+        },
+        {
+          name: 'OVH Webmail',
+          url: 'https://mail.ovh.net/roundcube/',
+          icon: 'mail',
+          color: '#123F6D',
+          description: 'Messagerie professionnelle OVH',
         },
       ],
     },
