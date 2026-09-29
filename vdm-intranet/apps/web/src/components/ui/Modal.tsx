@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 const SIZES = {
@@ -100,9 +101,11 @@ export function Modal({
     }
   }, [open])
 
-  if (!open) return null
+  if (!open || typeof document === 'undefined') return null
 
-  return (
+  // Portail vers <body> : un ancêtre avec backdrop-filter/transform (ex. cartes de widgets en
+  // verre dépoli) deviendrait sinon le bloc conteneur du `fixed` et rognerait la modale.
+  return createPortal(
     /* Backdrop */
     <div
       className="vdm-backdrop-in fixed inset-0 z-[9000] flex items-end sm:items-center justify-center p-0 sm:p-4"
@@ -155,6 +158,7 @@ export function Modal({
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

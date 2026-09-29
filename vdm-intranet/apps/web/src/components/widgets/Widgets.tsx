@@ -245,27 +245,33 @@ function AnnouncementDetailModal({
       onClose={onClose}
       title={item?.title ?? ''}
       subtitle={item ? formatAnnouncementDateFull(item.publishedAt) : undefined}
+      size="md"
     >
       {item && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {(item.isPinned || item.businessUnit) && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {item.isPinned && (
-                <span className="text-[10px] font-bold text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-semibold text-[#F28C38] bg-[#F28C38]/10 px-2 py-0.5 rounded-full">
                   Épinglée
                 </span>
               )}
               {item.businessUnit && (
-                <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
                   {item.businessUnit.name}
                 </span>
               )}
             </div>
           )}
-          <div className="text-sm text-gray-700 whitespace-pre-wrap">{item.body}</div>
+          <div className="text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap break-words">
+            {item.body}
+          </div>
           {item.createdBy && (
-            <div className="text-[11px] text-gray-400 pt-2 border-t border-gray-100">
-              Publié par {item.createdBy.fullName ?? item.createdBy.username}
+            <div className="text-xs text-gray-400 pt-3 border-t border-gray-100">
+              Publié par{' '}
+              <span className="font-medium text-gray-600">
+                {item.createdBy.fullName ?? item.createdBy.username}
+              </span>
             </div>
           )}
         </div>
