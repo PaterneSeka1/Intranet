@@ -71,14 +71,19 @@ async function ensureFolder(def: FolderDef, buIds: string[], createdById: string
 async function main() {
   console.log('Seed Module 4 — VdM Intranet')
 
+  // SEED_SKIP_USERS=1 : aucun compte n'est créé (base dont les utilisateurs existent déjà, ex. la
+  // prod). Les comptes existants sont seulement recherchés pour renseigner l'auteur des onglets.
+  const skipUsers = process.env.SEED_SKIP_USERS === '1'
+  if (skipUsers) console.log('  SEED_SKIP_USERS=1 : aucun utilisateur ne sera créé.')
+
   const seedPassword = process.env.SEED_PASSWORD
-  if (!seedPassword) {
+  if (!seedPassword && !skipUsers) {
     throw new Error(
       'SEED_PASSWORD manquant. Définissez-le dans votre .env avant de lancer le seed.\n' +
         'Exemple : SEED_PASSWORD="MotDePasse-Fort-2024!"'
     )
   }
-  const pwd = await bcrypt.hash(seedPassword, 12)
+  const pwd = seedPassword ? await bcrypt.hash(seedPassword, 12) : ''
 
   // ---- Business Units ----
   const buDefs = [
@@ -439,6 +444,7 @@ async function main() {
       userIds[u.username] = existing.id
       continue
     }
+    if (skipUsers) continue
     const r = await prisma.user.create({
       data: {
         username: u.username,
@@ -482,7 +488,8 @@ async function main() {
 
   // ---- Onglets par BU (créés par le responsable applicatif du périmètre) ----
   const cto = { id: userIds['CTO'] }
-  const daf = { id: userIds['DAF'] }
+  // Sans création de comptes, le DAF de démo peut ne pas exister : ses onglets reviennent au CTO.
+  const daf = { id: userIds['DAF'] ?? (skipUsers ? cto.id : undefined) }
   if (!cto.id) throw new Error('CTO user not found')
   if (!daf.id) throw new Error('DAF user not found')
 
