@@ -134,6 +134,47 @@ function setCachedHolidays(data: PublicHoliday[]) {
   }
 }
 
+// Annonces lues : suivi local (même approche que le bandeau), empreinte = updatedAt
+// pour qu'une annonce modifiée redevienne non lue.
+const READ_ANNOUNCEMENTS_KEY = 'vdm_read_announcements'
+
+type ReadMap = Record<string, string>
+
+function loadReadAnnouncements(): ReadMap {
+  try {
+    const raw = localStorage.getItem(READ_ANNOUNCEMENTS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as ReadMap) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveReadAnnouncements(items: ReadMap) {
+  try {
+    localStorage.setItem(READ_ANNOUNCEMENTS_KEY, JSON.stringify(items))
+  } catch {
+    /* noop */
+  }
+}
+
+function isAnnouncementRead(item: Announcement, read: ReadMap) {
+  return read[item.id] === item.updatedAt
+}
+
+function UnreadBadge({ count, className = '' }: { count: number; className?: string }) {
+  if (count <= 0) return null
+  return (
+    <span
+      title={`${count} annonce(s) non lue(s)`}
+      className={`min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0 ${className}`}
+    >
+      {count > 9 ? '9+' : count}
+    </span>
+  )
+}
+
 function formatAnnouncementDate(value: string): string {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return ''
@@ -152,7 +193,15 @@ function formatAnnouncementDateFull(value: string): string {
   })
 }
 
-function AnnouncementItem({ item, onSelect }: { item: Announcement; onSelect: () => void }) {
+function AnnouncementItem({
+  item,
+  unread,
+  onSelect,
+}: {
+  item: Announcement
+  unread: boolean
+  onSelect: () => void
+}) {
   return (
     <button
       type="button"
@@ -160,6 +209,9 @@ function AnnouncementItem({ item, onSelect }: { item: Announcement; onSelect: ()
       className="w-full text-left border-t border-gray-100 pt-2.5 pb-2 px-2 -mx-2 first:border-t-0 first:pt-0 rounded-lg transition-colors hover:bg-gray-100 group"
     >
       <div className="flex items-center gap-2 mb-1">
+        {unread && (
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" aria-label="Non lue" />
+        )}
         {item.isPinned && (
           <span className="text-[10px] font-bold text-[#F28C38] bg-[#F28C38]/10 px-1.5 py-0.5 rounded-full">
             Épinglée
@@ -169,7 +221,11 @@ function AnnouncementItem({ item, onSelect }: { item: Announcement; onSelect: ()
           {formatAnnouncementDate(item.publishedAt)}
         </span>
       </div>
-      <div className="text-xs font-semibold text-gray-800 line-clamp-1 group-hover:text-[#F28C38] group-hover:underline">
+      <div
+        className={`text-xs line-clamp-1 group-hover:text-[#F28C38] group-hover:underline ${
+          unread ? 'font-bold text-gray-900' : 'font-semibold text-gray-600'
+        }`}
+      >
         {item.title}
       </div>
     </button>
@@ -218,11 +274,25 @@ function AnnouncementDetailModal({
   )
 }
 
-function AnnouncementWidget({ announcements }: { announcements: Announcement[] }) {
+function AnnouncementWidget({
+  announcements,
+  read,
+  onRead,
+}: {
+  announcements: Announcement[]
+  read: ReadMap
+  onRead: (item: Announcement) => void
+}) {
   const [selected, setSelected] = useState<Announcement | null>(null)
   const pinned = announcements.filter((a) => a.isPinned)
   const regular = announcements.filter((a) => !a.isPinned)
   const items = [...pinned, ...regular]
+  const unreadCount = items.filter((a) => !isAnnouncementRead(a, read)).length
+
+  function open(item: Announcement) {
+    setSelected(item)
+    onRead(item)
+  }
 
   return (
     <div
@@ -230,8 +300,11 @@ function AnnouncementWidget({ announcements }: { announcements: Announcement[] }
     >
       <div className="flex items-center justify-between gap-3 mb-3 shrink-0">
         <div>
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            Annonces
+          <div className="flex items-center gap-1.5">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Annonces
+            </div>
+            <UnreadBadge count={unreadCount} />
           </div>
           <div className="text-sm font-semibold text-gray-900">Dernières informations</div>
         </div>
@@ -245,7 +318,12 @@ function AnnouncementWidget({ announcements }: { announcements: Announcement[] }
       ) : (
         <div className="space-y-2.5 overflow-y-auto pr-1">
           {items.map((item) => (
-            <AnnouncementItem key={item.id} item={item} onSelect={() => setSelected(item)} />
+            <AnnouncementItem
+              key={item.id}
+              item={item}
+              unread={!isAnnouncementRead(item, read)}
+              onSelect={() => open(item)}
+            />
           ))}
         </div>
       )}
@@ -347,6 +425,7 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
   const [visible, setVisible] = useState<Record<WidgetKey, boolean>>(DEFAULT_WIDGET_VISIBILITY)
   const [holidays, setHolidays] = useState<PublicHoliday[]>([])
   const [onLeave, setOnLeave] = useState<EmployeeOnLeave[]>([])
+  const [readAnnouncements, setReadAnnouncements] = useState<ReadMap>({})
 
   useLayoutEffect(() => {
     try {
@@ -361,7 +440,25 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
 
     const cachedHolidays = getCachedHolidays()
     if (cachedHolidays) setHolidays(cachedHolidays)
+
+    setReadAnnouncements(loadReadAnnouncements())
   }, [])
+
+  function markAnnouncementRead(item: Announcement) {
+    setReadAnnouncements((prev) => {
+      if (prev[item.id] === item.updatedAt) return prev
+      // On ne conserve que les annonces encore actives pour ne pas faire grossir le stockage
+      const activeIds = new Set(announcements.map((a) => a.id))
+      const next: ReadMap = { [item.id]: item.updatedAt }
+      for (const [id, fp] of Object.entries(prev)) if (activeIds.has(id)) next[id] ??= fp
+      saveReadAnnouncements(next)
+      return next
+    })
+  }
+
+  const unreadAnnouncements = announcements.filter(
+    (a) => !isAnnouncementRead(a, readAnnouncements)
+  ).length
 
   useEffect(() => {
     if (getCachedHolidays()) return
@@ -442,7 +539,7 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
           <button
             key={key}
             onClick={() => toggleWidget(key)}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all backdrop-blur-sm shadow-md border ${
+            className={`relative px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all backdrop-blur-sm shadow-md border ${
               DESKTOP_ONLY_WIDGETS.has(key) ? 'hidden lg:inline-block' : ''
             } ${
               visible[key]
@@ -451,11 +548,20 @@ export function Widgets({ announcements = [] }: { announcements?: Announcement[]
             }`}
           >
             {WIDGET_LABELS[key]}
+            {key === 'announcements' && !visible.announcements && (
+              <UnreadBadge count={unreadAnnouncements} className="absolute -top-1.5 -right-1.5" />
+            )}
           </button>
         ))}
       </div>
 
-      {visible.announcements && <AnnouncementWidget announcements={announcements} />}
+      {visible.announcements && (
+        <AnnouncementWidget
+          announcements={announcements}
+          read={readAnnouncements}
+          onRead={markAnnouncementRead}
+        />
+      )}
 
       {visible.leave && <LeaveWidget employees={onLeave} />}
 
