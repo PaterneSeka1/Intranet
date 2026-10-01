@@ -7,9 +7,11 @@
  * À lancer UNIQUEMENT sur décision du DSI, depuis la racine du dépôt :
  *   node scripts/send-launch-invitations.js           # essai à blanc : liste destinataires et exclus
  *   node scripts/send-launch-invitations.js --send    # envoi réel
+ *   node scripts/send-launch-invitations.js --only a@x.com,b@x.com [--send]
+ *                                                     # limite aux adresses listées (renvoi ciblé)
  *
  * Prérequis : API compilée et à jour (bash scripts/deploy.sh).
- * Relancer --send renvoie un nouveau lien à tout le monde et invalide le précédent.
+ * Relancer --send sans --only renvoie un nouveau lien à tout le monde et invalide le précédent.
  */
 const path = require('path')
 
@@ -37,6 +39,11 @@ const EXCLUSIONS = [
 ]
 
 const SEND = process.argv.includes('--send')
+const onlyIdx = process.argv.indexOf('--only')
+const ONLY =
+  onlyIdx === -1
+    ? null
+    : (process.argv[onlyIdx + 1] ?? '').split(',').map(normalize).filter(Boolean)
 const DELAY_MS = 2000 // espacement des envois pour ne pas être limité par le SMTP OVH
 
 async function main() {
@@ -65,7 +72,20 @@ async function main() {
       excluded.push(hits[0])
     }
     const excludedIds = new Set(excluded.map((u) => u.id))
-    const targets = users.filter((u) => !excludedIds.has(u.id))
+    let targets = users.filter((u) => !excludedIds.has(u.id))
+
+    if (ONLY) {
+      const unknown = ONLY.filter((email) => !targets.some((u) => normalize(u.email) === email))
+      if (!ONLY.length || unknown.length) {
+        console.error(
+          'ARRÊT : --only contient des adresses absentes des destinataires (inexistantes, inactives ou exclues) :',
+          unknown.length ? unknown : '(liste vide)'
+        )
+        process.exitCode = 1
+        return
+      }
+      targets = targets.filter((u) => ONLY.includes(normalize(u.email)))
+    }
 
     console.log(`Comptes actifs : ${users.length}`)
     console.log(`Exclus (${excluded.length}) :`)
