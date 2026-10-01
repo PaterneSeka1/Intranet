@@ -2,7 +2,7 @@ import { fetchSettings } from '@/lib/settings'
 import { ResetPasswordClient } from '@/components/auth/ResetPasswordClient'
 
 interface Props {
-  searchParams: { token?: string }
+  searchParams: { token?: string; activation?: string }
 }
 
 export default async function ResetPasswordPage({ searchParams }: Props) {
@@ -12,6 +12,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
   return (
     <ResetPasswordClient
       token={searchParams.token}
+      activation={searchParams.activation === '1'}
       initialAppName={s['vdm_app_name'] || 'VdM Intranet'}
       initialAppSubtitle={s['vdm_app_subtitle'] || 'Veilleur des Médias — Abidjan'}
       initialLogo={s['vdm_logo']}

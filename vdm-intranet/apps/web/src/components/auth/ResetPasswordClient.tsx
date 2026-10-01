@@ -10,6 +10,8 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 
 interface Props {
   token?: string
+  // Lien d'invitation du lancement officiel : mêmes mécanismes, libellés d'activation.
+  activation?: boolean
   initialAppName?: string
   initialAppSubtitle?: string
   initialLogo?: string
@@ -48,6 +50,7 @@ function Shell({
 
 export function ResetPasswordClient({
   token,
+  activation = false,
   initialAppName = 'VdM Intranet',
   initialAppSubtitle = 'Veilleur des Médias — Abidjan',
   initialLogo,
@@ -63,7 +66,9 @@ export function ResetPasswordClient({
       <Shell appName={initialAppName} appSubtitle={initialAppSubtitle} logo={initialLogo}>
         <div className="space-y-5">
           <div className="bg-red-50 border border-red-100 rounded-xl px-3.5 py-3 text-sm text-red-600">
-            Ce lien de réinitialisation est invalide ou incomplet.
+            {activation
+              ? 'Ce lien d’activation est invalide ou incomplet.'
+              : 'Ce lien de réinitialisation est invalide ou incomplet.'}
           </div>
           <Link
             href="/mot-de-passe-oublie"
@@ -92,7 +97,11 @@ export function ResetPasswordClient({
     setLoading(true)
     try {
       await api.auth.resetPassword(token!, password)
-      toast.success('Mot de passe réinitialisé avec succès. Vous pouvez vous connecter.')
+      toast.success(
+        activation
+          ? 'Votre compte est activé. Vous pouvez vous connecter.'
+          : 'Mot de passe réinitialisé avec succès. Vous pouvez vous connecter.'
+      )
       router.push('/login')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Impossible de contacter le serveur.')
@@ -104,12 +113,17 @@ export function ResetPasswordClient({
   return (
     <Shell appName={initialAppName} appSubtitle={initialAppSubtitle} logo={initialLogo}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {activation && (
+          <p className="text-sm text-gray-600 text-center">
+            Bienvenue ! Choisissez votre mot de passe pour activer votre compte.
+          </p>
+        )}
         <div>
           <label
             htmlFor="rp-password"
             className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide"
           >
-            Nouveau mot de passe
+            {activation ? 'Mot de passe' : 'Nouveau mot de passe'}
           </label>
           <PasswordInput
             id="rp-password"
@@ -152,7 +166,13 @@ export function ResetPasswordClient({
           disabled={loading}
           className="w-full bg-[#F28C38] hover:bg-[#e07d29] active:bg-[#d06e1a] text-white font-semibold py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
         >
-          {loading ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
+          {activation
+            ? loading
+              ? 'Activation…'
+              : 'Activer mon compte'
+            : loading
+              ? 'Réinitialisation…'
+              : 'Réinitialiser le mot de passe'}
         </button>
       </form>
     </Shell>

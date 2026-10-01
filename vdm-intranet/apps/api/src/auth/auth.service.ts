@@ -12,6 +12,9 @@ import { PrismaService } from '../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
+// Invitation du lancement officiel : envoyée par l'administration (pas demandée par l'employé),
+// d'où une validité plus longue que le lien « mot de passe oublié ».
+const INVITATION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const GENERIC_FORGOT_MESSAGE =
   'Si un compte existe avec cet identifiant, un email de réinitialisation a été envoyé.'
 const LOGIN_LOCKOUT_THRESHOLD = 5
@@ -96,17 +99,7 @@ export class AuthService {
 
     // Réponse volontairement générique — ne jamais révéler si le compte existe ou a un email.
     if (user && user.isActive && user.email) {
-      const rawToken = crypto.randomBytes(32).toString('hex')
-      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
-      const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS)
-
-      await this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } })
-      await this.prisma.passwordResetToken.create({
-        data: { userId: user.id, tokenHash, expiresAt },
-      })
-
-      const frontendUrl = this.config.get<string>('NEXT_PUBLIC_APP_URL') ?? 'http://localhost:3000'
-      const resetUrl = `${frontendUrl}/reinitialiser-mot-de-passe?token=${rawToken}`
+      const resetUrl = await this.createPasswordResetUrl(user.id, RESET_TOKEN_TTL_MS)
       await this.mailService.sendPasswordReset(
         user.email,
         user.firstName ?? user.username,
@@ -115,6 +108,37 @@ export class AuthService {
     }
 
     return { message: GENERIC_FORGOT_MESSAGE }
+  }
+
+  // Email d'invitation du lancement officiel : lien de création du mot de passe valable 7 jours.
+  // Jamais déclenché automatiquement — uniquement sur décision explicite du DSI.
+  async sendLaunchInvitation(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } })
+    if (!user || !user.isActive || !user.email) {
+      throw new NotFoundException('Compte introuvable, inactif ou sans email')
+    }
+
+    // `activation=1` : la page affiche les libellés d'activation au lieu de « réinitialiser ».
+    const setupUrl =
+      (await this.createPasswordResetUrl(user.id, INVITATION_TOKEN_TTL_MS)) + '&activation=1'
+    await this.mailService.sendLaunchInvitation(
+      user.email,
+      user.firstName ?? user.username,
+      user.matricule,
+      setupUrl
+    )
+  }
+
+  private async createPasswordResetUrl(userId: string, ttlMs: number): Promise<string> {
+    const rawToken = crypto.randomBytes(32).toString('hex')
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+    const expiresAt = new Date(Date.now() + ttlMs)
+
+    await this.prisma.passwordResetToken.deleteMany({ where: { userId } })
+    await this.prisma.passwordResetToken.create({ data: { userId, tokenHash, expiresAt } })
+
+    const frontendUrl = this.config.get<string>('NEXT_PUBLIC_APP_URL') ?? 'http://localhost:3000'
+    return `${frontendUrl}/reinitialiser-mot-de-passe?token=${rawToken}`
   }
 
   async resetPassword(token: string, newPassword: string) {
