@@ -309,14 +309,14 @@ const containerDndId = (key: string) => `container:${key}`
 
 /**
  * Nombre de colonnes de la grille des dossiers, calé sur les points de rupture Tailwind
- * (1 / sm:2 / lg:3). Les dossiers sont répartis en colonnes indépendantes (masonry) pour
- * qu'un dossier replié ne laisse pas un grand vide sous lui.
+ * (1 / md:2 / xl:3, la barre latérale réduisant la largeur utile). Les dossiers sont répartis
+ * en colonnes indépendantes (masonry) pour qu'un dossier replié ne laisse pas un grand vide sous lui.
  */
 function useFolderColumnCount(): number {
   const [count, setCount] = useState(1)
   useEffect(() => {
-    const lg = window.matchMedia('(min-width: 1024px)')
-    const sm = window.matchMedia('(min-width: 640px)')
+    const lg = window.matchMedia('(min-width: 1280px)')
+    const sm = window.matchMedia('(min-width: 768px)')
     const update = () => setCount(lg.matches ? 3 : sm.matches ? 2 : 1)
     update()
     lg.addEventListener('change', update)
@@ -755,10 +755,11 @@ function FolderSection({
       style={style}
       className="min-w-0 bg-gray-50/60 border border-gray-100 rounded-2xl p-3 sm:p-4"
     >
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <div className={`flex items-center justify-between gap-2 ${collapsed ? '' : 'mb-3'}`}>
         <button
           type="button"
           onClick={onToggleCollapsed}
+          title={folder.name}
           className="flex items-center gap-2 min-w-0 text-left flex-1"
         >
           {dndEnabled && canManageThis && (
@@ -779,14 +780,22 @@ function FolderSection({
               className="w-4 h-4"
             />
           </span>
-          <span className="font-semibold text-gray-800 text-sm truncate">{folder.name}</span>
-          <span className="text-[10px] text-gray-400 bg-white px-1.5 py-0.5 rounded-full shrink-0">
-            {ids.length}
+          {/* Nom sur la première ligne, badges d'audience en dessous : sur une seule ligne, les
+              badges (non compressibles) écrasaient le nom et débordaient sous les actions. */}
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold text-gray-800 text-sm truncate">{folder.name}</span>
+              <span className="text-[10px] text-gray-400 bg-white px-1.5 py-0.5 rounded-full shrink-0">
+                {ids.length}
+              </span>
+            </span>
+            <span className="flex flex-wrap gap-1 mt-1">
+              <AudienceBadges item={folder} chipClassName="bg-white" />
+            </span>
           </span>
-          <AudienceBadges item={folder} chipClassName="bg-white" />
         </button>
         {canManageThis && (
-          <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-0.5 flex-shrink-0">
             <button
               onClick={onCreateTabHere}
               className="p-1.5 rounded-lg hover:bg-white text-gray-400 hover:text-[#F28C38] transition-colors"
