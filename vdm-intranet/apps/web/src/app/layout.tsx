@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await fetchSettings()
   const s = Object.fromEntries(settings.map((x) => [x.key, x.value]))
   const appName = s['vdm_app_name'] || 'VdM Intranet'
-  const favicon = s['vdm_favicon'] || s['vdm_logo'] || '/icon-192.png'
+  const favicon = s['vdm_favicon'] || s['vdm_logo'] || '/logo-192.png'
 
   return {
     title: appName,

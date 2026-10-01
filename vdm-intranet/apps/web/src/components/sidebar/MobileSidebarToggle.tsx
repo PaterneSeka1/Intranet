@@ -74,19 +74,11 @@ export function MobileSidebarToggle({
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            {logo ? (
-              <img
-                src={logo}
-                alt=""
-                className="w-7 h-7 rounded-lg object-contain bg-white shrink-0"
-              />
-            ) : (
-              <img
-                src="/icon-192.png"
-                alt=""
-                className="w-7 h-7 rounded-lg object-cover shrink-0"
-              />
-            )}
+            <img
+              src={logo || '/logo_entreprise.png'}
+              alt=""
+              className="w-7 h-7 rounded-lg object-contain bg-white shrink-0"
+            />
             <span className="font-bold text-gray-800 text-sm hidden sm:inline">{appName}</span>
           </div>
           <div className="flex-1 max-w-xs">

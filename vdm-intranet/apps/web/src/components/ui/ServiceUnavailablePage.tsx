@@ -196,7 +196,7 @@ export function ServiceUnavailablePage() {
 
           {/* Footer */}
           <div className="px-8 py-3.5 bg-gray-50/70 border-t border-gray-100 flex items-center justify-center gap-2">
-            <img src="/icon-192.png" alt="" className="w-5 h-5 rounded-md object-cover shrink-0" />
+            <img src="/logo_entreprise.png" alt="" className="w-5 h-5 rounded-md object-contain bg-white shrink-0" />
             <span className="text-[11px] text-gray-400">VdM Intranet · Veilleur des Médias</span>
           </div>
         </div>

@@ -92,7 +92,6 @@ export function Sidebar({
   user,
   onClose,
   appName = 'VdM Intranet',
-  appSubtitle = 'Veilleur des Médias',
   logo,
 }: SidebarProps) {
   const pathname = usePathname()
@@ -108,22 +107,14 @@ export function Sidebar({
       style={{ background: 'var(--vdm-sidebar-bg)' }}
     >
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          {logo ? (
-            <img
-              src={logo}
-              alt=""
-              className="w-8 h-8 rounded-lg object-contain bg-white shrink-0"
-            />
-          ) : (
-            <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="vdm-sb-text text-sm font-bold leading-tight">{appName}</div>
-            <div className="vdm-sb-text-faint text-xs">{appSubtitle}</div>
-          </div>
-          <div className="hidden lg:block">
+      <div className="px-4 py-4 border-b border-white/10">
+        <div className="flex items-center gap-12">
+          <img
+            src={logo || '/logo_entreprise_compact.png'}
+            alt={appName}
+            className="flex-1 min-w-0 h-auto max-h-12 rounded-xl object-contain bg-white px-3 py-2"
+          />
+          <div className="hidden lg:block shrink-0 ">
             <NotificationsBell dark />
           </div>
         </div>
