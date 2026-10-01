@@ -64,12 +64,9 @@ export default async function ProtectedLayout({ children }: { children: React.Re
           <div className="flex items-center gap-2 min-w-0">
             <img
               src={logo || '/logo_entreprise_compact.png'}
-              alt=""
-              className="w-2 h-2 rounded-lg object-contain bg-white shrink-0"
+              alt={appName}
+              className="h-10 w-auto max-w-[180px] object-contain shrink-0"
             />
-            <span className="font-bold text-gray-800 text-sm hidden sm:inline truncate">
-              {appName}
-            </span>
           </div>
           <div className="flex items-center gap-1 sm:gap-3 shrink-0">
             <Link
