@@ -120,7 +120,9 @@ export class PresenceService {
       this.schedule.getScheduleSource(userId, today),
     ])
 
-    if (presence && !presence.expectedDepartureTime) {
+    // Tant que le départ n'est pas pointé, l'heure figée à l'arrivée peut être périmée (horaire
+    // modifié en cours de journée) : on affiche l'horaire actuel, celui que processEndDay utilisera.
+    if (presence && !presence.officialDepartureTime) {
       const departureSource = await this.schedule.getDepartureScheduleSource(userId, today)
       presence.expectedDepartureTime = departureSource?.time ?? null
     }
