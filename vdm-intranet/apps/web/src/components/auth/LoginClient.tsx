@@ -141,6 +141,9 @@ export function LoginClient({ initialLogo }: Props) {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F28C38]/20 focus:border-[#F28C38] transition-all placeholder-gray-300"
               placeholder="Ex : 001 ou email@veilleurdesmedias.com"
               required

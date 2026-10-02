@@ -52,7 +52,9 @@ export class AuthService {
   // pas de matricule) — jamais `username`, conservé comme champ technique interne uniquement.
   async login(identifier: string, password: string) {
     const user = await this.prisma.user.findFirst({
-      where: { OR: [{ matricule: identifier }, { email: identifier }] },
+      where: {
+        OR: [{ matricule: identifier }, { email: { equals: identifier, mode: 'insensitive' } }],
+      },
     })
     const now = new Date()
 
@@ -94,7 +96,9 @@ export class AuthService {
 
   async forgotPassword(identifier: string) {
     const user = await this.prisma.user.findFirst({
-      where: { OR: [{ matricule: identifier }, { email: identifier }] },
+      where: {
+        OR: [{ matricule: identifier }, { email: { equals: identifier, mode: 'insensitive' } }],
+      },
     })
 
     // Réponse volontairement générique — ne jamais révéler si le compte existe ou a un email.
