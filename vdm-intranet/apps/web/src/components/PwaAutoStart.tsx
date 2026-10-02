@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle2, Download } from 'lucide-react'
 
-type OS = 'macos' | 'windows' | 'other'
+type OS = 'macos' | 'windows' | 'linux' | 'other'
 type Phase = 'idle' | 'ask' | 'downloading' | 'done'
 
 const STORAGE_KEY = 'vdm_autostart_done'
@@ -19,6 +19,8 @@ function detectOS(): OS {
   const ua = navigator.userAgent
   if (/Mac/i.test(ua) && !/iPhone|iPad/.test(ua)) return 'macos'
   if (/Win/i.test(ua)) return 'windows'
+  // Android et ChromeOS annoncent aussi « Linux » : aucun script à y exécuter.
+  if (/Linux|X11/i.test(ua) && !/Android|CrOS/i.test(ua)) return 'linux'
   return 'other'
 }
 
@@ -198,6 +200,93 @@ function windowsScript(appUrl: string, appName: string): string {
   return lines.join('\r\n')
 }
 
+/* ── Génère le script Linux (.sh) ───────────────────────────────── */
+/** Chaîne bash entre guillemets simples (le nom de l'app est personnalisable). */
+function shQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+function linuxScript(appName: string): string {
+  const lines = [
+    '#!/bin/bash',
+    `APP_NAME=${shQuote(appName)}`,
+    'DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/vdm-intranet"',
+    'LAUNCHER="$DATA_DIR/vdm-launch.sh"',
+    'AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"',
+    'AUTOSTART="$AUTOSTART_DIR/vdm-intranet.desktop"',
+    '',
+    '# Lancé avec sudo, $HOME serait celui de root : le démarrage automatique',
+    "# serait installé pour root et ne se déclencherait jamais à l'ouverture",
+    "# de session de l'utilisateur.",
+    'if [ "$(id -u)" -eq 0 ]; then',
+    '  echo "Ne lancez pas ce script avec sudo : bash vdm-demarrage-auto.sh" >&2',
+    '  exit 1',
+    'fi',
+    '',
+    'echo "Configuration du démarrage automatique VdM Intranet..."',
+    'mkdir -p "$DATA_DIR" "$AUTOSTART_DIR" || exit 1',
+    '',
+    "# Script de lancement exécuté à chaque connexion : vérifie d'abord que",
+    "# l'application est toujours installée avant de l'ouvrir. Si elle a été",
+    '# désinstallée, il retire lui-même le démarrage automatique.',
+    '{',
+    "echo '#!/bin/bash'",
+    `printf 'APP_NAME=%q\\n' "$APP_NAME"`,
+    "cat <<'LAUNCHER_CONTENT'",
+    'AUTOSTART="${XDG_CONFIG_HOME:-$HOME/.config}/autostart/vdm-intranet.desktop"',
+    '',
+    '# Sous Linux, Chrome/Edge/Brave/Chromium installent la PWA sous forme',
+    "# d'un fichier .desktop dont le NOM n'a rien à voir avec celui de",
+    "# l'application (chrome-<identifiant>-Default.desktop, msedge-..., et",
+    "# « Default » change avec le profil) — et le snap Chromium d'Ubuntu le",
+    '# range dans ~/snap/chromium/... au lieu de ~/.local/share/applications.',
+    '# Deviner le chemin est donc voué à échouer (même piège que « Chrome',
+    '# Apps.localized » sur macOS) : on cherche le fichier par son contenu',
+    '# (Name= exact + lanceur de PWA --app-id=), dans tous ces emplacements.',
+    'APP_FILE=""',
+    'while IFS= read -r -d "" f; do',
+    '  if grep -qxF "Name=$APP_NAME" "$f" && grep -q "^Exec=.*--app-id=" "$f"; then',
+    '    APP_FILE="$f"',
+    '    break',
+    '  fi',
+    'done < <(find "${XDG_DATA_HOME:-$HOME/.local/share}/applications" "$HOME/snap" \\',
+    '           -maxdepth 6 -name "*.desktop" -print0 2>/dev/null)',
+    '',
+    'if [ -z "$APP_FILE" ]; then',
+    '  rm -f "$AUTOSTART"',
+    '  exit 0',
+    'fi',
+    '',
+    'sleep 8',
+    '# Commande enregistrée par le navigateur lui-même (bon binaire, bon',
+    '# profil), sans les codes %U/%F réservés aux lanceurs de bureau.',
+    'EXEC_LINE="$(grep -m 1 "^Exec=" "$APP_FILE" | sed -e "s/^Exec=//" -e "s/ *%[a-zA-Z]//g")"',
+    'exec sh -c "$EXEC_LINE"',
+    'LAUNCHER_CONTENT',
+    '} > "$LAUNCHER"',
+    'chmod 755 "$LAUNCHER"',
+    '',
+    '# Entrée de démarrage automatique XDG (GNOME, KDE, Xfce, Cinnamon, MATE).',
+    '# Chemin entre guillemets dans Exec= : $HOME peut contenir un espace.',
+    'cat > "$AUTOSTART" <<AUTOSTART_CONTENT',
+    '[Desktop Entry]',
+    'Type=Application',
+    'Name=VdM Intranet',
+    'Exec=/bin/bash "$LAUNCHER"',
+    'Terminal=false',
+    'NoDisplay=true',
+    'X-GNOME-Autostart-enabled=true',
+    'AUTOSTART_CONTENT',
+    'chmod 644 "$AUTOSTART"',
+    '',
+    'echo ""',
+    'echo "✓ VdM Intranet s\'ouvrira automatiquement à la prochaine ouverture de session."',
+    'echo ""',
+    'read -r -p "Appuyez sur Entrée pour fermer..."',
+  ]
+  return lines.join('\n') + '\n'
+}
+
 /* ── Déclenche le téléchargement d'un fichier texte ────────────── */
 function downloadScript(content: string, filename: string) {
   const blob = new Blob([content], { type: 'text/plain' })
@@ -263,6 +352,8 @@ export function PwaAutoStart() {
       downloadScript(macosScript(appUrl, appName), 'vdm-demarrage-auto.command')
     } else if (os === 'windows') {
       downloadScript(windowsScript(appUrl, appName), 'vdm-demarrage-auto.bat')
+    } else if (os === 'linux') {
+      downloadScript(linuxScript(appName), 'vdm-demarrage-auto.sh')
     }
 
     localStorage.setItem(STORAGE_KEY, '1')
@@ -276,12 +367,26 @@ export function PwaAutoStart() {
 
   if (!mounted || phase === 'idle') return null
 
-  const instructionFile = os === 'macos' ? 'vdm-demarrage-auto.command' : 'vdm-demarrage-auto.bat'
+  const instructionFile =
+    os === 'macos'
+      ? 'vdm-demarrage-auto.command'
+      : os === 'linux'
+        ? 'vdm-demarrage-auto.sh'
+        : 'vdm-demarrage-auto.bat'
+
+  // Un .sh téléchargé n'est pas exécutable et les gestionnaires de fichiers
+  // Linux l'ouvrent dans un éditeur au double-clic : on passe par le terminal.
+  const instructionAction =
+    os === 'linux'
+      ? 'Ouvrez un terminal dans votre dossier de téléchargements et exécutez la commande ci-dessous pour activer le démarrage automatique.'
+      : 'Double-cliquez dessus pour activer le démarrage automatique.'
 
   const instructionNote =
     os === 'macos'
       ? "Si macOS bloque l'ouverture : clic droit → Ouvrir → Ouvrir"
-      : 'Si Windows affiche « Contrôle intelligent des applications a bloqué un fichier potentiellement dangereux » : clic droit sur le fichier → Propriétés → cocher Débloquer → OK, puis redouble-cliquez dessus.'
+      : os === 'linux'
+        ? 'Commande : bash vdm-demarrage-auto.sh (sans sudo)'
+        : 'Si Windows affiche « Contrôle intelligent des applications a bloqué un fichier potentiellement dangereux » : clic droit sur le fichier → Propriétés → cocher Débloquer → OK, puis redouble-cliquez dessus.'
 
   return createPortal(
     <>
@@ -327,10 +432,10 @@ export function PwaAutoStart() {
               </div>
               <h2 className="as-title">Une dernière étape</h2>
               <p className="as-desc">
-                Le fichier <code className="as-code">{instructionFile}</code> a été téléchargé.
-                Double-cliquez dessus pour activer le démarrage automatique.
+                Le fichier <code className="as-code">{instructionFile}</code> a été téléchargé.{' '}
+                {instructionAction}
               </p>
-              {(os === 'macos' || os === 'windows') && (
+              {(os === 'macos' || os === 'windows' || os === 'linux') && (
                 <div className="as-note">{instructionNote}</div>
               )}
               <button className="as-btn-yes" onClick={() => setPhase('idle')}>

@@ -1,0 +1,11 @@
+{
+  "NewTabPageLocation": "http://localhost:3000",
+  "DeveloperToolsAvailability": 2,
+  "IncognitoModeAvailability": 1,
+  "PrintingEnabled": false,
+  "DownloadRestrictions": 3,
+  "BookmarkBarEnabled": false,
+  "PasswordManagerEnabled": false,
+  "BrowserSettingsPageEnabled": false,
+  "SavingBrowserHistoryDisabled": true
+}

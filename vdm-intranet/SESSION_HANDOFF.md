@@ -533,3 +533,9 @@ Demande : analyse complète du dépôt (backend, frontend, rôles/permissions, i
 - **Non fait** (hors périmètre technique de cet environnement) : vérifier que la CI GitHub Actions s'exécute réellement sans erreur sur les derniers commits (pas d'accès `gh`/API Actions ici) ; renseigner les vraies variables d'environnement de production sur le VPS (explicitement laissé à l'utilisateur) ; vérifier les libs système Chromium sur la machine cible réelle ; vérification visuelle réelle en navigateur (dette qui s'accumule depuis plusieurs sessions, toujours non résolue faute d'outil adapté).
 - Rien n'a été poussé sur `origin` — tous les changements restent en local, à committer/pousser après relecture.
 - `TACHE.md` mis à jour avec le détail complet de cette session.
+
+### Nouvelle demande réalisée — Démarrage automatique sous Linux (2026-10-01)
+
+- Demande : pouvoir configurer le lancement automatique sous Linux, en surveillant particulièrement le dossier d'installation pour ne pas reproduire les erreurs rencontrées sur macOS (politique Chromium ignorée car posée hors du sous-dossier `Managed Preferences/<utilisateur>`, PWA introuvable à cause de `Chrome Apps.localized`).
+- Kit kiosque `deployment/kiosk/linux/` (voir son README, section « Pièges évités ») et branche Linux du script self-service de `PwaAutoStart.tsx`. Détail et tests dans `TACHE.md`.
+- Tests réels exécutés dans un conteneur Ubuntu 24.04 (12 scénarios, tous OK). **Non fait** : essai sur un vrai poste Linux avec bureau et vrai navigateur.

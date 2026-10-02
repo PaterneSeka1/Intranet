@@ -1110,3 +1110,12 @@ Constat d'audit : `packages/database/prisma/seed.ts` commençait par vider les t
 - `[x]` Registre d'icônes web : ajout de `search` et `sparkles` (lucide-react).
 - `[x]` `npx tsc --noEmit` (`packages/database`, `apps/web`) et `prettier --check` : OK.
 - `[ ]` Vérifier sur la base locale : `npm run db:seed`, puis connexion avec un compte EREP (ex. `RBU_EREP`) et un compte d'une autre BU pour contrôler la visibilité.
+
+## Ajout — Démarrage automatique sous Linux (kit kiosque + script self-service PWA) — 2026-10-01
+
+- `[x]` Nouveau kit `deployment/kiosk/linux/` (équivalent du kit macOS) : détection Chrome > Edge > Brave > Chromium > Firefox (paquets natifs et snap), lanceur installé dans `/opt/vdm-intranet/`, démarrage automatique XDG (`~/.config/autostart/vdm-intranet-kiosk.desktop`), politique de verrouillage JSON posée dans le dossier exact de chaque navigateur, désinstalleur basé sur la liste exacte des fichiers posés.
+- `[x]` Pièges « dossier d'installation » vus sur macOS/Windows traités d'emblée : chemins de politique centralisés (Chromium : `/etc/chromium` **et** `/etc/chromium-browser`), umask `022` imposé aux écritures root (dossiers parents illisibles sinon), refus de `sudo` (autostart installé pour root), contrôle de `~/.config` avant toute étape système, auto-réparation d'un kit en CRLF, chemin `Exec=` sans espace, navigateur mémorisé à l'installation, Flatpak refusé explicitement.
+- `[x]` `PwaAutoStart.tsx` : détection de Linux (hors Android/ChromeOS) et génération de `vdm-demarrage-auto.sh` — la PWA est retrouvée par le contenu de son `.desktop` (`Name=` exact + `--app-id=`), pas par son nom de fichier (haché par Chrome, rangé sous `~/snap/...` pour le snap Chromium) ; auto-retrait de l'autostart si la PWA est désinstallée.
+- `[x]` Tests réels dans un conteneur Ubuntu 24.04 (utilisateur non-root, sudo en umask `077`, faux navigateurs) : 7 scénarios kit (Chrome .deb + kit CRLF + URL avec `&`/`'`, désinstallation, Firefox avec politique existante sauvegardée/restaurée, changement de navigateur, aucun navigateur, `~/.config` root) et 5 scénarios script PWA (sudo refusé, PWA Chrome, auto-nettoyage, snap Chromium + nom avec `'`/`"`/`$`, faux `.desktop` ignoré) : tous OK. `tsc --noEmit` (web) et `prettier --check` : OK.
+- `[ ]` Validation sur un vrai poste Linux avec bureau (session réelle, vrai navigateur) : vérifier `chrome://policy` / `about:policies` et le lancement à l'ouverture de session — non testable en conteneur.
+- `[ ]` Optionnel : distribuer le kit en `.zip` depuis le site, comme `vdm-kiosk-windows.zip`.
