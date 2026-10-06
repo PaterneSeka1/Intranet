@@ -206,13 +206,24 @@ function shQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
+// Aucune séquence dollar-accolade (`${VAR:-défaut}`) dans les chaînes bash
+// ci-dessous, même en commentaire : le minifieur de `next build` réécrit ces
+// chaînes en template literals sans l'échapper, ce qui produit un chunk
+// serveur syntaxiquement invalide (« Missing } in template expression ») et
+// fait échouer tout le build. Les valeurs XDG par défaut sont donc posées
+// avec un test explicite.
 function linuxScript(appName: string): string {
+  const xdgDefaults = [
+    'XDG_DATA="$XDG_DATA_HOME"; [ -n "$XDG_DATA" ] || XDG_DATA="$HOME/.local/share"',
+    'XDG_CONF="$XDG_CONFIG_HOME"; [ -n "$XDG_CONF" ] || XDG_CONF="$HOME/.config"',
+  ]
   const lines = [
     '#!/bin/bash',
     `APP_NAME=${shQuote(appName)}`,
-    'DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/vdm-intranet"',
+    ...xdgDefaults,
+    'DATA_DIR="$XDG_DATA/vdm-intranet"',
     'LAUNCHER="$DATA_DIR/vdm-launch.sh"',
-    'AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"',
+    'AUTOSTART_DIR="$XDG_CONF/autostart"',
     'AUTOSTART="$AUTOSTART_DIR/vdm-intranet.desktop"',
     '',
     '# Lancé avec sudo, $HOME serait celui de root : le démarrage automatique',
@@ -233,7 +244,8 @@ function linuxScript(appName: string): string {
     "echo '#!/bin/bash'",
     `printf 'APP_NAME=%q\\n' "$APP_NAME"`,
     "cat <<'LAUNCHER_CONTENT'",
-    'AUTOSTART="${XDG_CONFIG_HOME:-$HOME/.config}/autostart/vdm-intranet.desktop"',
+    ...xdgDefaults,
+    'AUTOSTART="$XDG_CONF/autostart/vdm-intranet.desktop"',
     '',
     '# Sous Linux, Chrome/Edge/Brave/Chromium installent la PWA sous forme',
     "# d'un fichier .desktop dont le NOM n'a rien à voir avec celui de",
@@ -249,7 +261,7 @@ function linuxScript(appName: string): string {
     '    APP_FILE="$f"',
     '    break',
     '  fi',
-    'done < <(find "${XDG_DATA_HOME:-$HOME/.local/share}/applications" "$HOME/snap" \\',
+    'done < <(find "$XDG_DATA/applications" "$HOME/snap" \\',
     '           -maxdepth 6 -name "*.desktop" -print0 2>/dev/null)',
     '',
     'if [ -z "$APP_FILE" ]; then',

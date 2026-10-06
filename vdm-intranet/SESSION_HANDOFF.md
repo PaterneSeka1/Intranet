@@ -539,3 +539,9 @@ Demande : analyse complète du dépôt (backend, frontend, rôles/permissions, i
 - Demande : pouvoir configurer le lancement automatique sous Linux, en surveillant particulièrement le dossier d'installation pour ne pas reproduire les erreurs rencontrées sur macOS (politique Chromium ignorée car posée hors du sous-dossier `Managed Preferences/<utilisateur>`, PWA introuvable à cause de `Chrome Apps.localized`).
 - Kit kiosque `deployment/kiosk/linux/` (voir son README, section « Pièges évités ») et branche Linux du script self-service de `PwaAutoStart.tsx`. Détail et tests dans `TACHE.md`.
 - Tests réels exécutés dans un conteneur Ubuntu 24.04 (12 scénarios, tous OK). **Non fait** : essai sur un vrai poste Linux avec bureau et vrai navigateur.
+
+### Nouvelle demande réalisée — Page blanche sous Linux & image de fond des formulaires (2026-10-06)
+
+- Symptôme rapporté : sur un PC Linux récent, la page de connexion ne s'affichait jamais (écran blanc), alors que Windows/macOS fonctionnaient. Non reproductible dans Chromium/Firefox/WebKit Linux propres : la cause est un échec de la redirection JS de l'intro `/` sur cet appareil, qui laissait un écran presque blanc sans issue. Rendu robuste sans JavaScript (détail dans `TACHE.md`).
+- **Régression découverte au passage** : le commit `f98c78c` (script Linux de `PwaAutoStart.tsx`) cassait `next build` — corrigé ici. À ne pas déployer sans ce correctif.
+- Correctif annexe : image de fond paramétrable affichée au-dessus des cartes de connexion/mot de passe.

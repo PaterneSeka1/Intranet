@@ -54,19 +54,30 @@ export default function LandingPage() {
             <div className="seal-sub">VdM Intranet · Abidjan, Côte d&rsquo;Ivoire</div>
           </div>
         </div>
-
-        {/* Lien de passage direct */}
-        <Link href="/login" className="skip-btn">
-          Accéder directement →
-        </Link>
       </main>
+
+      {/* Hors de .scene, qui s'efface à 3,6 s : ces liens doivent rester
+          utilisables si la redirection JS ne se fait pas (script bloqué par
+          une extension, un proxy, un navigateur ancien...) — sans quoi
+          l'écran reste vide indéfiniment. Rendus côté serveur, ils
+          fonctionnent comme de simples liens même sans JavaScript. */}
+      <Link href="/login" className="skip-btn">
+        Accéder directement →
+      </Link>
+      <Link href="/login" className="fallback-btn">
+        Continuer vers la connexion
+      </Link>
     </>
   )
 }
 
 const CSS = `
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; background: #0E1826; }
+/* !important : la classe Tailwind bg-[#F4F4F6] posée sur <body> par le
+   layout racine l'emporterait sinon (classe > sélecteur de balise) — une fois
+   .scene effacée, l'écran devenait blanc au lieu de bleu nuit si la
+   redirection JS ne se faisait pas. Cette règle disparaît avec la page. */
+html, body { height: 100%; overflow: hidden; background: #0E1826 !important; }
 
 /* ─── Scène ─── */
 .scene {
@@ -259,6 +270,31 @@ html, body { height: 100%; overflow: hidden; background: #0E1826; }
 .skip-btn:hover { color: rgba(237,232,223,.8); }
 @keyframes fade-in {
   from { opacity: 0; } to { opacity: 1; }
+}
+
+/* ─── Secours : n'apparaît qu'après l'heure prévue de la redirection JS
+   (4,2 s) — invisible et non cliquable tant qu'il n'est pas affiché ─── */
+.fallback-btn {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  padding: 13px 26px;
+  border-radius: 11px;
+  background: #F28C38; color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px; font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(242,140,56,.35);
+  opacity: 0; visibility: hidden;
+  /* « forwards » et surtout pas « both » : avec « both », la 1re image clé
+     (visibility: visible) s'appliquerait dès le chargement, pendant le
+     délai — bouton transparent mais cliquable au centre de l'intro. */
+  animation: fallback-in .4s ease 5.5s forwards;
+}
+.fallback-btn:hover { background: #e07d29; }
+@keyframes fallback-in {
+  from { opacity: 0; visibility: visible; }
+  to   { opacity: 1; visibility: visible; }
 }
 
 /* ─── Réduction de mouvement ─── */
