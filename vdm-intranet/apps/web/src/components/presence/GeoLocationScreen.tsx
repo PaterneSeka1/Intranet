@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { presenceApi, type FirstLoginPayload } from '@/lib/presence'
 import { api } from '@/lib/api'
+import { getCurrentPosition } from '@/lib/geolocation'
 
 interface Props {
   onSuccess: () => void
@@ -11,51 +12,40 @@ interface Props {
 
 type State = 'idle' | 'requesting' | 'sending' | 'error'
 
-const GEO_ERRORS: Record<number, string> = {
-  1: "Vous avez refusé l'accès à la localisation. Veuillez autoriser la localisation dans les paramètres de votre navigateur, puis réessayez.",
-  2: 'Impossible de déterminer votre position. Vérifiez que le GPS est activé.',
-  3: 'La demande de localisation a expiré. Réessayez.',
-}
-
 export function GeoLocationScreen({ onSuccess }: Props) {
   const router = useRouter()
   const [state, setState] = useState<State>('idle')
   const [error, setError] = useState<string | null>(null)
 
   async function requestLocation() {
-    if (!navigator.geolocation) {
-      setError("La géolocalisation n'est pas supportée par votre navigateur.")
-      return
-    }
-
     setState('requesting')
     setError(null)
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        setState('sending')
-        try {
-          const payload: FirstLoginPayload = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            userAgent: navigator.userAgent,
-          }
-          await presenceApi.firstLogin(payload)
-          onSuccess()
-        } catch (err) {
-          const msg =
-            err instanceof Error ? err.message : "Erreur lors de l'enregistrement de la présence."
-          setState('error')
-          setError(msg)
-        }
-      },
-      (posError) => {
-        setState('error')
-        setError(GEO_ERRORS[posError.code] ?? 'Erreur de localisation inconnue.')
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    )
+    let position: GeolocationPosition
+    try {
+      position = await getCurrentPosition()
+    } catch (err) {
+      setState('error')
+      setError(err instanceof Error ? err.message : 'Erreur de localisation inconnue.')
+      return
+    }
+
+    setState('sending')
+    try {
+      const payload: FirstLoginPayload = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        userAgent: navigator.userAgent,
+      }
+      await presenceApi.firstLogin(payload)
+      onSuccess()
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Erreur lors de l'enregistrement de la présence."
+      setState('error')
+      setError(msg)
+    }
   }
 
   const isLoading = state === 'requesting' || state === 'sending'

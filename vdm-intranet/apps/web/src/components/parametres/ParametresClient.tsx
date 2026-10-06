@@ -10,6 +10,7 @@ import { saveSettings, deleteSetting } from '@/lib/settings'
 import { escapeCssString, opacityPercentToCss, opacitySettingToPercent } from '@/lib/theme-settings'
 import { Moon, Sun, DoorOpen, CalendarDays, Check, MapPin, LocateFixed } from 'lucide-react'
 import { presenceApi, type WorkplaceLocation, type WorkplaceLocationPayload } from '@/lib/presence'
+import { getCurrentPosition } from '@/lib/geolocation'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -2512,12 +2513,6 @@ function PolesSection({
 // Lieu de travail de référence (géofencing présence)
 // ---------------------------------------------------------------------------
 
-const GEO_ERRORS: Record<number, string> = {
-  1: 'Accès à la localisation refusé — autorisez-la dans les paramètres de votre navigateur.',
-  2: 'Position introuvable — vérifiez que le GPS est activé.',
-  3: 'La demande de localisation a expiré, réessayez.',
-}
-
 function WorkplaceLocationPanel({ initial }: { initial: WorkplaceLocation | null }) {
   const [label, setLabel] = useState(initial?.label ?? '')
   const [latitude, setLatitude] = useState(initial ? String(initial.latitude) : '')
@@ -2528,25 +2523,18 @@ function WorkplaceLocationPanel({ initial }: { initial: WorkplaceLocation | null
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(initial)
 
-  function useCurrentPosition() {
-    if (!navigator.geolocation) {
-      setError("La géolocalisation n'est pas supportée par ce navigateur.")
-      return
-    }
+  async function useCurrentPosition() {
     setLocating(true)
     setError('')
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(String(position.coords.latitude))
-        setLongitude(String(position.coords.longitude))
-        setLocating(false)
-      },
-      (posError) => {
-        setError(GEO_ERRORS[posError.code] ?? 'Erreur de localisation inconnue.')
-        setLocating(false)
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    )
+    try {
+      const position = await getCurrentPosition()
+      setLatitude(String(position.coords.latitude))
+      setLongitude(String(position.coords.longitude))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de localisation inconnue.')
+    } finally {
+      setLocating(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
