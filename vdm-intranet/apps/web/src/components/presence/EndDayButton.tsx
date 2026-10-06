@@ -6,14 +6,9 @@ import { DoorOpen } from 'lucide-react'
 import { presenceApi, type EndDayPayload } from '@/lib/presence'
 import { confirm } from '@/lib/confirm'
 import { toast } from '@/lib/toast'
+import { getCurrentPosition } from '@/lib/geolocation'
 
 type State = 'idle' | 'requesting' | 'sending' | 'error'
-
-const GEO_ERRORS: Record<number, string> = {
-  1: "Vous avez refusé l'accès à la localisation. Veuillez autoriser la localisation dans les paramètres de votre navigateur, puis réessayez.",
-  2: 'Impossible de déterminer votre position. Vérifiez que le GPS est activé.',
-  3: 'La demande de localisation a expiré. Réessayez.',
-}
 
 export function EndDayButton() {
   const router = useRouter()
@@ -29,42 +24,36 @@ export function EndDayButton() {
     })
     if (!ok) return
 
-    if (!navigator.geolocation) {
-      setError("La géolocalisation n'est pas supportée par votre navigateur.")
-      setState('error')
-      return
-    }
-
     setState('requesting')
     setError(null)
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        setState('sending')
-        try {
-          const payload: EndDayPayload = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            userAgent: navigator.userAgent,
-          }
-          await presenceApi.endDay(payload)
-          toast.success('Départ enregistré. Bonne soirée !')
-          setState('idle')
-          router.refresh()
-        } catch (err) {
-          const msg =
-            err instanceof Error ? err.message : "Erreur lors de l'enregistrement du départ."
-          setState('error')
-          setError(msg)
-        }
-      },
-      (posError) => {
-        setState('error')
-        setError(GEO_ERRORS[posError.code] ?? 'Erreur de localisation inconnue.')
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    )
+    let position: GeolocationPosition
+    try {
+      position = await getCurrentPosition()
+    } catch (err) {
+      setState('error')
+      setError(err instanceof Error ? err.message : 'Erreur de localisation inconnue.')
+      return
+    }
+
+    setState('sending')
+    try {
+      const payload: EndDayPayload = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        userAgent: navigator.userAgent,
+      }
+      await presenceApi.endDay(payload)
+      toast.success('Départ enregistré. Bonne soirée !')
+      setState('idle')
+      router.refresh()
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Erreur lors de l'enregistrement du départ."
+      setState('error')
+      setError(msg)
+    }
   }
 
   const isLoading = state === 'requesting' || state === 'sending'

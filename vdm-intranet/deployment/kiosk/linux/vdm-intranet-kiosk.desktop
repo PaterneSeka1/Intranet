@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=VdM Intranet (kiosque)
+Comment=Ouvre VdM Intranet en mode kiosque à l'ouverture de session
+Exec=/opt/vdm-intranet/kiosk-vdm.sh
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5

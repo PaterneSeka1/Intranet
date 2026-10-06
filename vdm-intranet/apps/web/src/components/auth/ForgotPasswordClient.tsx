@@ -37,7 +37,7 @@ export function ForgotPasswordClient({ initialLogo }: Props) {
       style={{ background: 'var(--vdm-login-bg)' }}
     >
       <BgImageLayer />
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
+      <div className="relative z-[2] bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[360px] p-8">
         <div className="text-center mb-8">
           <img
             src={initialLogo || '/logo_entreprise.png'}
