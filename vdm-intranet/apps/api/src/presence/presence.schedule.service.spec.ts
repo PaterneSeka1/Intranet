@@ -256,4 +256,61 @@ describe('PresenceScheduleService', () => {
       })
     })
   })
+
+  describe('resolveShiftDate — rattachement des pointages au poste (équipe de nuit)', () => {
+    const night0000 = { expectedArrivalTime: '00:00', isNightShift: true }
+    const night2000 = { expectedArrivalTime: '20:00', isNightShift: true }
+
+    function mockUser(scheduleGroup: unknown, mandates: unknown[] = []) {
+      findUnique.mockResolvedValue({ scheduleGroup, mandates })
+    }
+
+    it('poste 00:00 : une arrivée anticipée la veille à 22:00 est rattachée au jour du poste', async () => {
+      mockUser(night0000)
+      const date = await service.resolveShiftDate('u1', new Date('2026-08-10T22:00:00.000Z'))
+      expect(date.toISOString()).toBe('2026-08-11T00:00:00.000Z')
+    })
+
+    it('poste 00:00 : une reconnexion à 00:05 retombe sur le même poste (pas de seconde présence)', async () => {
+      mockUser(night0000)
+      const date = await service.resolveShiftDate('u1', new Date('2026-08-11T00:05:00.000Z'))
+      expect(date.toISOString()).toBe('2026-08-11T00:00:00.000Z')
+    })
+
+    it('poste 00:00 : le départ à 08:00 est rattaché au même poste', async () => {
+      mockUser(night0000)
+      const date = await service.resolveShiftDate('u1', new Date('2026-08-11T08:00:00.000Z'))
+      expect(date.toISOString()).toBe('2026-08-11T00:00:00.000Z')
+    })
+
+    it('poste 20:00 : le départ à 05:00 le lendemain est rattaché au poste de la veille', async () => {
+      mockUser(night2000)
+      const date = await service.resolveShiftDate('u1', new Date('2026-08-11T05:00:00.000Z'))
+      expect(date.toISOString()).toBe('2026-08-10T00:00:00.000Z')
+    })
+
+    it('groupe de jour : toujours la date du calendrier, même tard le soir', async () => {
+      mockUser({ expectedArrivalTime: '08:00', isNightShift: false })
+      const date = await service.resolveShiftDate('u1', new Date('2026-08-10T23:00:00.000Z'))
+      expect(date.toISOString()).toBe('2026-08-10T00:00:00.000Z')
+    })
+
+    it('un mandat de jour (isNightShift=false) neutralise le mode nuit du groupe ce jour-là', async () => {
+      mockUser(night0000, [
+        {
+          date: new Date('2026-08-11T00:00:00.000Z'),
+          expectedArrivalTime: '09:00',
+          isNightShift: false,
+        },
+      ])
+      const date = await service.resolveShiftDate('u1', new Date('2026-08-11T08:50:00.000Z'))
+      expect(date.toISOString()).toBe('2026-08-11T00:00:00.000Z')
+    })
+
+    it('sans groupe (horaire individuel) : date du calendrier', async () => {
+      mockUser(null)
+      const date = await service.resolveShiftDate('u1', new Date('2026-08-10T22:00:00.000Z'))
+      expect(date.toISOString()).toBe('2026-08-10T00:00:00.000Z')
+    })
+  })
 })

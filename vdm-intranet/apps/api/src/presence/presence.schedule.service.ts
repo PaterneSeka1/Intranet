@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config'
 import { PresenceStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
 export interface ScheduleSource {
   time: string | null
   source: 'mandate' | 'group' | 'individual' | 'none'
@@ -100,6 +102,53 @@ export class PresenceScheduleService {
     }
 
     return { time: null, source: 'none', isNightShift: false }
+  }
+
+  /**
+   * Date de poste à laquelle rattacher un pointage (arrivée, départ, connexions) fait à `now`.
+   *
+   * Pour un employé de jour, c'est simplement la date UTC du jour. Pour une équipe de nuit, la
+   * date du calendrier ne suffit pas : un employé du poste de 00:00 qui arrive la veille à 22:00,
+   * puis se reconnecte après minuit (expiration du jeton) et part à 08:00, doit voir ces trois
+   * pointages rattachés à UNE seule présence — sinon une seconde présence est créée après minuit
+   * (faux retard de quelques minutes) et le départ clôture celle-ci au lieu de la vraie.
+   *
+   * Règle : parmi les débuts de poste attendus de la veille, du jour et du lendemain (mandat >
+   * groupe, comme getScheduleSource), on retient le plus proche de `now` ; s'il s'agit d'un poste
+   * de nuit, sa date est la date de poste. Ex. poste 00:00 : arrivée J 22:00 → J+1 ; poste 20:00 :
+   * départ J+1 05:00 → J. Les horaires individuels n'ont jamais de mode nuit : toujours le jour.
+   */
+  async resolveShiftDate(userId: string, now: Date): Promise<Date> {
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    const candidates = [-1, 0, 1].map((offset) => new Date(today.getTime() + offset * DAY_MS))
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        scheduleGroup: { select: { expectedArrivalTime: true, isNightShift: true } },
+        mandates: {
+          where: { date: { in: candidates } },
+          select: { date: true, expectedArrivalTime: true, isNightShift: true },
+        },
+      },
+    })
+    if (!user) return today
+
+    let nearest: { date: Date; distance: number; isNightShift: boolean } | null = null
+    for (const date of candidates) {
+      const mandate = user.mandates.find((m) => m.date.getTime() === date.getTime())
+      const time = mandate?.expectedArrivalTime ?? user.scheduleGroup?.expectedArrivalTime
+      if (!time) continue
+      const isNightShift = mandate
+        ? (mandate.isNightShift ?? user.scheduleGroup?.isNightShift ?? false)
+        : (user.scheduleGroup?.isNightShift ?? false)
+      const [hour, minute] = time.split(':').map(Number)
+      const start = date.getTime() + (hour * 60 + minute) * 60_000
+      const distance = Math.abs(now.getTime() - start)
+      if (!nearest || distance < nearest.distance) nearest = { date, distance, isNightShift }
+    }
+
+    return nearest?.isNightShift ? nearest.date : today
   }
 
   private calculateDelayMinutes(

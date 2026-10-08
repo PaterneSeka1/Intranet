@@ -316,6 +316,7 @@ describe('PresenceService — statuts "aujourd’hui" (repos / en attente / abse
     isArrivalOverdue: jest.Mock
     getScheduleSource: jest.Mock
     getDepartureScheduleSource: jest.Mock
+    resolveShiftDate: jest.Mock
   }
   let leaveSync: { getActiveLeaves: jest.Mock }
   let publicHolidays: { isHoliday: jest.Mock }
@@ -357,6 +358,12 @@ describe('PresenceService — statuts "aujourd’hui" (repos / en attente / abse
       isArrivalOverdue: jest.fn(),
       getScheduleSource: jest.fn(),
       getDepartureScheduleSource: jest.fn(),
+      // Comportement de jour par défaut : la date de poste est la date UTC du jour.
+      resolveShiftDate: jest.fn((_userId: string, now: Date) =>
+        Promise.resolve(
+          new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+        )
+      ),
     }
     leaveSync = { getActiveLeaves: jest.fn().mockResolvedValue([]) }
     publicHolidays = { isHoliday: jest.fn().mockResolvedValue({ isHoliday: false, label: null }) }
