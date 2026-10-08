@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt'
 import * as crypto from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
+import { PresenceScheduleService } from '../presence/presence.schedule.service'
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
 const GENERIC_FORGOT_MESSAGE =
@@ -42,7 +43,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly mailService: MailService
+    private readonly mailService: MailService,
+    private readonly presenceSchedule: PresenceScheduleService
   ) {}
 
   // Identifiants de connexion acceptés : matricule (employés) ou email (stagiaires, qui n'ont
@@ -67,7 +69,9 @@ export class AuthService {
     }
     if (!user.isActive) throw new UnauthorizedException('Compte désactivé')
 
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    // Date de poste (et non du calendrier) : un employé de nuit qui se reconnecte après minuit
+    // (jeton expiré) a déjà sa présence sur le poste commencé la veille au soir.
+    const today = await this.presenceSchedule.resolveShiftDate(user.id, now)
 
     const [safe, todayPresence] = await Promise.all([
       this.prisma.user.update({

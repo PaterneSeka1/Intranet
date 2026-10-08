@@ -63,6 +63,10 @@ const USER_SUMMARY = {
   },
 } as const
 
+const DAY_MS = 24 * 60 * 60 * 1000
+// Durée maximale entre l'arrivée et le départ d'un même poste (poste de nuit + heures sup).
+const MAX_SHIFT_SPAN_MS = 18 * 60 * 60 * 1000
+
 function getToday(): Date {
   const now = new Date()
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
@@ -110,8 +114,10 @@ export class PresenceService {
   // ----------------------------------------------------------------
 
   async getTodayPresence(userId: string, role?: Role) {
-    const today = getToday()
     const now = new Date()
+    // Date de poste et non date du calendrier : un employé de nuit doit retrouver après minuit la
+    // présence ouverte la veille au soir (cf. PresenceScheduleService.resolveShiftDate).
+    const today = await this.schedule.resolveShiftDate(userId, now)
     // Indépendantes l'une de l'autre — parallélisées plutôt qu'enchaînées en série.
     const [presence, scheduleSource] = await Promise.all([
       this.prisma.presence.findUnique({
@@ -256,8 +262,10 @@ export class PresenceService {
       throw new BadRequestException('latitude et longitude sont obligatoires')
     }
 
-    const today = getToday()
     const now = new Date()
+    // Une reconnexion après minuit d'un employé de nuit retombe sur la présence de son poste au
+    // lieu d'en créer une seconde (qui serait faussement "en retard de quelques minutes").
+    const today = await this.schedule.resolveShiftDate(userId, now)
 
     // Calculer le groupe horaire hors transaction (lecture seule, non critique). Les 3 lectures
     // sont indépendantes — parallélisées plutôt qu'enchaînées en série.
@@ -378,8 +386,8 @@ export class PresenceService {
   // ----------------------------------------------------------------
 
   async recordLoginLog(userId: string, dto: LoginLogDto, ipAddress: string) {
-    const today = getToday()
     const now = new Date()
+    const today = await this.schedule.resolveShiftDate(userId, now)
 
     const isFirst = !(await this.prisma.connectionLog.findFirst({
       where: { userId, date: today, type: 'LOGIN' },
@@ -406,8 +414,8 @@ export class PresenceService {
   // ----------------------------------------------------------------
 
   async recordLogoutLog(userId: string, dto: LoginLogDto, ipAddress: string) {
-    const today = getToday()
     const now = new Date()
+    const today = await this.schedule.resolveShiftDate(userId, now)
     // mapsUrl toujours construit côté serveur — jamais depuis le client
     const mapsUrl = buildMapsUrl(dto.latitude, dto.longitude)
 
@@ -446,12 +454,29 @@ export class PresenceService {
   // ----------------------------------------------------------------
 
   async processEndDay(userId: string, dto: EndDayDto, ipAddress: string, role?: Role) {
-    const today = getToday()
     const now = new Date()
+    const shiftDate = await this.schedule.resolveShiftDate(userId, now)
 
-    const presence = await this.prisma.presence.findUnique({
-      where: { userId_date: { userId, date: today } },
+    let presence = await this.prisma.presence.findUnique({
+      where: { userId_date: { userId, date: shiftDate } },
     })
+    if (!presence || presence.officialDepartureTime) {
+      // Départ tardif d'un poste de nuit (ex: poste 20:00, départ J+1 à 09:00) : le début de poste
+      // le plus proche est déjà celui du soir suivant, la présence ouverte est donc celle de la
+      // veille. Bornée à MAX_SHIFT_SPAN_MS après l'arrivée pour ne jamais clôturer une présence
+      // oubliée d'un jour précédent.
+      const previous = await this.prisma.presence.findUnique({
+        where: { userId_date: { userId, date: new Date(shiftDate.getTime() - DAY_MS) } },
+      })
+      if (
+        previous &&
+        !previous.officialDepartureTime &&
+        previous.officialArrivalTime &&
+        now.getTime() - previous.officialArrivalTime.getTime() <= MAX_SHIFT_SPAN_MS
+      ) {
+        presence = previous
+      }
+    }
     if (!presence) {
       throw new BadRequestException(
         "Aucune arrivée enregistrée aujourd'hui — impossible de marquer un départ."
@@ -461,6 +486,7 @@ export class PresenceService {
       throw new BadRequestException("Départ déjà enregistré pour aujourd'hui.")
     }
 
+    const today = presence.date
     const { time: expectedTime, isNightShift } = await this.schedule.getDepartureScheduleSource(
       userId,
       today
