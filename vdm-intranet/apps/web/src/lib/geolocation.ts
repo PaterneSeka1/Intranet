@@ -45,7 +45,7 @@ async function describeError(err: GeolocationPositionError): Promise<string> {
 
   if (err.code === err.POSITION_UNAVAILABLE) {
     return isMac
-      ? "Impossible de déterminer votre position. Sur Mac, le Wi-Fi doit être activé (même si vous êtes connecté par câble) et le Service de localisation activé dans Réglages Système → Confidentialité et sécurité."
+      ? 'Impossible de déterminer votre position. Sur Mac, le Wi-Fi doit être activé (même si vous êtes connecté par câble) et le Service de localisation activé dans Réglages Système → Confidentialité et sécurité.'
       : 'Impossible de déterminer votre position. Vérifiez que la localisation (et le Wi-Fi) de votre appareil est activée.'
   }
 

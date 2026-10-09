@@ -49,8 +49,7 @@ export function EndDayButton() {
       setState('idle')
       router.refresh()
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Erreur lors de l'enregistrement du départ."
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'enregistrement du départ."
       setState('error')
       setError(msg)
     }

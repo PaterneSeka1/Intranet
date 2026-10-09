@@ -1,0 +1,3 @@
+# Les hooks Git et scripts shell doivent rester en LF, sinon Bash échoue sous Windows.
+.githooks/* text eol=lf
+*.sh text eol=lf

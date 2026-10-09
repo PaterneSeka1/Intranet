@@ -88,12 +88,7 @@ interface SidebarProps {
   logo?: string
 }
 
-export function Sidebar({
-  user,
-  onClose,
-  appName = 'VdM Intranet',
-  logo,
-}: SidebarProps) {
+export function Sidebar({ user, onClose, appName = 'VdM Intranet', logo }: SidebarProps) {
   const pathname = usePathname()
   const [showLogout, setShowLogout] = useState(false)
   const items = MENUS[user.role] ?? []
