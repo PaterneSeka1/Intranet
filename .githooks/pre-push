@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Bloque le push si les vérifications de la CI échouent localement.
+# Activation (une fois par clone) : git config core.hooksPath .githooks
+# Contournement ponctuel : git push --no-verify   (ou SKIP_VERIFY_CI=1 git push)
+# Mode rapide sans les builds : VERIFY_CI_QUICK=1 git push
+
+if [ "${SKIP_VERIFY_CI:-0}" = "1" ]; then
+  echo "pre-push : vérification CI ignorée (SKIP_VERIFY_CI=1)."
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+ARGS=()
+[ "${VERIFY_CI_QUICK:-0}" = "1" ] && ARGS+=(--quick)
+
+echo "pre-push : vérification CI locale avant envoi…"
+if ! bash "$ROOT/vdm-intranet/scripts/verify-ci.sh" "${ARGS[@]}"; then
+  echo ""
+  echo "Push annulé : corrigez les erreurs ci-dessus (ou lancez /verif-ci dans Claude Code)."
+  exit 1
+fi
