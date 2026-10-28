@@ -442,6 +442,35 @@ describe('PresenceService — statuts "aujourd’hui" (repos / en attente / abse
       expect(rows[0].status).toBe('ABSENT')
     })
 
+    it('rapproche le congé par matricule même quand username diffère, sans exposer le matricule', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-10T09:15:00.000Z')) // lundi, 09h15
+      prisma.user.findMany.mockResolvedValue([
+        makeUser({
+          username: 'PRENOM_NOM',
+          matricule: '042',
+          individualExpectedArrivalTime: '08:00',
+        }),
+      ])
+      leaveSync.getActiveLeaves.mockResolvedValue([
+        {
+          matricule: '042',
+          email: 'autre@exemple.ci',
+          firstName: 'P',
+          lastName: 'N',
+          type: 'ANNUAL_PAID',
+          startDate: '2026-08-03',
+          endDate: '2026-08-20',
+          departmentName: null,
+        },
+      ])
+      schedule.isArrivalOverdue.mockReturnValue(true)
+
+      const rows = await service.getTodayAllPresences(requester, '2026-08-10')
+
+      expect(rows[0].status).toBe('EN_CONGE')
+      expect(rows[0].user).not.toHaveProperty('matricule')
+    })
+
     it('un mandat explicite un jour de week-end reste un jour de travail (peut redevenir ABSENT)', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T20:30:00.000Z')) // samedi soir, mandaté
       prisma.user.findMany.mockResolvedValue([makeUser()])

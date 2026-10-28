@@ -101,6 +101,7 @@ export class PilotageService {
         select: {
           id: true,
           username: true,
+          matricule: true,
           email: true,
           individualExpectedArrivalTime: true,
           workingDays: true,
@@ -203,6 +204,7 @@ export class PilotageService {
         select: {
           id: true,
           username: true,
+          matricule: true,
           email: true,
           businessUnitId: true,
           businessUnit: { select: { id: true, name: true, code: true } },
@@ -319,6 +321,7 @@ export class PilotageService {
       select: {
         id: true,
         username: true,
+        matricule: true,
         email: true,
         businessUnitId: true,
         businessUnit: { select: { id: true, name: true, code: true } },

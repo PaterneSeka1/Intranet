@@ -35,6 +35,7 @@ export type ExportFormat = 'excel' | 'pdf'
 type AttendanceUser = {
   id: string
   username: string
+  matricule?: string | null
   email?: string | null
   workingDays: number[]
   scheduleGroup: { expectedArrivalTime: string; isNightShift: boolean } | null
@@ -342,6 +343,8 @@ export class ReportsService {
       select: {
         id: true,
         username: true,
+        matricule: true,
+        email: true,
         fullName: true,
         role: true,
         businessUnit: { select: { name: true } },
@@ -472,6 +475,7 @@ export class ReportsService {
           select: {
             id: true,
             username: true,
+            matricule: true,
             email: true,
             fullName: true,
             role: true,
@@ -577,6 +581,7 @@ export class ReportsService {
       select: {
         id: true,
         username: true,
+        matricule: true,
         firstName: true,
         lastName: true,
         fullName: true,

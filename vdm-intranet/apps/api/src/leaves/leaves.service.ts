@@ -41,6 +41,7 @@ export class LeavesService {
       select: {
         id: true,
         username: true,
+        matricule: true,
         email: true,
         fullName: true,
         role: true,
@@ -83,7 +84,7 @@ export class LeavesService {
     if (employees.length === 0) return { configured, employees: [] }
 
     const users = await this.prisma.user.findMany({
-      select: { username: true, email: true },
+      select: { username: true, matricule: true, email: true },
       // Plafond défensif largement au-dessus de l'effectif réel (pas une limite métier).
       take: 5000,
     })

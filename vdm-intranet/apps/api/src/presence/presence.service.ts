@@ -143,7 +143,7 @@ export class PresenceService {
       const [user, activeLeaves] = await Promise.all([
         this.prisma.user.findUnique({
           where: { id: userId },
-          select: { username: true, email: true, workingDays: true },
+          select: { username: true, matricule: true, email: true, workingDays: true },
         }),
         this.leaveSync.getActiveLeaves(today),
       ])
@@ -193,7 +193,9 @@ export class PresenceService {
     const [users, presences, mandates, holiday, activeLeaves] = await Promise.all([
       this.prisma.user.findMany({
         where: { isActive: true, ...scope },
-        select: USER_SUMMARY,
+        // matricule chargé pour le rapprochement des congés uniquement — retiré de la réponse,
+        // visible par tous les rôles (cf. publicUser ci-dessous).
+        select: { ...USER_SUMMARY, matricule: true },
         orderBy: [{ role: 'asc' }, { lastName: 'asc' }],
       }),
       this.prisma.presence.findMany({
@@ -211,7 +213,8 @@ export class PresenceService {
     const presenceMap = new Map(presences.map((p) => [p.userId, p]))
     const mandateMap = new Map(mandates.map((m) => [m.userId, m]))
 
-    return users.map((user) => {
+    return users.map(({ matricule, ...publicUser }) => {
+      const user = { ...publicUser, matricule }
       const presence = presenceMap.get(user.id) ?? null
       const mandate = mandateMap.get(user.id) ?? null
       const leave = presence ? undefined : activeLeaves.find((l) => matchLeaveToUser(l, user))
@@ -245,7 +248,7 @@ export class PresenceService {
         })
 
       return {
-        user,
+        user: publicUser,
         presence,
         status,
         leave: this.toLeaveInfo(leave),
